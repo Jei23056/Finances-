@@ -29,13 +29,8 @@
 html { font-size: 16px; }
 body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; padding:1.5rem 1rem 5rem; }
 .shell { max-width:860px; margin:0 auto; }
-
-/* header */
 header { display:flex; align-items:flex-end; justify-content:space-between; padding-bottom:1.25rem; border-bottom:1px solid var(--border); margin-bottom:2rem; }
 header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:400; letter-spacing:-0.5px; }
-.year-tag { font-size:11px; color:var(--muted); letter-spacing:.1em; text-transform:uppercase; padding-bottom:4px; }
-
-/* year summary bar */
 .year-bar { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:2rem; }
 .ycard { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:1rem 1.1rem; position:relative; overflow:hidden; }
 .ycard::after { content:''; position:absolute; top:0;left:0;right:0; height:2px; }
@@ -50,26 +45,18 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 .ycard.exp .ycard-val { color:var(--red); }
 .ycard.net .ycard-val { color:var(--gold); }
 .ycard.sav .ycard-val { color:var(--blue); }
-
-/* month tabs scroll */
 .month-scroll { display:flex; gap:4px; overflow-x:auto; padding-bottom:6px; margin-bottom:1.5rem; scrollbar-width:none; }
 .month-scroll::-webkit-scrollbar { display:none; }
 .mtab { flex-shrink:0; padding:7px 14px; background:var(--card); border:1px solid var(--border); border-radius:999px; font-size:13px; color:var(--muted2); cursor:pointer; transition:all .18s; white-space:nowrap; }
 .mtab:hover { border-color:var(--border2); color:var(--text); }
 .mtab.active { background:var(--surf); border-color:var(--border2); color:var(--text); font-weight:500; }
 .mtab.has-data { border-color:rgba(255,255,255,0.15); }
-
-/* month panel */
 .month-panel { display:none; }
 .month-panel.active { display:block; }
-
-/* month summary */
 .msummary { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:1.25rem; }
 .mcard { background:var(--card); border:1px solid var(--border); border-radius:var(--rs); padding:.85rem 1rem; }
 .mcard-lbl { font-size:10px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
 .mcard-val { font-size:1.2rem; font-family:'DM Serif Display',serif; font-weight:400; }
-
-/* form */
 .form-wrap { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:1.15rem; margin-bottom:1.25rem; }
 .type-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:1rem; }
 .tbtn { padding:9px; border:1px solid var(--border2); border-radius:var(--rs); background:transparent; font-family:'DM Sans',sans-serif; font-size:13px; cursor:pointer; color:var(--muted2); transition:all .18s; }
@@ -93,8 +80,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 .btn-add { width:100%; margin-top:.85rem; padding:9px; background:var(--gldim); border:1px solid var(--gold); border-radius:var(--rs); color:var(--gold); font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; transition:all .18s; }
 .btn-add:hover { background:rgba(232,185,106,.2); }
 .btn-add:active { transform:scale(.98); }
-
-/* entries */
 .sec-lbl { font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
 .entries { display:flex; flex-direction:column; gap:5px; margin-bottom:1.5rem; }
 .entry { display:flex; align-items:center; background:var(--card); border:1px solid var(--border); border-radius:var(--rs); padding:10px 14px; animation:si .2s ease; transition:border-color .18s; }
@@ -110,8 +95,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 .bdel  { background:none;border:none;cursor:pointer;color:var(--muted);font-size:17px;line-height:1;padding:1px 3px;transition:color .15s; }
 .bdel:hover { color:var(--red); }
 .empty { text-align:center;padding:2rem;color:var(--muted);font-size:13px;border:1px dashed var(--border);border-radius:var(--r); }
-
-/* categories chart */
 .cats-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:1.5rem; }
 .cat-block { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:1rem; }
 .cat-block h3 { font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:.85rem; }
@@ -121,22 +104,11 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 .btrack { flex:1;height:16px;background:var(--surf);border-radius:3px;overflow:hidden; }
 .bfill  { height:100%;border-radius:3px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-size:10px;font-weight:500;color:var(--bg);transition:width .45s cubic-bezier(.4,0,.2,1);min-width:2px; }
 .bval   { font-size:11px;color:var(--muted);width:64px;flex-shrink:0; }
-
-/* month progress bar */
 .mprogress { height:3px;background:var(--surf);border-radius:2px;margin-bottom:1.5rem;overflow:hidden; }
 .mprogress-fill { height:100%;border-radius:2px;transition:width .5s ease; }
-
-/* tabs inside month */
 .inner-tabs { display:flex;gap:4px;margin-bottom:1rem; }
 .itab { padding:6px 14px;background:transparent;border:1px solid var(--border);border-radius:999px;font-size:12px;color:var(--muted);cursor:pointer;transition:all .15s; }
 .itab.active { background:var(--surf);border-color:var(--border2);color:var(--text);font-weight:500; }
-
-/* net badge */
-.net-badge { display:inline-block;font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;margin-left:8px;vertical-align:middle; }
-.net-pos { background:var(--gdim);color:var(--green); }
-.net-neg { background:var(--rdim);color:var(--red); }
-
-/* responsive */
 @media(max-width:600px){
   .year-bar  { grid-template-columns:1fr 1fr; }
   .msummary  { grid-template-columns:1fr 1fr; }
@@ -145,12 +117,10 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   .finputs .fdesc { grid-column:1/-1; }
 }
 </style>
-<!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
-/* Login screen */
 #login-screen {
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   min-height:100vh; gap:1.5rem; text-align:center;
@@ -170,13 +140,11 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 }
 .btn-google:hover { opacity:.9; }
 .btn-google img { width:20px; height:20px; }
-/* User badge in header */
 .user-badge { display:flex; align-items:center; gap:8px; }
 .user-badge span { font-size:12px; color:var(--muted); }
 .btn-signout { background:none; border:1px solid var(--border); border-radius:999px;
   color:var(--muted); font-size:11px; padding:4px 10px; cursor:pointer; transition:all .15s; }
 .btn-signout:hover { border-color:var(--red); color:var(--red); }
-/* Saving indicator */
 #save-indicator { position:fixed; bottom:1rem; right:1rem; font-size:11px;
   color:var(--muted); background:var(--card); border:1px solid var(--border);
   border-radius:999px; padding:4px 12px; opacity:0; transition:opacity .3s; }
@@ -185,7 +153,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 </head>
 <body>
 
-<!-- Login screen -->
 <div id="login-screen" style="display:flex">
   <div class="login-card">
     <h2>Mis Finanzas 💰</h2>
@@ -197,7 +164,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   </div>
 </div>
 
-<!-- App -->
 <div id="app-shell" style="display:none">
 <div class="shell">
 
@@ -209,24 +175,17 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   </div>
 </header>
 
-<!-- Resumen anual -->
 <div class="year-bar">
-  <div class="ycard inc"><div class="ycard-lbl">Total ganado</div><div class="ycard-val" id="y-inc">$0</div></div>
-  <div class="ycard exp"><div class="ycard-lbl">Total gastado</div><div class="ycard-val" id="y-exp">$0</div></div>
+  <div class="ycard inc"><div class="ycard-lbl">Total ganado</div><div class="ycard-val" id="y-inc">$0.00</div></div>
+  <div class="ycard exp"><div class="ycard-lbl">Total gastado</div><div class="ycard-val" id="y-exp">$0.00</div></div>
   <div class="ycard net"><div class="ycard-lbl">% Ahorrado</div><div class="ycard-val" id="y-net">—</div><div class="ycard-hint" id="y-net-hint">mes actual</div></div>
-  <div class="ycard sav"><div class="ycard-lbl">Capital actual</div><div class="ycard-val" id="y-cap">$0</div></div>
+  <div class="ycard sav"><div class="ycard-lbl">Capital actual</div><div class="ycard-val" id="y-cap">$0.00</div></div>
 </div>
 
-<!-- Tabs de meses -->
 <div class="month-scroll" id="month-tabs"></div>
-
-<!-- Paneles de cada mes -->
 <div id="month-panels"></div>
 
-<!-- Panel vista anual global -->
 <div id="panel-annual" style="display:none">
-
-  <!-- Botones acciones año -->
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
     <div>
       <div style="font-size:13px;color:var(--text);font-weight:500">Acciones del año</div>
@@ -253,7 +212,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
     <div id="annual-month-bars"></div>
   </div>
 
-  <!-- Gráfico de capital -->
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:1.5rem">
     <div class="sec-lbl" style="margin-bottom:1rem">Evolución del capital en el año</div>
     <div id="capital-chart-wrap">
@@ -263,11 +221,10 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   </div>
 </div>
 
-</div><!-- /shell -->
-</div><!-- /app-shell -->
+</div>
+</div>
 <div id="save-indicator">Guardado ✓</div>
 
-<!-- Footer -->
 <div style="text-align:center;padding:2rem 0 1rem;font-size:11px;color:var(--muted);letter-spacing:.06em">
   Design by <span style="color:var(--muted2)">Jeiron</span> &amp; <span style="color:var(--muted2)">Claude</span> ✦ 2026
 </div>
@@ -295,8 +252,8 @@ const EXPENSE_CATS = [
   {v:'Gigantes',        l:'⚾ Gigantes'},
   {v:'Ghostm',          l:'👻 Ghostm'},
   {v:'Dumbass',         l:'💀 Dumbass'},
-  {v:'Otros gastos',    l:'📂 Otros gastosjjjjjjjj'},
-  {v:'penes'}
+  {v:'Otros gastos',    l:'📂 Otros gastos'},
+  {v:'penes',           l:'penes'}
 ];
 
 const INCOME_CATS = [
@@ -310,20 +267,17 @@ const INCOME_CATS = [
   {v:'Otros ingresos',   l:'📂 Otros ingresos'},
 ];
 
-// ── Data store ────────────────────────────────────────────────────────────
 let data = {};
-
-// save() is defined later with Firebase
 
 function getMonth(m){
   if(!data[m]) data[m] = { entries:[], startCapital: m===0 ? 0 : null };
   return data[m];
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────
+// ── FIX 1: fmt always shows 2 decimal places ──────────────────────────────
 function fmt(n){
   const abs = Math.abs(n);
-  return '$' + abs.toLocaleString('es-DO',{minimumFractionDigits:0,maximumFractionDigits:0});
+  return '$' + abs.toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
 function fmtSigned(n){
   return (n>=0?'+':'-') + fmt(n);
@@ -335,14 +289,22 @@ function esc(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ── Build month totals ────────────────────────────────────────────────────
+// ── FIX 2: Format amount input on blur → "2,000.00" ──────────────────────
+function formatAmtInput(el){
+  const raw = parseFloat(el.value.replace(/,/g,''));
+  if(!isNaN(raw) && raw > 0){
+    el.value = raw.toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+}
+
+// ── FIX 3: toFixed(2) to avoid floating point drift ──────────────────────
 function monthTotals(mi){
   const md = getMonth(mi);
-  const inc  = md.entries.filter(e=>e.type==='income' ).reduce((s,e)=>s+e.amount,0);
-  const exp  = md.entries.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0);
-  const net  = inc - exp;
+  const inc  = parseFloat(md.entries.filter(e=>e.type==='income' ).reduce((s,e)=>s+e.amount,0).toFixed(2));
+  const exp  = parseFloat(md.entries.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0).toFixed(2));
+  const net  = parseFloat((inc - exp).toFixed(2));
   const start = md.startCapital ?? 0;
-  return { inc, exp, net, start, end: start + net };
+  return { inc, exp, net, start, end: parseFloat((start + net).toFixed(2)) };
 }
 
 function yearTotals(){
@@ -352,16 +314,19 @@ function yearTotals(){
     const t = monthTotals(mi);
     yInc += t.inc; yExp += t.exp; cap += t.net;
   });
-  return { yInc, yExp, yNet: yInc-yExp, yCap: cap };
+  return {
+    yInc: parseFloat(yInc.toFixed(2)),
+    yExp: parseFloat(yExp.toFixed(2)),
+    yNet: parseFloat((yInc-yExp).toFixed(2)),
+    yCap: parseFloat(cap.toFixed(2))
+  };
 }
 
-// ── Render year summary ───────────────────────────────────────────────────
 function renderYear(){
   const {yInc,yExp,yNet,yCap} = yearTotals();
   document.getElementById('y-inc').textContent = fmt(yInc);
   document.getElementById('y-exp').textContent = fmt(yExp);
 
-  // % ahorrado: usa el mes que el usuario esta viendo (activeMonth)
   const mi    = annualActive ? new Date().getMonth() : activeMonth;
   const tCur  = monthTotals(mi);
   const tPrev = mi > 0 ? monthTotals(mi - 1) : null;
@@ -393,7 +358,6 @@ function renderYear(){
   capEl.style.color = yCap>=0?'var(--green)':'var(--red)';
 }
 
-// ── Entry HTML ────────────────────────────────────────────────────────────
 function entryHTML(e, mi){
   const color = e.type==='income'?'var(--green)':'var(--red)';
   const sign  = e.type==='income'?'+':'−';
@@ -411,7 +375,6 @@ function entryHTML(e, mi){
   </div>`;
 }
 
-// ── Bar chart ─────────────────────────────────────────────────────────────
 function barsHTML(data2, color){
   if(!data2.length) return '<div style="font-size:12px;color:var(--muted);padding:4px 0">Sin datos</div>';
   const max = Math.max(...data2.map(d=>d.v));
@@ -426,17 +389,14 @@ function barsHTML(data2, color){
   }).join('');
 }
 
-// ── Render one month panel ────────────────────────────────────────────────
 function renderMonth(mi){
   const md  = getMonth(mi);
   const t   = monthTotals(mi);
   const panel = document.getElementById(`panel-${mi}`);
 
-  const netColor = t.net>=0?'var(--green)':'var(--red)';
   const pct = t.inc>0 ? Math.min(100,Math.round(t.exp/t.inc*100)) : 0;
   const progressColor = pct>=100?'var(--red)':pct>=75?'var(--gold)':'var(--green)';
 
-  // cat maps
   const expMap={}, incMap={};
   md.entries.filter(e=>e.type==='expense').forEach(e=>{ expMap[e.cat]=(expMap[e.cat]||0)+e.amount; });
   md.entries.filter(e=>e.type==='income' ).forEach(e=>{ incMap[e.cat]=(incMap[e.cat]||0)+e.amount; });
@@ -451,11 +411,9 @@ function renderMonth(mi){
     ? md.entries.slice().reverse().map(e=>entryHTML(e,mi)).join('')
     : '<div class="empty">Sin movimientos este mes</div>';
 
-  // Start capital editable
   const sc = md.startCapital ?? 0;
 
   panel.innerHTML = `
-    <!-- month summary cards -->
     <div class="msummary">
       <div class="mcard">
         <div class="mcard-lbl">Capital inicio</div>
@@ -478,10 +436,8 @@ function renderMonth(mi){
       </div>
     </div>
 
-    <!-- gasto vs ingreso progress -->
     <div class="mprogress"><div class="mprogress-fill" style="width:${pct}%;background:${progressColor}"></div></div>
 
-    <!-- form -->
     <div class="form-wrap">
       <div class="type-row">
         <button class="tbtn ae" id="tbtn-exp-${mi}" onclick="setType(${mi},'expense')">— Gasté</button>
@@ -490,17 +446,20 @@ function renderMonth(mi){
       <div class="finputs">
         <div>
           <label>Cantidad</label>
-          <input type="number" id="amt-${mi}" placeholder="0" min="0" step="any" />
+          <input type="text" id="amt-${mi}" placeholder="0.00" inputmode="decimal"
+            oninput="this.value=this.value.replace(/[^0-9.]/g,'')"
+            onblur="formatAmtInput(this)"
+            onfocus="this.select()" />
         </div>
         <div>
           <label>Categoría</label>
           <select id="cat-${mi}">
             <option value="">Selecciona…</option>
-            <optgroup label="── Gastos ──" id="og-exp-${mi}">
-              ${EXPENSE_CATS.map(c=>`<option value="${esc(c.v)}">${esc(c.l)}</option>`).join('')}
+            <optgroup label="── Gastos ──">
+              ${EXPENSE_CATS.map(c=>`<option value="${esc(c.v)}">${esc(c.l||c.v)}</option>`).join('')}
             </optgroup>
-            <optgroup label="── Ingresos ──" id="og-inc-${mi}">
-              ${INCOME_CATS.map(c=>`<option value="${esc(c.v)}">${esc(c.l)}</option>`).join('')}
+            <optgroup label="── Ingresos ──">
+              ${INCOME_CATS.map(c=>`<option value="${esc(c.v)}">${esc(c.l||c.v)}</option>`).join('')}
             </optgroup>
           </select>
         </div>
@@ -512,7 +471,6 @@ function renderMonth(mi){
       <button class="btn-add" onclick="addEntry(${mi})">Agregar movimiento</button>
     </div>
 
-    <!-- inner tabs -->
     <div class="inner-tabs">
       <button class="itab active" id="it-recent-${mi}" onclick="showInner(${mi},'recent')">Recientes</button>
       <button class="itab"        id="it-all-${mi}"    onclick="showInner(${mi},'all')">Todos</button>
@@ -541,12 +499,10 @@ function renderMonth(mi){
     </div>
   `;
 
-  // restore type state
   const mt = monthTypes[mi] || 'expense';
   setTypeVisual(mi, mt);
 }
 
-// ── Month type state ──────────────────────────────────────────────────────
 const monthTypes = {};
 function setType(mi, type){
   monthTypes[mi] = type;
@@ -561,7 +517,6 @@ function setTypeVisual(mi, type){
   bi.className = 'tbtn' + (type==='income' ?' ai':'');
 }
 
-// ── Inner tab switch ──────────────────────────────────────────────────────
 function showInner(mi, which){
   ['recent','all','cats'].forEach(t=>{
     const el = document.getElementById(`inner-${t}-${mi}`);
@@ -571,9 +526,10 @@ function showInner(mi, which){
   });
 }
 
-// ── Add entry ─────────────────────────────────────────────────────────────
 function addEntry(mi){
-  const amount = parseFloat(document.getElementById(`amt-${mi}`).value);
+  // FIX: strip commas before parsing formatted value like "2,000.00"
+  const raw    = document.getElementById(`amt-${mi}`).value.replace(/,/g,'');
+  const amount = parseFloat(raw);
   const cat    = document.getElementById(`cat-${mi}`).value;
   const desc   = document.getElementById(`desc-${mi}`).value.trim();
   const type   = monthTypes[mi] || 'expense';
@@ -583,15 +539,22 @@ function addEntry(mi){
   if(!desc)              { document.getElementById(`desc-${mi}`).focus(); return; }
 
   const md = getMonth(mi);
-  md.entries.push({ id:Date.now(), type, amount, cat, desc, date:todayStr() });
-  save();
+  md.entries.push({
+    id: Date.now(),
+    type,
+    amount: parseFloat(amount.toFixed(2)),
+    cat, desc,
+    date: todayStr()
+  });
 
-  // propagate start capital to next months
+  // clear amount after adding
+  document.getElementById(`amt-${mi}`).value = '';
+
+  save();
   propagateCapitals();
   renderAll();
 }
 
-// ── Delete entry ──────────────────────────────────────────────────────────
 function delEntry(mi, id){
   const md = getMonth(mi);
   md.entries = md.entries.filter(e=>e.id!==id);
@@ -600,7 +563,6 @@ function delEntry(mi, id){
   renderAll();
 }
 
-// ── Edit start capital ────────────────────────────────────────────────────
 function editStart(mi){
   const md = getMonth(mi);
   const cur = md.startCapital ?? 0;
@@ -608,18 +570,17 @@ function editStart(mi){
   if(val===null) return;
   const n = parseFloat(val);
   if(isNaN(n)) return;
-  md.startCapital = n;
+  md.startCapital = parseFloat(n.toFixed(2));
+  md._autoCapital = false;
   save();
   propagateCapitals();
   renderAll();
 }
 
-// ── Propagate capital forward ─────────────────────────────────────────────
 function propagateCapitals(){
   for(let mi=1; mi<12; mi++){
     const prev = monthTotals(mi-1);
     const cur  = getMonth(mi);
-    // only auto-set if user hasn't manually overridden
     if(cur._autoCapital !== false){
       cur.startCapital = prev.end;
       cur._autoCapital = true;
@@ -627,7 +588,6 @@ function propagateCapitals(){
   }
 }
 
-// ── Active month ──────────────────────────────────────────────────────────
 let activeMonth = new Date().getMonth();
 let annualActive = false;
 
@@ -657,7 +617,6 @@ function switchToAnnual(){
 }
 
 function renderAnnual(){
-  // Aggregate all categories across all months
   const expMap = {}, incMap = {};
   MONTHS.forEach((_,mi)=>{
     const md = getMonth(mi);
@@ -667,21 +626,17 @@ function renderAnnual(){
   const expData = Object.entries(expMap).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
   const incData = Object.entries(incMap).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
 
-  // Detailed category list (emoji + name + total + count)
   function catListHTML(dataArr, type){
     if(!dataArr.length) return '<div style="font-size:12px;color:var(--muted);padding:4px 0">Sin datos</div>';
     const color = type==='expense' ? 'var(--red)' : 'var(--green)';
     const sign  = type==='expense' ? '-' : '+';
-    // find the label with emoji from CATS
-    const cats = type==='expense' ? EXPENSE_CATS : INCOME_CATS;
+    const cats  = type==='expense' ? EXPENSE_CATS : INCOME_CATS;
     return dataArr.map(d=>{
       const catDef = cats.find(c=>c.v===d.k);
       const label  = catDef?.l || d.k;
-      // count entries
       let count = 0;
       MONTHS.forEach((_,mi2)=>{
-        const md2 = getMonth(mi2);
-        count += md2.entries.filter(e=>e.type===type && e.cat===d.k).length;
+        count += getMonth(mi2).entries.filter(e=>e.type===type && e.cat===d.k).length;
       });
       return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
         <div>
@@ -696,7 +651,6 @@ function renderAnnual(){
   document.getElementById('annual-exp-bars').innerHTML = catListHTML(expData, 'expense');
   document.getElementById('annual-inc-bars').innerHTML = catListHTML(incData, 'income');
 
-  // Month-by-month comparison bars
   const maxVal = Math.max(...MONTHS.map((_,mi)=>{ const t=monthTotals(mi); return Math.max(t.inc,t.exp); }), 1);
   let html = '';
   MONTHS.forEach((name,mi)=>{
@@ -728,7 +682,6 @@ function renderAnnual(){
   });
   document.getElementById('annual-month-bars').innerHTML = html || '<div style="font-size:12px;color:var(--muted)">Sin datos aún</div>';
 
-  // ── Capital chart ────────────────────────────────────────────────────────
   renderCapitalChart();
 }
 
@@ -736,7 +689,6 @@ function hasData(mi){
   return (data[mi]?.entries?.length||0) > 0;
 }
 
-// ── Reset full year ───────────────────────────────────────────────────────
 function resetYear(){
   const confirmed = confirm('⚠️ ¿Estás seguro?\n\nEsto borrará TODOS los movimientos de los 12 meses de forma permanente.\n\nEsta acción no se puede deshacer.');
   if(!confirmed) return;
@@ -750,7 +702,7 @@ function resetYear(){
   alert('✅ Año restablecido. ¡Listo para empezar de cero!');
 }
 
-// ── Capital chart ─────────────────────────────────────────────────────────
+// ── FIX 4: Chart only renders up to last month with data ──────────────────
 function renderCapitalChart(){
   const canvas = document.getElementById('capital-chart');
   if(!canvas) return;
@@ -764,14 +716,24 @@ function renderCapitalChart(){
   canvas.style.height = H + 'px';
   ctx.scale(dpr, dpr);
 
-  // Build points — capital at end of each month
-  const points = [];
+  // Find the last month that has actual entries
+  let lastDataMonth = -1;
   MONTHS.forEach((name, mi) => {
-    const t = monthTotals(mi);
-    if(t.inc > 0 || t.exp > 0 || t.start !== 0){
-      points.push({ name, mi, val: t.end });
-    }
+    const md = getMonth(mi);
+    if(md.entries && md.entries.length > 0) lastDataMonth = mi;
   });
+
+  // Build points only up to lastDataMonth
+  const points = [];
+  if(lastDataMonth >= 0){
+    for(let mi = 0; mi <= lastDataMonth; mi++){
+      const t = monthTotals(mi);
+      // Include if it has entries, OR if month 0 with nonzero start capital
+      if(t.inc > 0 || t.exp > 0 || (mi === 0 && t.start !== 0)){
+        points.push({ name: MONTHS[mi], mi, val: t.end });
+      }
+    }
+  }
 
   if(points.length < 1){
     ctx.fillStyle = '#6e6c66';
@@ -793,7 +755,6 @@ function renderCapitalChart(){
   function xOf(i){ return PAD.left + (points.length === 1 ? cW/2 : i / (points.length-1) * cW); }
   function yOf(v){ return PAD.top + cH - ((v - minV) / range * cH); }
 
-  // Grid lines
   const ticks = 4;
   for(let i=0; i<=ticks; i++){
     const v  = minV + (range / ticks) * i;
@@ -807,11 +768,10 @@ function renderCapitalChart(){
     ctx.fillStyle = '#6e6c66';
     ctx.font = '10px DM Sans, sans-serif';
     ctx.textAlign = 'right';
-    const label = v >= 1000 ? '$' + Math.round(v/1000) + 'k' : '$' + Math.round(v);
+    const label = Math.abs(v) >= 1000 ? '$' + (v/1000).toFixed(1) + 'k' : '$' + v.toFixed(0);
     ctx.fillText(label, PAD.left - 6, y + 3.5);
   }
 
-  // Zero line if in range
   if(minV < 0 && maxV > 0){
     const y0 = yOf(0);
     ctx.beginPath();
@@ -824,7 +784,6 @@ function renderCapitalChart(){
     ctx.setLineDash([]);
   }
 
-  // Gradient fill
   const grad = ctx.createLinearGradient(0, PAD.top, 0, PAD.top + cH);
   grad.addColorStop(0,   'rgba(45,212,160,0.18)');
   grad.addColorStop(1,   'rgba(45,212,160,0.00)');
@@ -837,7 +796,6 @@ function renderCapitalChart(){
   ctx.fillStyle = grad;
   ctx.fill();
 
-  // Line
   ctx.beginPath();
   ctx.strokeStyle = '#2dd4a0';
   ctx.lineWidth = 2.5;
@@ -845,7 +803,6 @@ function renderCapitalChart(){
   points.forEach((p,i) => i===0 ? ctx.moveTo(xOf(i), yOf(p.val)) : ctx.lineTo(xOf(i), yOf(p.val)));
   ctx.stroke();
 
-  // Dots + month labels
   points.forEach((p,i) => {
     const x = xOf(i), y = yOf(p.val);
     ctx.beginPath();
@@ -855,15 +812,12 @@ function renderCapitalChart(){
     ctx.strokeStyle = '#2dd4a0';
     ctx.lineWidth = 2;
     ctx.stroke();
-
-    // Month label
     ctx.fillStyle = '#6e6c66';
     ctx.font = '10px DM Sans, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(p.name.slice(0,3), x, H - 6);
   });
 
-  // Tooltip
   const tooltip = document.getElementById('capital-tooltip');
   canvas.onmousemove = (e) => {
     const rect = canvas.getBoundingClientRect();
@@ -886,13 +840,11 @@ function renderCapitalChart(){
   canvas.onmouseleave = () => { tooltip.style.display = 'none'; };
 }
 
-// ── Export PDF ────────────────────────────────────────────────────────────
 function exportPDF(){
   const {yInc, yExp, yNet} = yearTotals();
   const savPctYear = yInc > 0 ? Math.round(yNet / yInc * 100) : 0;
 
-  let html = `
-  <html><head><meta charset="UTF-8">
+  let html = `<html><head><meta charset="UTF-8">
   <style>
     body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; padding: 32px; max-width: 720px; margin: 0 auto; }
     h1 { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
@@ -904,33 +856,27 @@ function exportPDF(){
     .lbl { color: #555; }
     .green { color: #18a87a; font-weight: 600; }
     .red   { color: #d94f3f; font-weight: 600; }
-    .gold  { color: #c9922a; font-weight: 600; }
     .year-summary { background: #f8f8f8; border-radius: 10px; padding: 20px 24px; margin-bottom: 32px; }
     .year-summary h2 { font-size: 18px; font-weight: 700; margin-bottom: 14px; }
     .ys-row { display:flex; justify-content:space-between; font-size:14px; padding:5px 0; border-bottom:1px solid #e8e8e8; }
     .ys-row:last-child { border-bottom:none; }
-    .no-data { font-size:12px; color:#aaa; font-style:italic; }
     @media print { body { padding: 16px; } }
   </style></head><body>
   <h1>📊 Resumen Financiero 2026</h1>
   <div class="subtitle">Generado el ${new Date().toLocaleDateString('es-DO',{day:'2-digit',month:'long',year:'numeric'})}</div>
-
   <div class="year-summary">
     <h2>Resumen del Año Completo</h2>
     <div class="ys-row"><span class="lbl">Total ganado</span><span class="green">+${fmt(yInc)}</span></div>
     <div class="ys-row"><span class="lbl">Total gastado</span><span class="red">-${fmt(yExp)}</span></div>
     <div class="ys-row"><span class="lbl">Balance neto</span><span class="${yNet>=0?'green':'red'}">${yNet>=0?'+':''}${fmt(yNet)}</span></div>
     <div class="ys-row"><span class="lbl">% Ahorrado del año</span><span class="${savPctYear>=0?'green':'red'}">${savPctYear}%</span></div>
-  </div>
-  `;
+  </div>`;
 
   MONTHS.forEach((name, mi) => {
     const md = getMonth(mi);
     const t  = monthTotals(mi);
     if(t.inc === 0 && t.exp === 0) return;
     const savPct = t.inc > 0 ? Math.round((t.inc - t.exp) / t.inc * 100) : null;
-
-    // category breakdown
     const expMap = {}, incMap = {};
     md.entries.filter(e=>e.type==='expense').forEach(e=>{ expMap[e.cat]=(expMap[e.cat]||0)+e.amount; });
     md.entries.filter(e=>e.type==='income' ).forEach(e=>{ incMap[e.cat]=(incMap[e.cat]||0)+e.amount; });
@@ -942,9 +888,7 @@ function exportPDF(){
       <div class="row"><span class="lbl">Ganado</span><span class="green">+${fmt(t.inc)}</span></div>
       <div class="row"><span class="lbl">Gastado</span><span class="red">-${fmt(t.exp)}</span></div>
       <div class="row"><span class="lbl">Balance</span><span class="${t.net>=0?'green':'red'}">${t.net>=0?'+':''}${fmt(t.net)}</span></div>
-      ${savPct!==null?`<div class="row"><span class="lbl">% Ahorrado</span><span class="${savPct>=0?'green':'red'}">${savPct}%</span></div>`:''}
-    `;
-
+      ${savPct!==null?`<div class="row"><span class="lbl">% Ahorrado</span><span class="${savPct>=0?'green':'red'}">${savPct}%</span></div>`:''}`;
     if(expCats.length){
       html += `<div style="margin-top:10px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Gastos por categoría</div>`;
       expCats.forEach(([k,v])=>{ html += `<div class="row"><span class="lbl" style="padding-left:8px">${esc(k)}</span><span class="red">-${fmt(v)}</span></div>`; });
@@ -953,19 +897,16 @@ function exportPDF(){
       html += `<div style="margin-top:10px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Ingresos por categoría</div>`;
       incCats.forEach(([k,v])=>{ html += `<div class="row"><span class="lbl" style="padding-left:8px">${esc(k)}</span><span class="green">+${fmt(v)}</span></div>`; });
     }
-
     html += `</div>`;
   });
 
   html += `</body></html>`;
-
   const win = window.open('', '_blank');
   win.document.write(html);
   win.document.close();
   setTimeout(()=>win.print(), 600);
 }
 
-// ── Build skeleton ────────────────────────────────────────────────────────
 function buildSkeleton(){
   const tabsEl   = document.getElementById('month-tabs');
   const panelsEl = document.getElementById('month-panels');
@@ -973,21 +914,18 @@ function buildSkeleton(){
   panelsEl.innerHTML = '';
 
   MONTHS.forEach((name, mi)=>{
-    // tab
     const btn = document.createElement('button');
     btn.className = 'mtab' + (mi===activeMonth?' active':'') + (hasData(mi)?' has-data':'');
     btn.textContent = name;
     btn.onclick = ()=>switchMonth(mi);
     tabsEl.appendChild(btn);
 
-    // panel
     const div = document.createElement('div');
     div.id = `panel-${mi}`;
     div.className = 'month-panel' + (mi===activeMonth?' active':'');
     panelsEl.appendChild(div);
   });
 
-  // "Año completo" tab
   const annualBtn = document.createElement('button');
   annualBtn.id = 'mtab-annual';
   annualBtn.className = 'mtab';
@@ -996,19 +934,17 @@ function buildSkeleton(){
   tabsEl.appendChild(annualBtn);
 }
 
-// ── Render all ────────────────────────────────────────────────────────────
 function renderAll(){
   propagateCapitals();
   MONTHS.forEach((_,mi)=> renderMonth(mi));
   renderYear();
   if(annualActive) renderAnnual();
-  // refresh tab has-data classes
   document.querySelectorAll('.mtab').forEach((t,i)=>{
     if(i < 12) t.classList.toggle('has-data', hasData(i));
   });
 }
 
-// ── Firebase config ──────────────────────────────────────────────────────
+// ── Firebase ──────────────────────────────────────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyDewwU-5lgP3sv4q56o3S6m22PxRnU3zw0",
   authDomain: "financesjbmarte.firebaseapp.com",
@@ -1019,13 +955,11 @@ const firebaseConfig = {
   measurementId: "G-4KK818C1ZR"
 };
 
-// ── Firebase init ─────────────────────────────────────────────────────────
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 let currentUser = null;
 
-// ── Auth UI ───────────────────────────────────────────────────────────────
 function showLoginScreen(){
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app-shell').style.display = 'none';
@@ -1034,16 +968,12 @@ function showApp(){
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-shell').style.display = 'block';
 }
-
 function signInWithGoogle(){
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider).catch(e=>alert('Error al iniciar sesión: ' + e.message));
 }
-function signOut(){
-  auth.signOut();
-}
+function signOut(){ auth.signOut(); }
 
-// ── Auth state ────────────────────────────────────────────────────────────
 auth.onAuthStateChanged(async user => {
   if(user){
     currentUser = user;
@@ -1058,15 +988,10 @@ auth.onAuthStateChanged(async user => {
   }
 });
 
-// ── Load/save from Firestore ──────────────────────────────────────────────
 async function loadFromFirebase(){
   try {
     const doc = await db.collection('users').doc(currentUser.uid).get();
-    if(doc.exists){
-      data = doc.data().finanzas || {};
-    } else {
-      data = {};
-    }
+    data = doc.exists ? (doc.data().finanzas || {}) : {};
   } catch(e){ console.error('Error cargando datos:', e); data = {}; }
 }
 
@@ -1079,9 +1004,6 @@ function save(){
     })
     .catch(e=>console.error('Error guardando:', e));
 }
-
-// ── Init ──────────────────────────────────────────────────────────────────
-// (auth state change handles init)
 </script>
 </body>
 </html>
