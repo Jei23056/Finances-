@@ -225,6 +225,19 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 
 <!-- Panel vista anual global -->
 <div id="panel-annual" style="display:none">
+
+  <!-- Botones acciones año -->
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+    <div>
+      <div style="font-size:13px;color:var(--text);font-weight:500">Acciones del año</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">Exporta un resumen o restablece al terminar el año.</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-shrink:0">
+      <button onclick="exportPDF()" style="padding:8px 16px;background:var(--gdim);border:1px solid var(--green);border-radius:var(--rs);color:var(--green);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .18s" onmouseover="this.style.background='rgba(45,212,160,.2)'" onmouseout="this.style.background='var(--gdim)'">📄 Exportar PDF</button>
+      <button onclick="resetYear()" style="padding:8px 16px;background:var(--rdim);border:1px solid var(--red);border-radius:var(--rs);color:var(--red);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .18s" onmouseover="this.style.background='rgba(240,96,80,.2)'" onmouseout="this.style.background='var(--rdim)'">🗑️ Restablecer año</button>
+    </div>
+  </div>
+
   <div class="cats-grid" style="margin-bottom:1.5rem">
     <div class="cat-block">
       <h3>En qué he gastado más (todo el año)</h3>
@@ -265,9 +278,11 @@ const EXPENSE_CATS = [
   {v:'Amigos',          l:'🤝 Amigos'},
   {v:'Avance efectivo', l:'💸 Avance efectivo'},
   {v:'Comisión',        l:'🏦 Comisión'},
+  {v:'Gigantes',        l:'⚾ Gigantes'},
   {v:'Ghostm',          l:'👻 Ghostm'},
   {v:'Dumbass',         l:'💀 Dumbass'},
-  {v:'Otros gastos',    l:'📂 Otros gastos'},
+  {v:'Otros gastos',    l:'📂 Otros gastosjjjjjjjj'},
+  {v:'penes'}
 ];
 
 const INCOME_CATS = [
@@ -702,6 +717,99 @@ function renderAnnual(){
 
 function hasData(mi){
   return (data[mi]?.entries?.length||0) > 0;
+}
+
+// ── Reset full year ───────────────────────────────────────────────────────
+function resetYear(){
+  const confirmed = confirm('⚠️ ¿Estás seguro?\n\nEsto borrará TODOS los movimientos de los 12 meses de forma permanente.\n\nEsta acción no se puede deshacer.');
+  if(!confirmed) return;
+  const confirmed2 = confirm('¿Confirmas que quieres borrar TODO el año?\n\nPresiona Aceptar para continuar.');
+  if(!confirmed2) return;
+  data = {};
+  save();
+  buildSkeleton();
+  renderAll();
+  switchToAnnual();
+  alert('✅ Año restablecido. ¡Listo para empezar de cero!');
+}
+
+// ── Export PDF ────────────────────────────────────────────────────────────
+function exportPDF(){
+  const {yInc, yExp, yNet} = yearTotals();
+  const savPctYear = yInc > 0 ? Math.round(yNet / yInc * 100) : 0;
+
+  let html = `
+  <html><head><meta charset="UTF-8">
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; padding: 32px; max-width: 720px; margin: 0 auto; }
+    h1 { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
+    .subtitle { font-size: 13px; color: #888; margin-bottom: 32px; }
+    .month-block { margin-bottom: 28px; page-break-inside: avoid; }
+    .month-title { font-size: 16px; font-weight: 700; border-bottom: 2px solid #e0e0e0; padding-bottom: 6px; margin-bottom: 12px; }
+    .row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; border-bottom: 1px solid #f0f0f0; }
+    .row:last-child { border-bottom: none; }
+    .lbl { color: #555; }
+    .green { color: #18a87a; font-weight: 600; }
+    .red   { color: #d94f3f; font-weight: 600; }
+    .gold  { color: #c9922a; font-weight: 600; }
+    .year-summary { background: #f8f8f8; border-radius: 10px; padding: 20px 24px; margin-bottom: 32px; }
+    .year-summary h2 { font-size: 18px; font-weight: 700; margin-bottom: 14px; }
+    .ys-row { display:flex; justify-content:space-between; font-size:14px; padding:5px 0; border-bottom:1px solid #e8e8e8; }
+    .ys-row:last-child { border-bottom:none; }
+    .no-data { font-size:12px; color:#aaa; font-style:italic; }
+    @media print { body { padding: 16px; } }
+  </style></head><body>
+  <h1>📊 Resumen Financiero 2026</h1>
+  <div class="subtitle">Generado el ${new Date().toLocaleDateString('es-DO',{day:'2-digit',month:'long',year:'numeric'})}</div>
+
+  <div class="year-summary">
+    <h2>Resumen del Año Completo</h2>
+    <div class="ys-row"><span class="lbl">Total ganado</span><span class="green">+${fmt(yInc)}</span></div>
+    <div class="ys-row"><span class="lbl">Total gastado</span><span class="red">-${fmt(yExp)}</span></div>
+    <div class="ys-row"><span class="lbl">Balance neto</span><span class="${yNet>=0?'green':'red'}">${yNet>=0?'+':''}${fmt(yNet)}</span></div>
+    <div class="ys-row"><span class="lbl">% Ahorrado del año</span><span class="${savPctYear>=0?'green':'red'}">${savPctYear}%</span></div>
+  </div>
+  `;
+
+  MONTHS.forEach((name, mi) => {
+    const md = getMonth(mi);
+    const t  = monthTotals(mi);
+    if(t.inc === 0 && t.exp === 0) return;
+    const savPct = t.inc > 0 ? Math.round((t.inc - t.exp) / t.inc * 100) : null;
+
+    // category breakdown
+    const expMap = {}, incMap = {};
+    md.entries.filter(e=>e.type==='expense').forEach(e=>{ expMap[e.cat]=(expMap[e.cat]||0)+e.amount; });
+    md.entries.filter(e=>e.type==='income' ).forEach(e=>{ incMap[e.cat]=(incMap[e.cat]||0)+e.amount; });
+    const expCats = Object.entries(expMap).sort((a,b)=>b[1]-a[1]);
+    const incCats = Object.entries(incMap).sort((a,b)=>b[1]-a[1]);
+
+    html += `<div class="month-block">
+      <div class="month-title">${name}</div>
+      <div class="row"><span class="lbl">Ganado</span><span class="green">+${fmt(t.inc)}</span></div>
+      <div class="row"><span class="lbl">Gastado</span><span class="red">-${fmt(t.exp)}</span></div>
+      <div class="row"><span class="lbl">Balance</span><span class="${t.net>=0?'green':'red'}">${t.net>=0?'+':''}${fmt(t.net)}</span></div>
+      ${savPct!==null?`<div class="row"><span class="lbl">% Ahorrado</span><span class="${savPct>=0?'green':'red'}">${savPct}%</span></div>`:''}
+    `;
+
+    if(expCats.length){
+      html += `<div style="margin-top:10px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Gastos por categoría</div>`;
+      expCats.forEach(([k,v])=>{ html += `<div class="row"><span class="lbl" style="padding-left:8px">${esc(k)}</span><span class="red">-${fmt(v)}</span></div>`; });
+    }
+    if(incCats.length){
+      html += `<div style="margin-top:10px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Ingresos por categoría</div>`;
+      incCats.forEach(([k,v])=>{ html += `<div class="row"><span class="lbl" style="padding-left:8px">${esc(k)}</span><span class="green">+${fmt(v)}</span></div>`; });
+    }
+
+    html += `</div>`;
+  });
+
+  html += `</body></html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  setTimeout(()=>win.print(), 600);
 }
 
 // ── Build skeleton ────────────────────────────────────────────────────────
