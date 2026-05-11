@@ -199,12 +199,26 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 
   <div class="cats-grid" style="margin-bottom:1.5rem">
     <div class="cat-block">
-      <h3>En qué he gastado más (todo el año)</h3>
-      <canvas id="annual-exp-pie" style="width:100%;display:block" height="240"></canvas>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem">
+        <h3 style="margin-bottom:0">En que he gastado mas (todo el ano)</h3>
+        <div style="display:flex;gap:4px">
+          <button id="exp-view-list" onclick="setCatView('exp','list')" style="padding:4px 9px;font-size:11px;border-radius:999px;border:1px solid var(--border2);background:var(--surf);color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif">Lista</button>
+          <button id="exp-view-pie"  onclick="setCatView('exp','pie')"  style="padding:4px 9px;font-size:11px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif">Grafico</button>
+        </div>
+      </div>
+      <div id="annual-exp-bars"><div style="font-size:12px;color:var(--muted);padding:4px 0">Sin datos</div></div>
+      <canvas id="annual-exp-pie" style="display:none;width:100%" height="240"></canvas>
     </div>
     <div class="cat-block">
-      <h3>De dónde he ganado más (todo el año)</h3>
-      <canvas id="annual-inc-pie" style="width:100%;display:block" height="240"></canvas>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem">
+        <h3 style="margin-bottom:0">De donde he ganado mas (todo el ano)</h3>
+        <div style="display:flex;gap:4px">
+          <button id="inc-view-list" onclick="setCatView('inc','list')" style="padding:4px 9px;font-size:11px;border-radius:999px;border:1px solid var(--border2);background:var(--surf);color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif">Lista</button>
+          <button id="inc-view-pie"  onclick="setCatView('inc','pie')"  style="padding:4px 9px;font-size:11px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif">Grafico</button>
+        </div>
+      </div>
+      <div id="annual-inc-bars"><div style="font-size:12px;color:var(--muted);padding:4px 0">Sin datos</div></div>
+      <canvas id="annual-inc-pie" style="display:none;width:100%" height="240"></canvas>
     </div>
   </div>
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:1.5rem">
@@ -626,8 +640,34 @@ function renderAnnual(){
   const expData = Object.entries(expMap).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
   const incData = Object.entries(incMap).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
 
-  // Draw pie charts directly
-  setTimeout(()=>{ drawPieChart('exp', expData); drawPieChart('inc', incData); }, 0);
+  function catListHTML(dataArr, type){
+    if(!dataArr.length) return '<div style="font-size:12px;color:var(--muted);padding:4px 0">Sin datos</div>';
+    const color = type==='expense' ? 'var(--red)' : 'var(--green)';
+    const sign  = type==='expense' ? '-' : '+';
+    const cats  = type==='expense' ? EXPENSE_CATS : INCOME_CATS;
+    return dataArr.map(d=>{
+      const catDef = cats.find(c=>c.v===d.k);
+      const label  = catDef?.l || d.k;
+      let count = 0;
+      MONTHS.forEach((_,mi2)=>{
+        count += getMonth(mi2).entries.filter(e=>e.type===type && e.cat===d.k).length;
+      });
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">'
+        + '<div>'
+        + '<div style="font-size:13px;color:var(--text)">' + esc(label) + '</div>'
+        + '<div style="font-size:11px;color:var(--muted);margin-top:2px">' + count + ' movimiento' + (count!==1?'s':'') + '</div>'
+        + '</div>'
+        + '<div style="font-family:'DM Serif Display',serif;font-size:1rem;color:' + color + '">' + sign + fmt(d.v) + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  document.getElementById('annual-exp-bars').innerHTML = catListHTML(expData, 'expense');
+  document.getElementById('annual-inc-bars').innerHTML = catListHTML(incData, 'income');
+
+  // Re-apply view state
+  if(catViewState.exp === 'pie'){ document.getElementById('annual-exp-bars').style.display='none'; document.getElementById('annual-exp-pie').style.display='block'; setTimeout(()=>drawPieChart('exp', expData),0); }
+  if(catViewState.inc === 'pie'){ document.getElementById('annual-inc-bars').style.display='none'; document.getElementById('annual-inc-pie').style.display='block'; setTimeout(()=>drawPieChart('inc', incData),0); }
 
   const maxVal = Math.max(...MONTHS.map((_,mi)=>{ const t=monthTotals(mi); return Math.max(t.inc,t.exp); }), 1);
   let html = '';
@@ -663,6 +703,40 @@ function renderAnnual(){
   renderCapitalChart();
 }
 
+
+// ── Cat view toggle (lista / grafico) ────────────────────────────────────
+const catViewState = { exp: 'list', inc: 'list' };
+
+function setCatView(which, mode){
+  catViewState[which] = mode;
+  const listBtn = document.getElementById(which + '-view-list');
+  const pieBtn  = document.getElementById(which + '-view-pie');
+  if(listBtn && pieBtn){
+    if(mode === 'list'){
+      listBtn.style.background = 'var(--surf)'; listBtn.style.color = 'var(--text)'; listBtn.style.borderColor = 'var(--border2)';
+      pieBtn.style.background  = 'transparent'; pieBtn.style.color  = 'var(--muted)'; pieBtn.style.borderColor  = 'var(--border)';
+    } else {
+      pieBtn.style.background  = 'var(--surf)'; pieBtn.style.color  = 'var(--text)'; pieBtn.style.borderColor  = 'var(--border2)';
+      listBtn.style.background = 'transparent'; listBtn.style.color = 'var(--muted)'; listBtn.style.borderColor = 'var(--border)';
+    }
+  }
+  const barsEl = document.getElementById('annual-' + which + '-bars');
+  const pieEl  = document.getElementById('annual-' + which + '-pie');
+  if(!barsEl || !pieEl) return;
+  if(mode === 'list'){
+    barsEl.style.display = 'block';
+    pieEl.style.display  = 'none';
+  } else {
+    barsEl.style.display = 'none';
+    pieEl.style.display  = 'block';
+    // gather data and draw
+    const type = which === 'exp' ? 'expense' : 'income';
+    const map = {};
+    MONTHS.forEach((_,mi)=>{ getMonth(mi).entries.filter(e=>e.type===type).forEach(e=>{ map[e.cat]=(map[e.cat]||0)+e.amount; }); });
+    const dataArr = Object.entries(map).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
+    drawPieChart(which, dataArr);
+  }
+}
 
 // ── Pie/donut chart for annual categories ────────────────────────────────
 const PIE_COLORS_EXP = ['#f06050','#f5a623','#f5e642','#a259ff','#00c8ff','#ff6eb4','#4cd964','#ff9f43','#54a0ff','#1dd1a1','#feca57','#48dbfb','#ff9ff3','#576574','#ff6b6b'];
