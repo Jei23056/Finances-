@@ -150,22 +150,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   border-radius:999px; padding:4px 12px; opacity:0; transition:opacity .3s; }
 #save-indicator.show { opacity:1; }
 
-/* ── Confetti Animation ──────────────────────────────────────────────────── */
-#confetti-container {
-  position:fixed; inset:0; pointer-events:none; z-index:9998; overflow:hidden;
-}
-.confetti-piece {
-  position:absolute; top:-10px;
-  width:8px; height:8px;
-  opacity:0;
-  animation:confetti-fall linear forwards;
-}
-@keyframes confetti-fall {
-  0%   { transform:translateY(0) rotate(0deg) scale(1); opacity:1; }
-  80%  { opacity:1; }
-  100% { transform:translateY(100vh) rotate(720deg) scale(.5); opacity:0; }
-}
-
 /* ── Splash Screen ─────────────────────────────────────────────────────── */
 #splash-screen {
   position:fixed; inset:0; z-index:9999;
@@ -250,9 +234,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 </style>
 </head>
 <body>
-
-<!-- Confetti Container -->
-<div id="confetti-container"></div>
 
 <!-- Splash Screen -->
 <div id="splash-screen">
@@ -671,7 +652,6 @@ function addEntry(mi){
 
   document.getElementById(`amt-${mi}`).value = '';
 
-  launchConfetti(type);
   save();
   propagateCapitals();
   renderAll();
@@ -1234,63 +1214,6 @@ function save(){
     .catch(e=>console.error('Error guardando:', e));
 }
 
-// ── Confetti ──────────────────────────────────────────────────────────────
-function launchConfetti(type){
-  const container = document.getElementById('confetti-container');
-  if(!container) return;
-
-  const colors = type === 'income'
-    ? ['#2dd4a0','#50e4b0','#18a870','#a8ffdc','#ffffff']
-    : ['#f06050','#f08070','#ff9080','#ffcccc','#ffffff'];
-
-  const shapes = ['border-radius:50%', 'border-radius:2px', 'border-radius:0'];
-
-  for(let i = 0; i < 48; i++){
-    const el = document.createElement('div');
-    el.className = 'confetti-piece';
-    const size = Math.random() * 7 + 5;
-    const left = Math.random() * 100;
-    const duration = Math.random() * 1.2 + 1;
-    const delay = Math.random() * 0.4;
-    const color = colors[Math.floor(Math.random() * colors.length)];
-    const shape = shapes[Math.floor(Math.random() * shapes.length)];
-    el.style.cssText = `
-      left:${left}%;
-      width:${size}px; height:${size}px;
-      background:${color};
-      ${shape};
-      animation-duration:${duration}s;
-      animation-delay:${delay}s;
-    `;
-    container.appendChild(el);
-    setTimeout(()=>el.remove(), (duration + delay + 0.2) * 1000);
-  }
-
-  // Flash ring effect at center
-  const ring = document.createElement('div');
-  const ringColor = type === 'income' ? 'rgba(45,212,160,' : 'rgba(240,96,80,';
-  ring.style.cssText = `
-    position:fixed; left:50%; top:50%;
-    transform:translate(-50%,-50%) scale(0);
-    width:120px; height:120px; border-radius:50%;
-    border:3px solid ${ringColor}0.8)};
-    pointer-events:none; z-index:9997;
-    animation:ring-expand .5s ease forwards;
-  `;
-  document.body.appendChild(ring);
-
-  const styleId = 'ring-style';
-  if(!document.getElementById(styleId)){
-    const s = document.createElement('style');
-    s.id = styleId;
-    s.textContent = `@keyframes ring-expand {
-      0%   { transform:translate(-50%,-50%) scale(0); opacity:1; }
-      100% { transform:translate(-50%,-50%) scale(3); opacity:0; }
-    }`;
-    document.head.appendChild(s);
-  }
-  setTimeout(()=>ring.remove(), 600);
-}
 
 // ── Splash Screen ─────────────────────────────────────────────────────────
 (function initSplash(){
