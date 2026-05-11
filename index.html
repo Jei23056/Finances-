@@ -149,9 +149,103 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   color:var(--muted); background:var(--card); border:1px solid var(--border);
   border-radius:999px; padding:4px 12px; opacity:0; transition:opacity .3s; }
 #save-indicator.show { opacity:1; }
+
+/* ── Splash Screen ─────────────────────────────────────────────────────── */
+#splash-screen {
+  position:fixed; inset:0; z-index:9999;
+  background:var(--bg);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:0;
+  transition:opacity .6s ease;
+}
+#splash-screen.fade-out { opacity:0; pointer-events:none; }
+
+.splash-particles {
+  position:absolute; inset:0; overflow:hidden; pointer-events:none;
+}
+.splash-particle {
+  position:absolute; border-radius:50%;
+  animation:particle-float linear infinite;
+  opacity:0;
+}
+@keyframes particle-float {
+  0%   { transform:translateY(100vh) scale(0); opacity:0; }
+  10%  { opacity:.6; }
+  90%  { opacity:.3; }
+  100% { transform:translateY(-10vh) scale(1.2); opacity:0; }
+}
+
+.splash-logo {
+  font-size:3.5rem; margin-bottom:1.2rem;
+  animation:splash-pop .6s cubic-bezier(.34,1.56,.64,1) .3s both;
+}
+@keyframes splash-pop {
+  from { transform:scale(0) rotate(-20deg); opacity:0; }
+  to   { transform:scale(1) rotate(0deg);  opacity:1; }
+}
+
+.splash-title {
+  font-family:'DM Serif Display',serif;
+  font-size:1rem; letter-spacing:.18em; text-transform:uppercase;
+  color:var(--muted); margin-bottom:.5rem;
+  animation:splash-fade-up .5s ease .7s both;
+}
+@keyframes splash-fade-up {
+  from { opacity:0; transform:translateY(12px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+.splash-name {
+  font-family:'DM Serif Display',serif;
+  font-size:2.6rem; font-weight:400;
+  background:linear-gradient(135deg, var(--gold) 0%, #fff5d6 40%, var(--gold) 70%, #e8b96a 100%);
+  background-size:200% auto;
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  background-clip:text;
+  animation:splash-fade-up .5s ease .95s both, shimmer 2.5s linear 1.4s infinite;
+  margin-bottom:2.5rem;
+}
+@keyframes shimmer {
+  to { background-position:200% center; }
+}
+
+.splash-bar-wrap {
+  width:160px; height:2px; background:rgba(255,255,255,0.08);
+  border-radius:2px; overflow:hidden;
+  animation:splash-fade-up .4s ease 1.2s both;
+}
+.splash-bar-fill {
+  height:100%; width:0%; background:var(--gold);
+  border-radius:2px;
+  animation:bar-grow 1.6s cubic-bezier(.4,0,.2,1) 1.3s forwards;
+}
+@keyframes bar-grow {
+  0%   { width:0%; }
+  60%  { width:85%; }
+  100% { width:100%; }
+}
+
+.splash-tagline {
+  font-size:11px; letter-spacing:.1em; color:var(--muted);
+  text-transform:uppercase; margin-top:1.2rem;
+  animation:splash-fade-up .4s ease 1.5s both;
+}
+
 </style>
 </head>
 <body>
+
+<!-- Splash Screen -->
+<div id="splash-screen">
+  <div class="splash-particles" id="splash-particles"></div>
+  <div class="splash-logo">💰</div>
+  <div class="splash-title">Bienvenido</div>
+  <div class="splash-name">Sr. Jeiron</div>
+  <div class="splash-bar-wrap">
+    <div class="splash-bar-fill"></div>
+  </div>
+  <div class="splash-tagline">Mis Finanzas · 2026</div>
+</div>
 
 <div id="login-screen" style="display:flex">
   <div class="login-card">
@@ -779,14 +873,33 @@ async function renderHistoryList(){
           <div style="font-family:'DM Serif Display',serif;font-size:1.1rem;color:var(--text)">${d.year}</div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px">Guardado el ${savedDate}</div>
         </div>
-        <div style="text-align:right">
-          <div style="font-size:13px;color:var(--green)">+${fmt(yInc)}</div>
-          <div style="font-size:13px;color:var(--red)">-${fmt(yExp)}</div>
-          ${savPct!==null?`<div style="font-size:11px;color:${savPct>=0?'var(--green)':'var(--red)'};margin-top:2px">${savPct>=0?'Ahorrado':'Deficit'} ${Math.abs(savPct)}%</div>`:''}
+        <div style="display:flex;align-items:center;gap:16px">
+          <div style="text-align:right">
+            <div style="font-size:13px;color:var(--green)">+${fmt(yInc)}</div>
+            <div style="font-size:13px;color:var(--red)">-${fmt(yExp)}</div>
+            ${savPct!==null?`<div style="font-size:11px;color:${savPct>=0?'var(--green)':'var(--red)'};margin-top:2px">${savPct>=0?'Ahorrado':'Deficit'} ${Math.abs(savPct)}%</div>`:''}
+          </div>
+          <button onclick="deleteYearFromHistory(${d.year})" title="Eliminar año del historial"
+            style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:18px;line-height:1;padding:2px 4px;transition:color .15s;flex-shrink:0"
+            onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--muted)'">×</button>
         </div>
       </div>`;
     }).join('');
   } catch(e){ el.innerHTML = '<div style="font-size:12px;color:var(--red)">Error cargando historial</div>'; }
+}
+
+async function deleteYearFromHistory(year){
+  const ok = confirm(`¿Eliminar el historial de ${year}?\n\nEsta acción no se puede deshacer.`);
+  if(!ok) return;
+  try {
+    await db.collection('users').doc(currentUser.uid)
+      .collection('historial').doc(String(year)).delete();
+    const ind = document.getElementById('save-indicator');
+    ind.textContent = `Año ${year} eliminado ✓`;
+    ind.classList.add('show');
+    setTimeout(()=>{ ind.classList.remove('show'); ind.textContent = 'Guardado ✓'; }, 2000);
+    renderHistoryList();
+  } catch(e){ alert('Error eliminando: ' + e.message); }
 }
 
 function resetYear(){
@@ -1100,6 +1213,36 @@ function save(){
     })
     .catch(e=>console.error('Error guardando:', e));
 }
+// ── Splash Screen ─────────────────────────────────────────────────────────
+(function initSplash(){
+  // Generate floating particles
+  const container = document.getElementById('splash-particles');
+  const colors = ['#e8b96a','#2dd4a0','#60a5fa','#f06050','#fff'];
+  for(let i = 0; i < 28; i++){
+    const p = document.createElement('div');
+    p.className = 'splash-particle';
+    const size = Math.random() * 6 + 2;
+    p.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:${Math.random()*100}%;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      animation-duration:${Math.random()*4+3}s;
+      animation-delay:${Math.random()*2}s;
+      filter:blur(${Math.random()*1.5}px);
+    `;
+    container.appendChild(p);
+  }
+
+  // Hide splash after 2.8s
+  setTimeout(()=>{
+    const splash = document.getElementById('splash-screen');
+    if(splash){
+      splash.classList.add('fade-out');
+      setTimeout(()=>{ splash.style.display='none'; }, 650);
+    }
+  }, 2800);
+})();
+
 </script>
 </body>
 </html>
