@@ -193,7 +193,20 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
     </div>
     <div style="display:flex;gap:8px;flex-shrink:0">
       <button onclick="exportPDF()" style="padding:8px 16px;background:var(--gdim);border:1px solid var(--green);border-radius:var(--rs);color:var(--green);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .18s" onmouseover="this.style.background='rgba(45,212,160,.2)'" onmouseout="this.style.background='var(--gdim)'">📄 Exportar PDF</button>
+      <button onclick="saveYearToHistory()" style="padding:8px 16px;background:var(--gldim);border:1px solid var(--gold);border-radius:var(--rs);color:var(--gold);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .18s" onmouseover="this.style.background='rgba(232,185,106,.2)'" onmouseout="this.style.background='var(--gldim)'">📦 Guardar año</button>
+      <button onclick="toggleHistory()" style="padding:8px 16px;background:transparent;border:1px solid var(--border2);border-radius:var(--rs);color:var(--muted2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .18s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted2)'">🕓 Historial</button>
       <button onclick="resetYear()" style="padding:8px 16px;background:var(--rdim);border:1px solid var(--red);border-radius:var(--rs);color:var(--red);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .18s" onmouseover="this.style.background='rgba(240,96,80,.2)'" onmouseout="this.style.background='var(--rdim)'">🗑️ Restablecer año</button>
+    </div>
+  </div>
+
+  <!-- Mejor y peor mes -->
+  <div id="best-worst-bar" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.5rem"></div>
+
+  <!-- Panel historial -->
+  <div id="history-panel" style="display:none;margin-bottom:1.5rem">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem">
+      <div class="sec-lbl" style="margin-bottom:1rem">Años anteriores guardados</div>
+      <div id="history-list"><div style="font-size:12px;color:var(--muted)">Sin historial aún</div></div>
     </div>
   </div>
 
@@ -646,6 +659,36 @@ function renderAnnual(){
   document.getElementById('annual-exp-bars').innerHTML = catListHTML(expData, 'expense');
   document.getElementById('annual-inc-bars').innerHTML = catListHTML(incData, 'income');
 
+  // ── Mejor y peor mes ─────────────────────────────────────────────────
+  const monthsWithData = MONTHS.map((name,mi)=>{
+    const t = monthTotals(mi);
+    return { name, mi, t };
+  }).filter(m => m.t.inc > 0);
+
+  const bwEl = document.getElementById('best-worst-bar');
+  if(monthsWithData.length >= 2){
+    const scored = monthsWithData.map(m=>({
+      ...m, pct: Math.round((m.t.inc - m.t.exp) / m.t.inc * 100)
+    })).sort((a,b)=>b.pct - a.pct);
+    const best  = scored[0];
+    const worst = scored[scored.length - 1];
+    bwEl.innerHTML = `
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;position:relative;overflow:hidden">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:var(--green)"></div>
+        <div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">🏆 Mejor mes</div>
+        <div style="font-family:'DM Serif Display',serif;font-size:1.4rem;color:var(--green)">${best.name}</div>
+        <div style="font-size:12px;color:var(--muted2);margin-top:4px">Ahorraste <span style="color:var(--green);font-weight:600">${best.pct}%</span> · neto ${fmtSigned(best.t.net)}</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;position:relative;overflow:hidden">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:var(--red)"></div>
+        <div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">📉 Peor mes</div>
+        <div style="font-family:'DM Serif Display',serif;font-size:1.4rem;color:var(--red)">${worst.name}</div>
+        <div style="font-size:12px;color:var(--muted2);margin-top:4px">${worst.pct >= 0 ? 'Ahorraste' : 'Gastaste más'} <span style="color:${worst.pct>=0?'var(--green)':'var(--red)'};font-weight:600">${Math.abs(worst.pct)}%</span> · neto ${fmtSigned(worst.t.net)}</div>
+      </div>`;
+  } else {
+    bwEl.innerHTML = '';
+  }
+
   const maxVal = Math.max(...MONTHS.map((_,mi)=>{ const t=monthTotals(mi); return Math.max(t.inc,t.exp); }), 1);
   let html = '';
   MONTHS.forEach((name,mi)=>{
@@ -682,6 +725,68 @@ function renderAnnual(){
 
 function hasData(mi){
   return (data[mi]?.entries?.length||0) > 0;
+}
+
+// ── Historial de años ────────────────────────────────────────────────────
+let historyVisible = false;
+
+function toggleHistory(){
+  historyVisible = !historyVisible;
+  const el = document.getElementById('history-panel');
+  if(!el) return;
+  el.style.display = historyVisible ? 'block' : 'none';
+  if(historyVisible) renderHistoryList();
+}
+
+async function saveYearToHistory(){
+  if(!currentUser) return;
+  const year = new Date().getFullYear();
+  const hasAny = MONTHS.some((_,mi)=> hasData(mi));
+  if(!hasAny){ alert('No hay datos que guardar en este año.'); return; }
+  const ok = confirm(`¿Guardar ${year} en el historial?\n\nPodrás consultarlo después sin perder nada.`);
+  if(!ok) return;
+  try {
+    await db.collection('users').doc(currentUser.uid)
+      .collection('historial').doc(String(year))
+      .set({ year, savedAt: new Date().toISOString(), finanzas: data });
+    const ind = document.getElementById('save-indicator');
+    ind.textContent = `Año ${year} guardado ✓`;
+    ind.classList.add('show');
+    setTimeout(()=>{ ind.classList.remove('show'); ind.textContent = 'Guardado ✓'; }, 2500);
+    if(historyVisible) renderHistoryList();
+  } catch(e){ alert('Error guardando historial: ' + e.message); }
+}
+
+async function renderHistoryList(){
+  const el = document.getElementById('history-list');
+  if(!el || !currentUser) return;
+  el.innerHTML = '<div style="font-size:12px;color:var(--muted)">Cargando…</div>';
+  try {
+    const snap = await db.collection('users').doc(currentUser.uid).collection('historial').orderBy('year','desc').get();
+    if(snap.empty){ el.innerHTML = '<div style="font-size:12px;color:var(--muted)">Sin historial aún. Usa "📦 Guardar año" antes de restablecer.</div>'; return; }
+    el.innerHTML = snap.docs.map(doc=>{
+      const d = doc.data();
+      const fd = d.finanzas || {};
+      let yInc=0, yExp=0;
+      Object.values(fd).forEach(m=>{
+        (m.entries||[]).forEach(e=>{ if(e.type==='income') yInc+=e.amount; else yExp+=e.amount; });
+      });
+      const yNet = yInc - yExp;
+      const savPct = yInc > 0 ? Math.round(yNet/yInc*100) : null;
+      const savedDate = d.savedAt ? new Date(d.savedAt).toLocaleDateString('es-DO',{day:'2-digit',month:'short',year:'numeric'}) : '';
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-family:'DM Serif Display',serif;font-size:1.1rem;color:var(--text)">${d.year}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Guardado el ${savedDate}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:13px;color:var(--green)">+${fmt(yInc)}</div>
+          <div style="font-size:13px;color:var(--red)">-${fmt(yExp)}</div>
+          ${savPct!==null?`<div style="font-size:11px;color:${savPct>=0?'var(--green)':'var(--red)'};margin-top:2px">${savPct>=0?'Ahorrado':'Deficit'} ${Math.abs(savPct)}%</div>`:''}
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e){ el.innerHTML = '<div style="font-size:12px;color:var(--red)">Error cargando historial</div>'; }
 }
 
 function resetYear(){
