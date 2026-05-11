@@ -288,7 +288,6 @@ function getMonth(m){
   return data[m];
 }
 
-// ── FIX 1: fmt always shows 2 decimal places ──────────────────────────────
 function fmt(n){
   const abs = Math.abs(n);
   return '$' + abs.toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -303,7 +302,6 @@ function esc(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ── FIX 2: Format amount input on blur → "2,000.00" ──────────────────────
 function formatAmtInput(el){
   const raw = parseFloat(el.value.replace(/,/g,''));
   if(!isNaN(raw) && raw > 0){
@@ -311,7 +309,6 @@ function formatAmtInput(el){
   }
 }
 
-// ── FIX 3: toFixed(2) to avoid floating point drift ──────────────────────
 function monthTotals(mi){
   const md = getMonth(mi);
   const inc  = parseFloat(md.entries.filter(e=>e.type==='income' ).reduce((s,e)=>s+e.amount,0).toFixed(2));
@@ -541,7 +538,6 @@ function showInner(mi, which){
 }
 
 function addEntry(mi){
-  // FIX: strip commas before parsing formatted value like "2,000.00"
   const raw    = document.getElementById(`amt-${mi}`).value.replace(/,/g,'');
   const amount = parseFloat(raw);
   const cat    = document.getElementById(`cat-${mi}`).value;
@@ -561,7 +557,6 @@ function addEntry(mi){
     date: todayStr()
   });
 
-  // clear amount after adding
   document.getElementById(`amt-${mi}`).value = '';
 
   save();
@@ -665,7 +660,6 @@ function renderAnnual(){
   document.getElementById('annual-exp-bars').innerHTML = catListHTML(expData, 'expense');
   document.getElementById('annual-inc-bars').innerHTML = catListHTML(incData, 'income');
 
-  // Re-apply view state (in case we re-rendered while in pie mode)
   if(catViewState.exp === 'pie'){ document.getElementById('annual-exp-bars').style.display='none'; document.getElementById('annual-exp-pie').style.display='block'; setTimeout(()=>drawPieChart('exp'),0); }
   if(catViewState.inc === 'pie'){ document.getElementById('annual-inc-bars').style.display='none'; document.getElementById('annual-inc-pie').style.display='block'; setTimeout(()=>drawPieChart('inc'),0); }
 
@@ -703,16 +697,13 @@ function renderAnnual(){
   renderCapitalChart();
 }
 
-// ── Pie chart view toggle ─────────────────────────────────────────────────
 const catViewState = { exp: 'list', inc: 'list' };
 
-// Palette for pie slices
 const PIE_COLORS_EXP = ['#f06050','#f08070','#c04030','#e87060','#a03020','#f0a090','#803020','#d05040','#b06050','#e09080'];
 const PIE_COLORS_INC = ['#2dd4a0','#50e4b0','#18a870','#40c490','#0d8050','#70e4c0','#10604a','#30b480','#209468','#60d4b0'];
 
 function setCatView(which, mode){
   catViewState[which] = mode;
-  // update button styles
   const listBtn = document.getElementById(`${which}-view-list`);
   const pieBtn  = document.getElementById(`${which}-view-pie`);
   if(listBtn && pieBtn){
@@ -751,7 +742,6 @@ function drawPieChart(which){
   const canvas = document.getElementById(`annual-${which}-pie`);
   if(!canvas) return;
 
-  // Gather data
   const map = {};
   const type = which === 'exp' ? 'expense' : 'income';
   MONTHS.forEach((_,mi)=>{
@@ -783,9 +773,8 @@ function drawPieChart(which){
   const cx = chartW / 2;
   const cy = H / 2;
   const R  = Math.min(cx, cy) - 10;
-  const Ri = R * 0.48; // donut hole
+  const Ri = R * 0.48;
 
-  // Draw donut slices
   let angle = -Math.PI / 2;
   dataArr.forEach((d, i) => {
     const slice = (d.v / total) * Math.PI * 2;
@@ -805,13 +794,11 @@ function drawPieChart(which){
     angle += slice;
   });
 
-  // Donut hole
   ctx.beginPath();
   ctx.arc(cx, cy, Ri, 0, Math.PI * 2);
   ctx.fillStyle = '#1c1d20';
   ctx.fill();
 
-  // Center total label
   ctx.fillStyle = '#f0ede8';
   ctx.font = `bold ${Math.round(R*0.22)}px DM Sans, sans-serif`;
   ctx.textAlign = 'center';
@@ -822,7 +809,6 @@ function drawPieChart(which){
   ctx.font = `${Math.round(R*0.14)}px DM Sans, sans-serif`;
   ctx.fillText('total', cx, cy + 10);
 
-  // Legend
   const lx = chartW + 8;
   const itemH = Math.min(22, (H - 8) / dataArr.length);
   const startY = (H - dataArr.length * itemH) / 2;
@@ -834,20 +820,17 @@ function drawPieChart(which){
     const pct = Math.round(d.v / total * 100);
     const label = (catDef?.l || d.k).replace(/^[\p{Emoji}\s]+/u,'').trim().slice(0, 14);
 
-    // dot
     ctx.beginPath();
     ctx.arc(lx + 5, y, 4, 0, Math.PI*2);
     ctx.fillStyle = color;
     ctx.fill();
 
-    // label
     ctx.fillStyle = '#9e9b94';
     ctx.font = `${Math.min(11, itemH*0.52)}px DM Sans, sans-serif`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.fillText(label, lx + 13, y);
 
-    // pct
     ctx.fillStyle = color;
     ctx.font = `bold ${Math.min(11, itemH*0.52)}px DM Sans, sans-serif`;
     ctx.textAlign = 'right';
@@ -872,7 +855,6 @@ function resetYear(){
   alert('✅ Año restablecido. ¡Listo para empezar de cero!');
 }
 
-// ── FIX 4: Chart only renders up to last month with data ──────────────────
 function renderCapitalChart(){
   const canvas = document.getElementById('capital-chart');
   if(!canvas) return;
@@ -886,19 +868,16 @@ function renderCapitalChart(){
   canvas.style.height = H + 'px';
   ctx.scale(dpr, dpr);
 
-  // Find the last month that has actual entries
   let lastDataMonth = -1;
   MONTHS.forEach((name, mi) => {
     const md = getMonth(mi);
     if(md.entries && md.entries.length > 0) lastDataMonth = mi;
   });
 
-  // Build points only up to lastDataMonth
   const points = [];
   if(lastDataMonth >= 0){
     for(let mi = 0; mi <= lastDataMonth; mi++){
       const t = monthTotals(mi);
-      // Include if it has entries, OR if month 0 with nonzero start capital
       if(t.inc > 0 || t.exp > 0 || (mi === 0 && t.start !== 0)){
         points.push({ name: MONTHS[mi], mi, val: t.end });
       }
