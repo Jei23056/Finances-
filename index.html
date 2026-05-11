@@ -199,26 +199,14 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 
   <div class="cats-grid" style="margin-bottom:1.5rem">
     <div class="cat-block">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem">
-        <h3 style="margin-bottom:0">En qué he gastado más (todo el año)</h3>
-        <div style="display:flex;gap:4px">
-          <button id="exp-view-list" onclick="setCatView('exp','list')" style="padding:4px 9px;font-size:11px;border-radius:999px;border:1px solid var(--border2);background:var(--surf);color:var(--text);cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif">☰ Lista</button>
-          <button id="exp-view-pie"  onclick="setCatView('exp','pie')"  style="padding:4px 9px;font-size:11px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif">◉ Gráfico</button>
-        </div>
-      </div>
+      <h3>En qué he gastado más (todo el año)</h3>
       <div id="annual-exp-bars"><div style="font-size:12px;color:var(--muted);padding:4px 0">Sin datos</div></div>
-      <canvas id="annual-exp-pie" style="display:none;width:100%;max-height:260px" height="260"></canvas>
+
     </div>
     <div class="cat-block">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem">
-        <h3 style="margin-bottom:0">De dónde he ganado más (todo el año)</h3>
-        <div style="display:flex;gap:4px">
-          <button id="inc-view-list" onclick="setCatView('inc','list')" style="padding:4px 9px;font-size:11px;border-radius:999px;border:1px solid var(--border2);background:var(--surf);color:var(--text);cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif">☰ Lista</button>
-          <button id="inc-view-pie"  onclick="setCatView('inc','pie')"  style="padding:4px 9px;font-size:11px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif">◉ Gráfico</button>
-        </div>
-      </div>
+      <h3>De dónde he ganado más (todo el año)</h3>
       <div id="annual-inc-bars"><div style="font-size:12px;color:var(--muted);padding:4px 0">Sin datos</div></div>
-      <canvas id="annual-inc-pie" style="display:none;width:100%;max-height:260px" height="260"></canvas>
+
     </div>
   </div>
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:1.5rem">
@@ -665,9 +653,7 @@ function renderAnnual(){
   document.getElementById('annual-exp-bars').innerHTML = catListHTML(expData, 'expense');
   document.getElementById('annual-inc-bars').innerHTML = catListHTML(incData, 'income');
 
-  // Re-apply view state (in case we re-rendered while in pie mode)
-  if(catViewState.exp === 'pie'){ document.getElementById('annual-exp-bars').style.display='none'; document.getElementById('annual-exp-pie').style.display='block'; setTimeout(()=>drawPieChart('exp'),0); }
-  if(catViewState.inc === 'pie'){ document.getElementById('annual-inc-bars').style.display='none'; document.getElementById('annual-inc-pie').style.display='block'; setTimeout(()=>drawPieChart('inc'),0); }
+
 
   const maxVal = Math.max(...MONTHS.map((_,mi)=>{ const t=monthTotals(mi); return Math.max(t.inc,t.exp); }), 1);
   let html = '';
@@ -701,165 +687,6 @@ function renderAnnual(){
   document.getElementById('annual-month-bars').innerHTML = html || '<div style="font-size:12px;color:var(--muted)">Sin datos aún</div>';
 
   renderCapitalChart();
-}
-
-// ── Pie chart view toggle ─────────────────────────────────────────────────
-const catViewState = { exp: 'list', inc: 'list' };
-
-// Palette — distinct, easy-to-tell-apart colors for each slice
-const PIE_COLORS_EXP = ['#f06050','#f5a623','#f5e642','#a259ff','#00c8ff','#ff6eb4','#4cd964','#ff9f43','#54a0ff','#1dd1a1','#feca57','#48dbfb','#ff9ff3','#576574','#ff6b6b'];
-const PIE_COLORS_INC = ['#2dd4a0','#54a0ff','#f5a623','#a259ff','#f06050','#feca57','#ff6eb4','#00c8ff','#4cd964','#ff9f43','#ff6b6b','#f5e642','#48dbfb','#ff9ff3','#576574'];
-
-function setCatView(which, mode){
-  catViewState[which] = mode;
-  // update button styles
-  const listBtn = document.getElementById(`${which}-view-list`);
-  const pieBtn  = document.getElementById(`${which}-view-pie`);
-  if(listBtn && pieBtn){
-    if(mode === 'list'){
-      listBtn.style.cssText = listBtn.style.cssText.replace(/background:[^;]+/,'background:var(--surf)');
-      listBtn.style.color = 'var(--text)';
-      listBtn.style.borderColor = 'var(--border2)';
-      pieBtn.style.background = 'transparent';
-      pieBtn.style.color = 'var(--muted)';
-      pieBtn.style.borderColor = 'var(--border)';
-    } else {
-      pieBtn.style.background = 'var(--surf)';
-      pieBtn.style.color = 'var(--text)';
-      pieBtn.style.borderColor = 'var(--border2)';
-      listBtn.style.background = 'transparent';
-      listBtn.style.color = 'var(--muted)';
-      listBtn.style.borderColor = 'var(--border)';
-    }
-  }
-
-  const barsEl = document.getElementById(`annual-${which}-bars`);
-  const pieEl  = document.getElementById(`annual-${which}-pie`);
-  if(!barsEl || !pieEl) return;
-
-  if(mode === 'list'){
-    barsEl.style.display = 'block';
-    pieEl.style.display  = 'none';
-  } else {
-    barsEl.style.display = 'none';
-    pieEl.style.display  = 'block';
-    drawPieChart(which);
-  }
-}
-
-function drawPieChart(which){
-  const canvas = document.getElementById(`annual-${which}-pie`);
-  if(!canvas) return;
-
-  // Gather data
-  const map = {};
-  const type = which === 'exp' ? 'expense' : 'income';
-  MONTHS.forEach((_,mi)=>{
-    getMonth(mi).entries.filter(e=>e.type===type).forEach(e=>{
-      map[e.cat] = (map[e.cat]||0) + e.amount;
-    });
-  });
-  const dataArr = Object.entries(map).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
-  if(!dataArr.length) return;
-
-  const palette = which === 'exp' ? PIE_COLORS_EXP : PIE_COLORS_INC;
-  const total   = dataArr.reduce((s,d)=>s+d.v, 0);
-  const cats    = which === 'exp' ? EXPENSE_CATS : INCOME_CATS;
-
-  const dpr = window.devicePixelRatio || 1;
-  const H   = parseInt(canvas.getAttribute('height')) || 260;
-  // Collapse canvas first so parentElement.clientWidth is accurate (prevents growth on re-draw)
-  canvas.style.width = '100%';
-  canvas.style.height = H + 'px';
-  canvas.width = 2; canvas.height = 2;
-  const SIZE = canvas.parentElement.clientWidth - 2;
-  canvas.width  = SIZE * dpr;
-  canvas.height = H * dpr;
-  canvas.style.width  = SIZE + 'px';
-  canvas.style.height = H + 'px';
-
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, SIZE, H);
-
-  const legendW = Math.max(120, SIZE * 0.38);
-  const chartW  = SIZE - legendW;
-  const cx = chartW / 2;
-  const cy = H / 2;
-  const R  = Math.min(cx, cy) - 10;
-  const Ri = R * 0.48; // donut hole
-
-  // Draw donut slices
-  let angle = -Math.PI / 2;
-  dataArr.forEach((d, i) => {
-    const slice = (d.v / total) * Math.PI * 2;
-    const color = palette[i % palette.length];
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, R, angle, angle + slice);
-    ctx.closePath();
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(cx, cy, R+1, angle, angle + slice);
-    ctx.arc(cx, cy, R-1, angle + slice, angle, true);
-    ctx.strokeStyle = '#0e0f11';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    angle += slice;
-  });
-
-  // Donut hole
-  ctx.beginPath();
-  ctx.arc(cx, cy, Ri, 0, Math.PI * 2);
-  ctx.fillStyle = '#1c1d20';
-  ctx.fill();
-
-  // Center total label
-  ctx.fillStyle = '#f0ede8';
-  ctx.font = `bold ${Math.round(R*0.22)}px DM Sans, sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  const totalLabel = total >= 1000 ? '$' + (total/1000).toFixed(1)+'k' : fmt(total);
-  ctx.fillText(totalLabel, cx, cy - 7);
-  ctx.fillStyle = '#6e6c66';
-  ctx.font = `${Math.round(R*0.14)}px DM Sans, sans-serif`;
-  ctx.fillText('total', cx, cy + 10);
-
-  // Legend — colored squares, name in white, pct in slice color
-  const lx = chartW + 10;
-  const itemH = Math.min(24, (H - 12) / dataArr.length);
-  const startY = (H - dataArr.length * itemH) / 2;
-
-  dataArr.forEach((d, i) => {
-    const y = startY + i * itemH + itemH / 2;
-    const color = palette[i % palette.length];
-    const catDef = cats.find(c=>c.v===d.k);
-    const pct = Math.round(d.v / total * 100);
-    // strip emoji, trim, limit length
-    const rawLabel = (catDef?.l || d.k).replace(/[\u{1F000}-\u{1FFFF}]/gu,'').replace(/^\s+/,'').trim();
-    const label = rawLabel.slice(0, 13);
-    const fs = Math.max(10, Math.min(12, itemH * 0.54));
-
-    // colored square
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.roundRect(lx, y - fs*0.5, fs*0.85, fs*0.85, 2);
-    ctx.fill();
-
-    // category name (white)
-    ctx.fillStyle = '#f0ede8';
-    ctx.font = `${fs}px DM Sans, sans-serif`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(label, lx + fs + 4, y);
-
-    // percentage (slice color, bold, right-aligned)
-    ctx.fillStyle = color;
-    ctx.font = `bold ${fs}px DM Sans, sans-serif`;
-    ctx.textAlign = 'right';
-    ctx.fillText(pct + '%', SIZE - 2, y);
-  });
 }
 
 function hasData(mi){
