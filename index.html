@@ -199,26 +199,12 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 
   <div class="cats-grid" style="margin-bottom:1.5rem">
     <div class="cat-block">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem">
-        <h3 style="margin-bottom:0">En qué he gastado más (todo el año)</h3>
-        <div style="display:flex;gap:4px">
-          <button id="exp-view-list" onclick="setCatView('exp','list')" style="padding:4px 9px;font-size:11px;border-radius:999px;border:1px solid var(--border2);background:var(--surf);color:var(--text);cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif">☰ Lista</button>
-          <button id="exp-view-pie"  onclick="setCatView('exp','pie')"  style="padding:4px 9px;font-size:11px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif">◉ Gráfico</button>
-        </div>
-      </div>
+      <h3>En qué he gastado más (todo el año)</h3>
       <div id="annual-exp-bars"><div style="font-size:12px;color:var(--muted);padding:4px 0">Sin datos</div></div>
-      <canvas id="annual-exp-pie" style="display:none;width:100%;max-height:200px" height="200"></canvas>
     </div>
     <div class="cat-block">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem">
-        <h3 style="margin-bottom:0">De dónde he ganado más (todo el año)</h3>
-        <div style="display:flex;gap:4px">
-          <button id="inc-view-list" onclick="setCatView('inc','list')" style="padding:4px 9px;font-size:11px;border-radius:999px;border:1px solid var(--border2);background:var(--surf);color:var(--text);cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif">☰ Lista</button>
-          <button id="inc-view-pie"  onclick="setCatView('inc','pie')"  style="padding:4px 9px;font-size:11px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif">◉ Gráfico</button>
-        </div>
-      </div>
+      <h3>De dónde he ganado más (todo el año)</h3>
       <div id="annual-inc-bars"><div style="font-size:12px;color:var(--muted);padding:4px 0">Sin datos</div></div>
-      <canvas id="annual-inc-pie" style="display:none;width:100%;max-height:200px" height="200"></canvas>
     </div>
   </div>
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:1.5rem">
@@ -660,9 +646,6 @@ function renderAnnual(){
   document.getElementById('annual-exp-bars').innerHTML = catListHTML(expData, 'expense');
   document.getElementById('annual-inc-bars').innerHTML = catListHTML(incData, 'income');
 
-  if(catViewState.exp === 'pie'){ document.getElementById('annual-exp-bars').style.display='none'; document.getElementById('annual-exp-pie').style.display='block'; setTimeout(()=>drawPieChart('exp'),0); }
-  if(catViewState.inc === 'pie'){ document.getElementById('annual-inc-bars').style.display='none'; document.getElementById('annual-inc-pie').style.display='block'; setTimeout(()=>drawPieChart('inc'),0); }
-
   const maxVal = Math.max(...MONTHS.map((_,mi)=>{ const t=monthTotals(mi); return Math.max(t.inc,t.exp); }), 1);
   let html = '';
   MONTHS.forEach((name,mi)=>{
@@ -695,147 +678,6 @@ function renderAnnual(){
   document.getElementById('annual-month-bars').innerHTML = html || '<div style="font-size:12px;color:var(--muted)">Sin datos aún</div>';
 
   renderCapitalChart();
-}
-
-const catViewState = { exp: 'list', inc: 'list' };
-
-const PIE_COLORS_EXP = ['#f06050','#f08070','#c04030','#e87060','#a03020','#f0a090','#803020','#d05040','#b06050','#e09080'];
-const PIE_COLORS_INC = ['#2dd4a0','#50e4b0','#18a870','#40c490','#0d8050','#70e4c0','#10604a','#30b480','#209468','#60d4b0'];
-
-function setCatView(which, mode){
-  catViewState[which] = mode;
-  const listBtn = document.getElementById(`${which}-view-list`);
-  const pieBtn  = document.getElementById(`${which}-view-pie`);
-  if(listBtn && pieBtn){
-    if(mode === 'list'){
-      listBtn.style.cssText = listBtn.style.cssText.replace(/background:[^;]+/,'background:var(--surf)');
-      listBtn.style.color = 'var(--text)';
-      listBtn.style.borderColor = 'var(--border2)';
-      pieBtn.style.background = 'transparent';
-      pieBtn.style.color = 'var(--muted)';
-      pieBtn.style.borderColor = 'var(--border)';
-    } else {
-      pieBtn.style.background = 'var(--surf)';
-      pieBtn.style.color = 'var(--text)';
-      pieBtn.style.borderColor = 'var(--border2)';
-      listBtn.style.background = 'transparent';
-      listBtn.style.color = 'var(--muted)';
-      listBtn.style.borderColor = 'var(--border)';
-    }
-  }
-
-  const barsEl = document.getElementById(`annual-${which}-bars`);
-  const pieEl  = document.getElementById(`annual-${which}-pie`);
-  if(!barsEl || !pieEl) return;
-
-  if(mode === 'list'){
-    barsEl.style.display = 'block';
-    pieEl.style.display  = 'none';
-  } else {
-    barsEl.style.display = 'none';
-    pieEl.style.display  = 'block';
-    drawPieChart(which);
-  }
-}
-
-function drawPieChart(which){
-  const canvas = document.getElementById(`annual-${which}-pie`);
-  if(!canvas) return;
-
-  const map = {};
-  const type = which === 'exp' ? 'expense' : 'income';
-  MONTHS.forEach((_,mi)=>{
-    getMonth(mi).entries.filter(e=>e.type===type).forEach(e=>{
-      map[e.cat] = (map[e.cat]||0) + e.amount;
-    });
-  });
-  const dataArr = Object.entries(map).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
-  if(!dataArr.length) return;
-
-  const palette = which === 'exp' ? PIE_COLORS_EXP : PIE_COLORS_INC;
-  const total   = dataArr.reduce((s,d)=>s+d.v, 0);
-  const cats    = which === 'exp' ? EXPENSE_CATS : INCOME_CATS;
-
-  const dpr = window.devicePixelRatio || 1;
-  const SIZE = canvas.parentElement.clientWidth - 2;
-  const H    = Math.min(SIZE, 220);
-  canvas.width  = SIZE * dpr;
-  canvas.height = H * dpr;
-  canvas.style.width  = SIZE + 'px';
-  canvas.style.height = H + 'px';
-
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, SIZE, H);
-
-  const legendW = Math.max(120, SIZE * 0.38);
-  const chartW  = SIZE - legendW;
-  const cx = chartW / 2;
-  const cy = H / 2;
-  const R  = Math.min(cx, cy) - 10;
-  const Ri = R * 0.48;
-
-  let angle = -Math.PI / 2;
-  dataArr.forEach((d, i) => {
-    const slice = (d.v / total) * Math.PI * 2;
-    const color = palette[i % palette.length];
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, R, angle, angle + slice);
-    ctx.closePath();
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(cx, cy, R+1, angle, angle + slice);
-    ctx.arc(cx, cy, R-1, angle + slice, angle, true);
-    ctx.strokeStyle = '#0e0f11';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    angle += slice;
-  });
-
-  ctx.beginPath();
-  ctx.arc(cx, cy, Ri, 0, Math.PI * 2);
-  ctx.fillStyle = '#1c1d20';
-  ctx.fill();
-
-  ctx.fillStyle = '#f0ede8';
-  ctx.font = `bold ${Math.round(R*0.22)}px DM Sans, sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  const totalLabel = total >= 1000 ? '$' + (total/1000).toFixed(1)+'k' : fmt(total);
-  ctx.fillText(totalLabel, cx, cy - 7);
-  ctx.fillStyle = '#6e6c66';
-  ctx.font = `${Math.round(R*0.14)}px DM Sans, sans-serif`;
-  ctx.fillText('total', cx, cy + 10);
-
-  const lx = chartW + 8;
-  const itemH = Math.min(22, (H - 8) / dataArr.length);
-  const startY = (H - dataArr.length * itemH) / 2;
-
-  dataArr.forEach((d, i) => {
-    const y = startY + i * itemH + itemH / 2;
-    const color = palette[i % palette.length];
-    const catDef = cats.find(c=>c.v===d.k);
-    const pct = Math.round(d.v / total * 100);
-    const label = (catDef?.l || d.k).replace(/^[\p{Emoji}\s]+/u,'').trim().slice(0, 14);
-
-    ctx.beginPath();
-    ctx.arc(lx + 5, y, 4, 0, Math.PI*2);
-    ctx.fillStyle = color;
-    ctx.fill();
-
-    ctx.fillStyle = '#9e9b94';
-    ctx.font = `${Math.min(11, itemH*0.52)}px DM Sans, sans-serif`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(label, lx + 13, y);
-
-    ctx.fillStyle = color;
-    ctx.font = `bold ${Math.min(11, itemH*0.52)}px DM Sans, sans-serif`;
-    ctx.textAlign = 'right';
-    ctx.fillText(pct + '%', SIZE - 2, y);
-  });
 }
 
 function hasData(mi){
