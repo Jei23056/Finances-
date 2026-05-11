@@ -26,8 +26,8 @@
   --blue:    #60a5fa;
   --r: 14px; --rs: 8px; --rxs: 6px;
 }
-html { font-size: 16px; }
-body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; padding:1.5rem 1rem 5rem; }
+html { font-size: 16px; overflow-x:hidden; }
+body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; padding:1.5rem 1rem 5rem; overflow-x:hidden; }
 .shell { max-width:860px; margin:0 auto; }
 header { display:flex; align-items:flex-end; justify-content:space-between; padding-bottom:1.25rem; border-bottom:1px solid var(--border); margin-bottom:2rem; }
 header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:400; letter-spacing:-0.5px; }
@@ -111,10 +111,17 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 .itab.active { background:var(--surf);border-color:var(--border2);color:var(--text);font-weight:500; }
 @media(max-width:600px){
   .year-bar  { grid-template-columns:1fr 1fr; }
+  .action-buttons { display:grid !important; grid-template-columns:1fr 1fr; gap:6px !important; width:100%; }
+  .action-buttons button { font-size:11px !important; padding:7px 8px !important; white-space:nowrap; }
   .msummary  { grid-template-columns:1fr 1fr; }
   .cats-grid { grid-template-columns:1fr; }
   .finputs   { grid-template-columns:1fr 1fr; }
   .finputs .fdesc { grid-column:1/-1; }
+  .ycard-val { font-size:1.1rem; }
+  .shell { padding:0 .5rem; }
+  .year-bar { gap:6px; }
+  .msummary { gap:6px; }
+  header h1 { font-size:1.4rem; }
 }
 </style>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -280,12 +287,12 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 <div id="month-panels"></div>
 
 <div id="panel-annual" style="display:none">
-  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;box-sizing:border-box;width:100%">
     <div>
       <div style="font-size:13px;color:var(--text);font-weight:500">Acciones del año</div>
       <div style="font-size:11px;color:var(--muted);margin-top:2px">Exporta un resumen o restablece al terminar el año.</div>
     </div>
-    <div style="display:flex;gap:8px;flex-shrink:0">
+    <div style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap" class="action-buttons">
       <button onclick="exportPDF()" style="padding:8px 16px;background:var(--gdim);border:1px solid var(--green);border-radius:var(--rs);color:var(--green);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .18s" onmouseover="this.style.background='rgba(45,212,160,.2)'" onmouseout="this.style.background='var(--gdim)'">📄 Exportar PDF</button>
       <button onclick="saveYearToHistory()" style="padding:8px 16px;background:var(--gldim);border:1px solid var(--gold);border-radius:var(--rs);color:var(--gold);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .18s" onmouseover="this.style.background='rgba(232,185,106,.2)'" onmouseout="this.style.background='var(--gldim)'">📦 Guardar año</button>
       <button onclick="toggleHistory()" style="padding:8px 16px;background:transparent;border:1px solid var(--border2);border-radius:var(--rs);color:var(--muted2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .18s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted2)'">🕓 Historial</button>
@@ -1191,8 +1198,10 @@ auth.onAuthStateChanged(async user => {
     await loadFromFirebase();
     buildSkeleton();
     renderAll();
+    dismissSplash();
   } else {
     currentUser = null;
+    dismissSplash();
     showLoginScreen();
   }
 });
@@ -1235,15 +1244,16 @@ function save(){
     container.appendChild(p);
   }
 
-  // Hide splash after 2.8s
-  setTimeout(()=>{
-    const splash = document.getElementById('splash-screen');
-    if(splash){
-      splash.classList.add('fade-out');
-      setTimeout(()=>{ splash.style.display='none'; }, 650);
-    }
-  }, 2800);
+  // Hide splash after minimum 2.8s (Firebase may dismiss it earlier)
+  setTimeout(()=>{ dismissSplash(); }, 2800);
 })();
+
+function dismissSplash(){
+  const splash = document.getElementById('splash-screen');
+  if(!splash || splash.style.display === 'none') return;
+  splash.classList.add('fade-out');
+  setTimeout(()=>{ splash.style.display='none'; }, 650);
+}
 
 </script>
 </body>
