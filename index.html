@@ -542,8 +542,8 @@ function renderMonth(mi){
         <div class="mcard-val" style="color:var(--red)">${fmt(t.exp)}</div>
       </div>
       <div class="mcard">
-        <div class="mcard-lbl">Capital final</div>
-        <div class="mcard-val" style="color:${t.end>=0?'var(--green)':'var(--red)'}">${fmtSigned(t.end)}</div>
+        <div class="mcard-lbl">Balance</div>
+        <div class="mcard-val" style="color:${t.net>=0?'var(--green)':'var(--red)'}">${fmtSigned(t.net)}</div>
       </div>
     </div>
 
