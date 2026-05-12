@@ -402,6 +402,50 @@ function esc(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ── Animación count-up para números ───────────────────────────────
+const _animState = new WeakMap();
+function animateNumber(el, toValue, options){
+  if(!el) return;
+  options = options || {};
+  const duration = options.duration || 700;
+  const prefix   = options.prefix || '';
+  const isPercent = options.percent || false;
+  const signed   = options.signed || false;
+
+  // Cancela animación anterior si existe
+  const prev = _animState.get(el);
+  if(prev && prev.raf) cancelAnimationFrame(prev.raf);
+
+  const fromValue = (prev && typeof prev.current === 'number') ? prev.current : 0;
+  const start = performance.now();
+
+  function tick(now){
+    const elapsed = now - start;
+    const t = Math.min(elapsed / duration, 1);
+    // easeOutCubic — empieza rápido y desacelera
+    const eased = 1 - Math.pow(1 - t, 3);
+    const current = fromValue + (toValue - fromValue) * eased;
+
+    let display;
+    if(isPercent){
+      display = Math.round(current) + '%';
+    } else if(signed){
+      const abs = Math.abs(current);
+      display = (current >= 0 ? '+' : '-') + prefix + abs.toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2});
+    } else {
+      display = prefix + Math.abs(current).toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2});
+    }
+    el.textContent = display;
+
+    if(t < 1){
+      _animState.set(el, { raf: requestAnimationFrame(tick), current });
+    } else {
+      _animState.set(el, { raf: null, current: toValue });
+    }
+  }
+  _animState.set(el, { raf: requestAnimationFrame(tick), current: fromValue });
+}
+
 function formatAmtInput(el){
   const raw = parseFloat(el.value.replace(/,/g,''));
   if(!isNaN(raw) && raw > 0){
@@ -435,8 +479,9 @@ function yearTotals(){
 
 function renderYear(){
   const {yInc,yExp,yNet,yCap} = yearTotals();
-  document.getElementById('y-inc').textContent = fmt(yInc);
-  document.getElementById('y-exp').textContent = fmt(yExp);
+
+  animateNumber(document.getElementById('y-inc'), yInc, { prefix:'$' });
+  animateNumber(document.getElementById('y-exp'), yExp, { prefix:'$' });
 
   const mi    = annualActive ? new Date().getMonth() : activeMonth;
   const tCur  = monthTotals(mi);
@@ -445,7 +490,7 @@ function renderYear(){
   const hintEl = document.getElementById('y-net-hint');
   if(tCur.inc > 0){
     const savPct = Math.round((tCur.inc - tCur.exp) / tCur.inc * 100);
-    netEl.textContent = savPct + '%';
+    animateNumber(netEl, savPct, { percent:true });
     netEl.style.color = savPct >= 0 ? 'var(--green)' : 'var(--red)';
     if(tPrev && tPrev.inc > 0){
       const prevPct = Math.round((tPrev.inc - tPrev.exp) / tPrev.inc * 100);
@@ -458,6 +503,8 @@ function renderYear(){
       hintEl.style.color = 'var(--muted)';
     }
   } else {
+    // Reset cuando no hay ingresos
+    _animState.set(netEl, { raf: null, current: 0 });
     netEl.textContent = '—';
     netEl.style.color = 'var(--muted)';
     hintEl.textContent = MONTHS[mi] + ' · sin ingresos';
@@ -465,7 +512,7 @@ function renderYear(){
   }
 
   const capEl = document.getElementById('y-cap');
-  capEl.textContent = fmtSigned(yCap);
+  animateNumber(capEl, yCap, { prefix:'$', signed:true });
   capEl.style.color = yCap>=0?'var(--green)':'var(--red)';
 }
 
@@ -529,21 +576,21 @@ function renderMonth(mi){
       <div class="mcard">
         <div class="mcard-lbl">Capital inicio</div>
         <div class="mcard-val" style="color:var(--muted2)">
-          ${fmt(sc)}
+          <span class="mcard-num" data-val="${sc}">${fmt(sc)}</span>
           <button onclick="editStart(${mi})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;margin-left:4px" title="Editar">✏️</button>
         </div>
       </div>
       <div class="mcard">
         <div class="mcard-lbl">Ganado</div>
-        <div class="mcard-val" style="color:var(--green)">${fmt(t.inc)}</div>
+        <div class="mcard-val" style="color:var(--green)"><span class="mcard-num" data-val="${t.inc}">${fmt(t.inc)}</span></div>
       </div>
       <div class="mcard">
         <div class="mcard-lbl">Gastado</div>
-        <div class="mcard-val" style="color:var(--red)">${fmt(t.exp)}</div>
+        <div class="mcard-val" style="color:var(--red)"><span class="mcard-num" data-val="${t.exp}">${fmt(t.exp)}</span></div>
       </div>
       <div class="mcard">
         <div class="mcard-lbl">Balance</div>
-        <div class="mcard-val" style="color:${t.net>=0?'var(--green)':'var(--red)'}">${fmtSigned(t.net)}</div>
+        <div class="mcard-val" style="color:${t.net>=0?'var(--green)':'var(--red)'}"><span class="mcard-num" data-val="${t.net}" data-signed="1">${fmtSigned(t.net)}</span></div>
       </div>
     </div>
 
@@ -609,6 +656,13 @@ function renderMonth(mi){
       </div>
     </div>
   `;
+
+  // Animar los 4 valores del resumen del mes
+  const nums = panel.querySelectorAll('.mcard-num');
+  if(nums[0]) animateNumber(nums[0], t.start, { prefix:'$' });
+  if(nums[1]) animateNumber(nums[1], t.inc,   { prefix:'$' });
+  if(nums[2]) animateNumber(nums[2], t.exp,   { prefix:'$' });
+  if(nums[3]) animateNumber(nums[3], t.net,   { prefix:'$', signed:true });
 
   const mt = monthTypes[mi] || 'expense';
   setTypeVisual(mi, mt);
