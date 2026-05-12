@@ -246,7 +246,7 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 <div id="splash-screen">
   <div class="splash-particles" id="splash-particles"></div>
   <div class="splash-logo">💰</div>
-  <div class="splash-title">Bienvenido</div>
+  <div class="splash-title" id="splash-greeting">Bienvenido</div>
   <div class="splash-name">Sr. Jeiron</div>
   <div class="splash-bar-wrap">
     <div class="splash-bar-fill"></div>
@@ -753,6 +753,12 @@ function propagateCapitals(){
 
 let activeMonth = new Date().getMonth();
 let annualActive = false;
+const annualExpandState = { expense: false, income: false };
+
+function toggleAnnualExpand(type){
+  annualExpandState[type] = !annualExpandState[type];
+  renderAnnual();
+}
 
 function switchMonth(mi){
   annualActive = false;
@@ -794,7 +800,12 @@ function renderAnnual(){
     const color = type==='expense' ? 'var(--red)' : 'var(--green)';
     const sign  = type==='expense' ? '-' : '+';
     const cats  = type==='expense' ? EXPENSE_CATS : INCOME_CATS;
-    return dataArr.map(d=>{
+    const LIMIT = 3;
+    const expanded = annualExpandState[type] === true;
+    const visible = expanded ? dataArr : dataArr.slice(0, LIMIT);
+    const hidden  = dataArr.length - LIMIT;
+
+    const rowsHTML = visible.map(d=>{
       const catDef = cats.find(c=>c.v===d.k);
       const label  = catDef?.l || d.k;
       let count = 0;
@@ -809,6 +820,17 @@ function renderAnnual(){
         <div style="font-family:'DM Serif Display',serif;font-size:1rem;color:${color}">${sign}${fmt(d.v)}</div>
       </div>`;
     }).join('');
+
+    let toggleBtn = '';
+    if(dataArr.length > LIMIT){
+      toggleBtn = `<button onclick="toggleAnnualExpand('${type}')"
+        style="width:100%;margin-top:10px;padding:7px;background:transparent;border:1px solid var(--border2);border-radius:var(--rs);color:var(--muted2);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .15s"
+        onmouseover="this.style.color='var(--text)';this.style.borderColor='rgba(255,255,255,0.2)'"
+        onmouseout="this.style.color='var(--muted2)';this.style.borderColor='var(--border2)'">
+        ${expanded ? '▲ Ver menos' : `▼ Ver todos (${dataArr.length})`}
+      </button>`;
+    }
+    return rowsHTML + toggleBtn;
   }
 
   document.getElementById('annual-exp-bars').innerHTML = catListHTML(expData, 'expense');
@@ -1297,6 +1319,17 @@ function save(){
 
 // ── Splash Screen ─────────────────────────────────────────────────────────
 (function initSplash(){
+  // Saludo dinámico según hora del día
+  const greetEl = document.getElementById('splash-greeting');
+  if(greetEl){
+    const h = new Date().getHours();
+    let greeting;
+    if(h >= 5 && h < 12)       greeting = 'Buenos días';
+    else if(h >= 12 && h < 19) greeting = 'Buenas tardes';
+    else                       greeting = 'Buenas noches';
+    greetEl.textContent = greeting;
+  }
+
   // Generate floating particles
   const container = document.getElementById('splash-particles');
   const colors = ['#e8b96a','#2dd4a0','#60a5fa','#f06050','#fff'];
