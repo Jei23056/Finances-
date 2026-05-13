@@ -147,19 +147,7 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 }
 .ycard > * { position:relative; z-index:2; }
 
-/* ── #10 Termómetro del balance arriba ──────────────────────────── */
-#balance-thermometer {
-  position:fixed; top:0; left:0; right:0; height:3px;
-  background:rgba(255,255,255,0.04); z-index:100;
-  overflow:hidden;
-}
-#balance-thermometer-fill {
-  height:100%; width:0%;
-  background:linear-gradient(90deg, var(--red), var(--gold), var(--green));
-  background-size:200% 100%;
-  transition:width 1s cubic-bezier(.4,0,.2,1), background-position 1s;
-  box-shadow:0 0 8px currentColor;
-}
+/* ── #10 (REMOVIDO) — Termómetro del balance ─────────────────── */
 
 /* ── #4 Puntos en pestañas (actual + con datos) ─────────────────── */
 .mtab { position:relative; }
@@ -183,10 +171,22 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   50%     { transform:scale(1.4); opacity:.6;  }
 }
 
-/* ── #7 Mini-gráfico en pestañas de mes ─────────────────────────── */
-.mtab { padding-bottom:14px !important; }
-.mtab-spark {
-  display:block; margin-top:4px; height:8px;
+/* ── #7 (REMOVIDO) — Mini-gráfico en pestañas ───────────────────── */
+/* En su lugar: color de fondo según balance del mes */
+.mtab.month-positive {
+  background:rgba(45,212,160,0.10);
+  border-color:rgba(45,212,160,0.35);
+  color:var(--green);
+}
+.mtab.month-negative {
+  background:rgba(240,96,80,0.10);
+  border-color:rgba(240,96,80,0.35);
+  color:var(--red);
+}
+.mtab.month-positive.active,
+.mtab.month-negative.active {
+  background:var(--surf);
+  color:var(--text);
 }
 
 /* ── #9 Borde gradiente animado en pestaña activa ───────────────── */
@@ -524,9 +524,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 </head>
 <body>
 
-<!-- #10 Termómetro de balance arriba -->
-<div id="balance-thermometer"><div id="balance-thermometer-fill"></div></div>
-
 <!-- #43 Achievement Toast -->
 <div class="achievement-toast" id="ach-toast">
   <div class="ach-icon" id="ach-toast-icon">🏆</div>
@@ -594,17 +591,8 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 <!-- #33 Insights bar -->
 <div class="insights-bar" id="insights-bar"></div>
 
-<!-- #39 Toggle de vista (Pestañas / Wallet) -->
-<div class="view-toggle">
-  <button class="vt-btn active" id="vt-tabs"   onclick="setView('tabs')">📋 Pestañas</button>
-  <button class="vt-btn"        id="vt-wallet" onclick="setView('wallet')">🃏 Cards</button>
-</div>
-
 <div class="month-scroll" id="month-tabs"></div>
 <div id="month-panels"></div>
-
-<!-- #39 Vista wallet (cards) -->
-<div id="wallet-view"><div class="wallet-stack" id="wallet-stack"></div></div>
 
 <div id="panel-annual" style="display:none">
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;box-sizing:border-box;width:100%">
@@ -1577,54 +1565,22 @@ function renderAll(){
 // FEATURES VISUALES NUEVAS (solo agregan, no modifican lógica existente)
 // ══════════════════════════════════════════════════════════════════════════
 
-// ── #10 Termómetro de balance ───────────────────────────────────────
-function updateBalanceThermometer(){
-  const mi = annualActive ? new Date().getMonth() : activeMonth;
-  const t  = monthTotals(mi);
-  const fill = document.getElementById('balance-thermometer-fill');
-  if(!fill) return;
-  if(t.inc <= 0){ fill.style.width = '0%'; return; }
-  // Pct gastado del ingreso (0% = perfecto, 100% = empate, >100% = déficit)
-  const pct = Math.min(100, Math.round(t.exp / t.inc * 100));
-  fill.style.width = pct + '%';
-  // Color del gradiente según situación
-  if(pct < 60)       fill.style.backgroundPosition = '0% 0%';     // verde
-  else if(pct < 90)  fill.style.backgroundPosition = '50% 0%';    // dorado
-  else               fill.style.backgroundPosition = '100% 0%';   // rojo
-}
+// ── #10 (REMOVIDO) — Termómetro del balance ─────────────────────────
+function updateBalanceThermometer(){ /* removido */ }
 
-// ── #4 + #7 Mini-sparkline en pestañas ──────────────────────────────
-function monthSparkline(mi){
-  const md = getMonth(mi);
-  if(!md.entries || md.entries.length === 0) return '';
-  // Construir días del mes con balance acumulado
-  const dayMap = {};
-  md.entries.forEach(e=>{
-    const k = e.date;
-    if(!dayMap[k]) dayMap[k] = 0;
-    dayMap[k] += (e.type === 'income' ? e.amount : -e.amount);
+// ── (REMOVIDO #7 mini-sparkline) — Color de pestaña según balance ───
+function applyMonthTabColors(){
+  document.querySelectorAll('.mtab').forEach((t, i)=>{
+    if(i >= 12) return;
+    t.classList.remove('month-positive', 'month-negative');
+    const tot = monthTotals(i);
+    if(tot.inc === 0 && tot.exp === 0) return; // sin datos, sin color
+    if(tot.net >= 0) t.classList.add('month-positive');
+    else             t.classList.add('month-negative');
   });
-  const days = Object.keys(dayMap).sort();
-  if(days.length < 2) return '';
-  let acc = 0;
-  const points = days.map(d => { acc += dayMap[d]; return acc; });
-  const min = Math.min(...points, 0);
-  const max = Math.max(...points, 0);
-  const range = (max - min) || 1;
-  const w = 50, h = 8;
-  const coords = points.map((v,i)=>{
-    const x = (i/(points.length-1)) * w;
-    const y = h - ((v - min) / range) * h;
-    return x.toFixed(1) + ',' + y.toFixed(1);
-  }).join(' ');
-  const endVal = points[points.length-1];
-  const color  = endVal >= 0 ? 'var(--green)' : 'var(--red)';
-  return `<svg class="mtab-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-    <polyline points="${coords}" fill="none" stroke="${color}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
-  </svg>`;
 }
 
-// ── #33 Insights contextuales ───────────────────────────────────────
+// ── #33 Insights contextuales (SOLO del mes actual) ─────────────────
 function generateInsights(){
   const insights = [];
   const now = new Date();
@@ -1651,7 +1607,7 @@ function generateInsights(){
     }
   }
 
-  // Comparativa con mes anterior
+  // Comparativa con mes anterior (sigue siendo info relevante al mes actual)
   if(curMi > 0){
     const tp = monthTotals(curMi - 1);
     if(t.exp > 0 && tp.exp > 0){
@@ -1672,12 +1628,6 @@ function generateInsights(){
   const topCat = Object.entries(expMap).sort((a,b)=>b[1]-a[1])[0];
   if(topCat){
     insights.push({ icon:'🎯', text:`Top gasto: ${topCat[0]} (${fmt(topCat[1])})` });
-  }
-
-  // Capital tendencia (del año)
-  const {yCap} = yearTotals();
-  if(yCap > 0){
-    insights.push({ icon:'💎', text:`Capital ${fmtSigned(yCap)}` });
   }
 
   // Cantidad de movimientos este mes
@@ -1701,80 +1651,8 @@ function renderInsights(){
   `).join('');
 }
 
-// ── #39 Vista wallet (cards) ────────────────────────────────────────
-let currentView = 'tabs';
-
-function setView(view){
-  currentView = view;
-  const wv = document.getElementById('wallet-view');
-  const tabs = document.getElementById('month-tabs');
-  const panels = document.getElementById('month-panels');
-  const annual = document.getElementById('panel-annual');
-  const btnTabs = document.getElementById('vt-tabs');
-  const btnWallet = document.getElementById('vt-wallet');
-
-  if(view === 'wallet'){
-    wv.classList.add('active');
-    tabs.style.display = 'none';
-    panels.style.display = 'none';
-    annual.style.display = 'none';
-    btnTabs.classList.remove('active');
-    btnWallet.classList.add('active');
-    renderWallet();
-  } else {
-    wv.classList.remove('active');
-    tabs.style.display = 'flex';
-    panels.style.display = '';
-    btnTabs.classList.add('active');
-    btnWallet.classList.remove('active');
-    if(annualActive){
-      annual.style.display = 'block';
-    } else {
-      annual.style.display = 'none';
-    }
-  }
-}
-
-function renderWallet(){
-  const stack = document.getElementById('wallet-stack');
-  if(!stack) return;
-  const curMi = new Date().getMonth();
-  let html = '';
-  MONTHS.forEach((name, mi)=>{
-    const t = monthTotals(mi);
-    if(t.inc === 0 && t.exp === 0 && mi !== curMi) return;
-    const pct = t.inc > 0 ? Math.round((t.inc - t.exp) / t.inc * 100) : null;
-    const isCurrent = mi === curMi;
-    const netColor = t.net >= 0 ? 'var(--green)' : 'var(--red)';
-    const pctColor = pct === null ? 'var(--muted)' : (pct >= 0 ? 'var(--green)' : 'var(--red)');
-    html += `
-      <div class="wallet-card ${isCurrent ? 'current' : ''}" onclick="setView('tabs');switchMonth(${mi})">
-        <div class="wc-header">
-          <div>
-            <div class="wc-month">${name}</div>
-            <div class="wc-badge">${isCurrent ? '★ Mes actual' : (t.inc>0||t.exp>0?'Con movimientos':'Sin datos')}</div>
-          </div>
-          <div class="wc-pct" style="color:${pctColor}">${pct === null ? '—' : (pct>=0?'+':'')+pct+'%'}</div>
-        </div>
-        <div class="wc-body">
-          <div>
-            <div class="wc-stat-lbl">Ganado</div>
-            <div class="wc-stat-val" style="color:var(--green)">+${fmt(t.inc)}</div>
-          </div>
-          <div style="text-align:right">
-            <div class="wc-stat-lbl">Gastado</div>
-            <div class="wc-stat-val" style="color:var(--red)">-${fmt(t.exp)}</div>
-          </div>
-          <div style="grid-column:1/-1;text-align:center;padding-top:8px;border-top:1px solid var(--border)">
-            <div class="wc-stat-lbl">Balance</div>
-            <div class="wc-stat-val" style="color:${netColor}">${fmtSigned(t.net)}</div>
-          </div>
-        </div>
-      </div>
-    `;
-  });
-  stack.innerHTML = html || '<div style="text-align:center;color:var(--muted);padding:2rem;font-size:13px">Sin meses con datos aún</div>';
-}
+// ── #39 (REMOVIDO) — Vista wallet (cards) ──────────────────────────
+// La vista de cards fue removida; ahora solo queda la vista de pestañas.
 
 // ── #43 Sistema de logros ───────────────────────────────────────────
 const ACHIEVEMENTS = [
@@ -1902,23 +1780,14 @@ window.renderAll = function(){
   _origRenderAll();
   updateBalanceThermometer();
   renderInsights();
-  // Decorar pestañas con sparkline + indicador mes actual
+  // Decorar pestañas con color por balance + indicador mes actual
   const curMi = new Date().getMonth();
   document.querySelectorAll('.mtab').forEach((t, i)=>{
     if(i < 12){
-      // Indicador de mes actual
       t.classList.toggle('is-current', i === curMi);
-      // Agregar sparkline (sin afectar el texto)
-      const existing = t.querySelector('.mtab-spark');
-      if(existing) existing.remove();
-      const spark = monthSparkline(i);
-      if(spark){
-        t.insertAdjacentHTML('beforeend', spark);
-      }
     }
   });
-  // Si está en vista wallet, refrescar también
-  if(currentView === 'wallet') renderWallet();
+  applyMonthTabColors();
   // Revisar logros
   checkAchievements(true);
 };
