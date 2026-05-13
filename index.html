@@ -1797,16 +1797,28 @@ window.renderAll = function(){
   checkAchievements(true);
 };
 
-// Hook switchMonth para actualizar termómetro
+// Hook switchMonth para re-aplicar colores y mes actual
 const _origSwitchMonth = switchMonth;
 window.switchMonth = function(mi){
   _origSwitchMonth(mi);
   updateBalanceThermometer();
+  // Re-aplicar indicador de mes actual y colores
+  const curMi = new Date().getMonth();
+  document.querySelectorAll('.mtab').forEach((t, i)=>{
+    if(i < 12) t.classList.toggle('is-current', i === curMi);
+  });
+  applyMonthTabColors();
 };
 const _origSwitchToAnnual = switchToAnnual;
 window.switchToAnnual = function(){
   _origSwitchToAnnual();
   updateBalanceThermometer();
+  // Re-aplicar indicador de mes actual y colores
+  const curMi = new Date().getMonth();
+  document.querySelectorAll('.mtab').forEach((t, i)=>{
+    if(i < 12) t.classList.toggle('is-current', i === curMi);
+  });
+  applyMonthTabColors();
 };
 
 // ══════════════════════════════════════════════════════════════════════════
