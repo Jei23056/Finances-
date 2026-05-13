@@ -123,6 +123,288 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   .msummary { gap:6px; }
   header h1 { font-size:1.4rem; }
 }
+
+/* ── #2 Brillo sutil en tarjetas del año ─────────────────────────── */
+.ycard { position:relative; overflow:hidden; }
+.ycard::before {
+  content:'';
+  position:absolute;
+  top:0; left:-100%;
+  width:60%; height:100%;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+  animation:ycard-shine 6s ease-in-out infinite;
+  pointer-events:none;
+  z-index:1;
+}
+.ycard.inc::before { animation-delay:0s; }
+.ycard.exp::before { animation-delay:1.5s; }
+.ycard.net::before { animation-delay:3s; }
+.ycard.sav::before { animation-delay:4.5s; }
+@keyframes ycard-shine {
+  0%   { left:-100%; }
+  60%  { left:160%; }
+  100% { left:160%; }
+}
+.ycard > * { position:relative; z-index:2; }
+
+/* ── #10 Termómetro del balance arriba ──────────────────────────── */
+#balance-thermometer {
+  position:fixed; top:0; left:0; right:0; height:3px;
+  background:rgba(255,255,255,0.04); z-index:100;
+  overflow:hidden;
+}
+#balance-thermometer-fill {
+  height:100%; width:0%;
+  background:linear-gradient(90deg, var(--red), var(--gold), var(--green));
+  background-size:200% 100%;
+  transition:width 1s cubic-bezier(.4,0,.2,1), background-position 1s;
+  box-shadow:0 0 8px currentColor;
+}
+
+/* ── #4 Puntos en pestañas (actual + con datos) ─────────────────── */
+.mtab { position:relative; }
+.mtab.has-data::after {
+  content:'';
+  position:absolute; top:6px; right:8px;
+  width:5px; height:5px; border-radius:50%;
+  background:var(--green); opacity:.8;
+}
+.mtab.is-current::after {
+  content:'';
+  position:absolute; top:5px; right:7px;
+  width:7px; height:7px; border-radius:50%;
+  background:var(--gold);
+  animation:current-pulse 2s ease-in-out infinite;
+  box-shadow:0 0 6px var(--gold);
+}
+.mtab.is-current.has-data::after { background:var(--gold); }
+@keyframes current-pulse {
+  0%,100% { transform:scale(1);   opacity:1;   }
+  50%     { transform:scale(1.4); opacity:.6;  }
+}
+
+/* ── #7 Mini-gráfico en pestañas de mes ─────────────────────────── */
+.mtab { padding-bottom:14px !important; }
+.mtab-spark {
+  display:block; margin-top:4px; height:8px;
+}
+
+/* ── #9 Borde gradiente animado en pestaña activa ───────────────── */
+.mtab.active {
+  background:var(--surf);
+  border:1px solid transparent;
+  background-image:
+    linear-gradient(var(--surf), var(--surf)),
+    linear-gradient(135deg, var(--gold), var(--green), var(--gold));
+  background-origin:border-box;
+  background-clip:padding-box, border-box;
+  background-size:100% 100%, 200% 200%;
+  animation:gradient-shift 4s ease infinite;
+}
+@keyframes gradient-shift {
+  0%,100% { background-position:0% 0%, 0% 50%; }
+  50%     { background-position:0% 0%, 100% 50%; }
+}
+
+/* ── #26 Pestaña activa se eleva con sombra dorada ───────────────── */
+.mtab.active {
+  transform:translateY(-2px);
+  box-shadow:0 4px 14px rgba(232,185,106,0.25), 0 0 0 1px rgba(232,185,106,0.15);
+}
+
+/* ── #33 Mensajes contextuales (insights) ───────────────────────── */
+.insights-bar {
+  display:flex; gap:8px; overflow-x:auto;
+  margin-bottom:1.25rem; padding-bottom:4px;
+  scrollbar-width:none;
+}
+.insights-bar::-webkit-scrollbar { display:none; }
+.insight-chip {
+  flex-shrink:0;
+  background:linear-gradient(135deg, var(--card), var(--card2));
+  border:1px solid var(--border2);
+  border-radius:999px; padding:7px 14px;
+  font-size:12px; color:var(--text);
+  display:flex; align-items:center; gap:6px;
+  animation:insight-in .4s ease;
+  white-space:nowrap;
+}
+.insight-chip .ic-icon { font-size:14px; }
+@keyframes insight-in {
+  from { opacity:0; transform:translateY(-4px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* ── #39 Vista "Cards" tipo Apple Wallet (toggle) ───────────────── */
+.view-toggle {
+  display:flex; gap:4px; margin-bottom:1rem;
+  background:var(--card); border:1px solid var(--border);
+  border-radius:999px; padding:3px; width:fit-content;
+}
+.vt-btn {
+  padding:6px 14px; background:transparent; border:none;
+  border-radius:999px; font-size:12px;
+  font-family:'DM Sans',sans-serif; color:var(--muted2);
+  cursor:pointer; transition:all .2s;
+}
+.vt-btn.active {
+  background:var(--surf); color:var(--text);
+  box-shadow:0 1px 3px rgba(0,0,0,.3);
+}
+
+#wallet-view { display:none; padding:1rem 0; }
+#wallet-view.active { display:block; animation:wallet-fade .4s ease; }
+@keyframes wallet-fade {
+  from { opacity:0; transform:translateY(10px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.wallet-stack {
+  display:flex; flex-direction:column;
+  align-items:center; padding:1rem 0;
+  perspective:1000px;
+}
+.wallet-card {
+  width:92%; max-width:480px;
+  background:linear-gradient(135deg, var(--card2), var(--card));
+  border:1px solid var(--border2);
+  border-radius:18px; padding:1.2rem 1.4rem;
+  margin-top:-45px; cursor:pointer;
+  transition:transform .35s cubic-bezier(.34,1.4,.64,1), margin-top .35s;
+  box-shadow:0 -4px 18px rgba(0,0,0,0.35);
+  position:relative; overflow:hidden;
+}
+.wallet-card:first-child { margin-top:0; }
+.wallet-card:hover { transform:translateY(-6px) scale(1.02); }
+.wallet-card.current { border-color:var(--gold); }
+.wallet-card.current::before {
+  content:''; position:absolute; top:0; left:0; right:0;
+  height:3px; background:linear-gradient(90deg, var(--gold), #fff5d6, var(--gold));
+  background-size:200% 100%; animation:wallet-shine 3s linear infinite;
+}
+@keyframes wallet-shine { to { background-position:200% 0; } }
+.wc-header {
+  display:flex; justify-content:space-between; align-items:flex-start;
+  margin-bottom:14px;
+}
+.wc-month {
+  font-family:'DM Serif Display',serif; font-size:1.5rem;
+  color:var(--text);
+}
+.wc-badge {
+  font-size:10px; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--muted); margin-top:3px;
+}
+.wc-pct {
+  font-family:'DM Serif Display',serif; font-size:1.2rem;
+}
+.wc-body {
+  display:grid; grid-template-columns:1fr 1fr; gap:12px;
+  padding-top:12px; border-top:1px solid var(--border);
+}
+.wc-stat-lbl {
+  font-size:9px; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--muted); margin-bottom:3px;
+}
+.wc-stat-val {
+  font-family:'DM Serif Display',serif; font-size:1rem;
+}
+
+/* ── #43 Sistema de logros (achievements) ───────────────────────── */
+.achievement-toast {
+  position:fixed; top:20px; left:50%;
+  transform:translateX(-50%) translateY(-20px);
+  background:linear-gradient(135deg, var(--card2), var(--card));
+  border:1px solid var(--gold);
+  border-radius:14px; padding:14px 20px;
+  display:flex; align-items:center; gap:12px;
+  box-shadow:0 8px 30px rgba(232,185,106,0.25), 0 0 0 1px rgba(232,185,106,0.1);
+  z-index:9000; opacity:0; pointer-events:none;
+  transition:all .5s cubic-bezier(.34,1.4,.64,1);
+  max-width:90%;
+}
+.achievement-toast.show {
+  opacity:1; transform:translateX(-50%) translateY(0);
+}
+.ach-icon {
+  font-size:28px; animation:ach-bounce 1s ease infinite;
+}
+@keyframes ach-bounce {
+  0%,100% { transform:scale(1); }
+  50%     { transform:scale(1.15) rotate(-5deg); }
+}
+.ach-text-lbl {
+  font-size:9px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--gold); margin-bottom:2px;
+}
+.ach-text-name {
+  font-family:'DM Serif Display',serif; font-size:1rem; color:var(--text);
+}
+.ach-text-desc {
+  font-size:11px; color:var(--muted); margin-top:2px;
+}
+
+/* Botón flotante para ver logros */
+#ach-fab {
+  position:fixed; bottom:20px; left:20px;
+  width:42px; height:42px; border-radius:50%;
+  background:var(--card); border:1px solid var(--border2);
+  display:none; align-items:center; justify-content:center;
+  cursor:pointer; font-size:18px;
+  transition:transform .2s, border-color .2s;
+  z-index:50;
+}
+#ach-fab.visible { display:flex; }
+#ach-fab:hover { transform:scale(1.1); border-color:var(--gold); }
+#ach-fab .ach-count {
+  position:absolute; top:-4px; right:-4px;
+  background:var(--gold); color:var(--bg);
+  font-size:10px; font-weight:600;
+  min-width:18px; height:18px; border-radius:9px;
+  display:flex; align-items:center; justify-content:center;
+  padding:0 4px;
+}
+
+/* Panel de logros */
+#ach-panel {
+  position:fixed; inset:0; z-index:9500;
+  background:rgba(0,0,0,0.7); backdrop-filter:blur(6px);
+  display:none; align-items:center; justify-content:center;
+  padding:1rem;
+}
+#ach-panel.show { display:flex; animation:fade-in .3s; }
+@keyframes fade-in { from {opacity:0} to {opacity:1} }
+.ach-modal {
+  background:var(--card); border:1px solid var(--border2);
+  border-radius:18px; padding:1.5rem;
+  max-width:480px; width:100%; max-height:80vh; overflow-y:auto;
+}
+.ach-modal h3 {
+  font-family:'DM Serif Display',serif; font-size:1.4rem;
+  margin-bottom:1rem; display:flex; justify-content:space-between;
+  align-items:center;
+}
+.ach-list { display:flex; flex-direction:column; gap:10px; }
+.ach-item {
+  display:flex; align-items:center; gap:14px;
+  padding:12px; border-radius:12px;
+  border:1px solid var(--border);
+  background:var(--surf);
+  transition:all .2s;
+}
+.ach-item.unlocked { border-color:rgba(232,185,106,0.3); }
+.ach-item.locked   { opacity:0.45; }
+.ach-item .ai-icon { font-size:24px; }
+.ach-item .ai-info { flex:1; }
+.ach-item .ai-name {
+  font-size:13px; font-weight:500; color:var(--text);
+}
+.ach-item .ai-desc { font-size:11px; color:var(--muted); margin-top:2px; }
+.ach-close {
+  background:none; border:none; color:var(--muted);
+  font-size:24px; cursor:pointer; line-height:1;
+}
+.ach-close:hover { color:var(--text); }
+
 </style>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -242,6 +524,32 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 </head>
 <body>
 
+<!-- #10 Termómetro de balance arriba -->
+<div id="balance-thermometer"><div id="balance-thermometer-fill"></div></div>
+
+<!-- #43 Achievement Toast -->
+<div class="achievement-toast" id="ach-toast">
+  <div class="ach-icon" id="ach-toast-icon">🏆</div>
+  <div>
+    <div class="ach-text-lbl">Logro desbloqueado</div>
+    <div class="ach-text-name" id="ach-toast-name"></div>
+    <div class="ach-text-desc" id="ach-toast-desc"></div>
+  </div>
+</div>
+
+<!-- #43 FAB de logros -->
+<div id="ach-fab" onclick="openAchPanel()" title="Logros">
+  🏆<div class="ach-count" id="ach-count">0</div>
+</div>
+
+<!-- #43 Panel de logros -->
+<div id="ach-panel" onclick="if(event.target.id==='ach-panel')closeAchPanel()">
+  <div class="ach-modal">
+    <h3>🏆 Mis Logros <button class="ach-close" onclick="closeAchPanel()">×</button></h3>
+    <div class="ach-list" id="ach-list"></div>
+  </div>
+</div>
+
 <!-- Splash Screen -->
 <div id="splash-screen">
   <div class="splash-particles" id="splash-particles"></div>
@@ -283,8 +591,20 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   <div class="ycard sav"><div class="ycard-lbl">Capital actual</div><div class="ycard-val" id="y-cap">$0.00</div></div>
 </div>
 
+<!-- #33 Insights bar -->
+<div class="insights-bar" id="insights-bar"></div>
+
+<!-- #39 Toggle de vista (Pestañas / Wallet) -->
+<div class="view-toggle">
+  <button class="vt-btn active" id="vt-tabs"   onclick="setView('tabs')">📋 Pestañas</button>
+  <button class="vt-btn"        id="vt-wallet" onclick="setView('wallet')">🃏 Cards</button>
+</div>
+
 <div class="month-scroll" id="month-tabs"></div>
 <div id="month-panels"></div>
+
+<!-- #39 Vista wallet (cards) -->
+<div id="wallet-view"><div class="wallet-stack" id="wallet-stack"></div></div>
 
 <div id="panel-annual" style="display:none">
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;box-sizing:border-box;width:100%">
@@ -1252,6 +1572,372 @@ function renderAll(){
     if(i < 12) t.classList.toggle('has-data', hasData(i));
   });
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// FEATURES VISUALES NUEVAS (solo agregan, no modifican lógica existente)
+// ══════════════════════════════════════════════════════════════════════════
+
+// ── #10 Termómetro de balance ───────────────────────────────────────
+function updateBalanceThermometer(){
+  const mi = annualActive ? new Date().getMonth() : activeMonth;
+  const t  = monthTotals(mi);
+  const fill = document.getElementById('balance-thermometer-fill');
+  if(!fill) return;
+  if(t.inc <= 0){ fill.style.width = '0%'; return; }
+  // Pct gastado del ingreso (0% = perfecto, 100% = empate, >100% = déficit)
+  const pct = Math.min(100, Math.round(t.exp / t.inc * 100));
+  fill.style.width = pct + '%';
+  // Color del gradiente según situación
+  if(pct < 60)       fill.style.backgroundPosition = '0% 0%';     // verde
+  else if(pct < 90)  fill.style.backgroundPosition = '50% 0%';    // dorado
+  else               fill.style.backgroundPosition = '100% 0%';   // rojo
+}
+
+// ── #4 + #7 Mini-sparkline en pestañas ──────────────────────────────
+function monthSparkline(mi){
+  const md = getMonth(mi);
+  if(!md.entries || md.entries.length === 0) return '';
+  // Construir días del mes con balance acumulado
+  const dayMap = {};
+  md.entries.forEach(e=>{
+    const k = e.date;
+    if(!dayMap[k]) dayMap[k] = 0;
+    dayMap[k] += (e.type === 'income' ? e.amount : -e.amount);
+  });
+  const days = Object.keys(dayMap).sort();
+  if(days.length < 2) return '';
+  let acc = 0;
+  const points = days.map(d => { acc += dayMap[d]; return acc; });
+  const min = Math.min(...points, 0);
+  const max = Math.max(...points, 0);
+  const range = (max - min) || 1;
+  const w = 50, h = 8;
+  const coords = points.map((v,i)=>{
+    const x = (i/(points.length-1)) * w;
+    const y = h - ((v - min) / range) * h;
+    return x.toFixed(1) + ',' + y.toFixed(1);
+  }).join(' ');
+  const endVal = points[points.length-1];
+  const color  = endVal >= 0 ? 'var(--green)' : 'var(--red)';
+  return `<svg class="mtab-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <polyline points="${coords}" fill="none" stroke="${color}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+  </svg>`;
+}
+
+// ── #33 Insights contextuales ───────────────────────────────────────
+function generateInsights(){
+  const insights = [];
+  const now = new Date();
+  const curMi = now.getMonth();
+  const t = monthTotals(curMi);
+
+  // Saludo según hora
+  const h = now.getHours();
+  let saludo;
+  if(h>=5 && h<12) saludo = '☀️ Buen día';
+  else if(h>=12 && h<19) saludo = '🌤️ Buena tarde';
+  else saludo = '🌙 Buena noche';
+  insights.push({ icon:'', text: saludo });
+
+  // Insight de gasto vs ingreso este mes
+  if(t.inc > 0){
+    const pct = Math.round((t.inc - t.exp) / t.inc * 100);
+    if(pct >= 30){
+      insights.push({ icon:'🔥', text:`Ahorrando ${pct}% en ${MONTHS[curMi]}` });
+    } else if(pct >= 0){
+      insights.push({ icon:'💪', text:`Ahorro de ${pct}% este mes` });
+    } else {
+      insights.push({ icon:'⚠️', text:`Llevas ${Math.abs(pct)}% sobre tu ingreso` });
+    }
+  }
+
+  // Comparativa con mes anterior
+  if(curMi > 0){
+    const tp = monthTotals(curMi - 1);
+    if(t.exp > 0 && tp.exp > 0){
+      const diff = Math.round((t.exp - tp.exp) / tp.exp * 100);
+      if(Math.abs(diff) >= 10){
+        const updown = diff > 0 ? '📈' : '📉';
+        const verbo  = diff > 0 ? 'más' : 'menos';
+        insights.push({ icon:updown, text:`Gastas ${Math.abs(diff)}% ${verbo} que ${MONTHS[curMi-1]}` });
+      }
+    }
+  }
+
+  // Top categoría del mes
+  const expMap = {};
+  getMonth(curMi).entries.filter(e=>e.type==='expense').forEach(e=>{
+    expMap[e.cat] = (expMap[e.cat]||0) + e.amount;
+  });
+  const topCat = Object.entries(expMap).sort((a,b)=>b[1]-a[1])[0];
+  if(topCat){
+    insights.push({ icon:'🎯', text:`Top gasto: ${topCat[0]} (${fmt(topCat[1])})` });
+  }
+
+  // Capital tendencia (del año)
+  const {yCap} = yearTotals();
+  if(yCap > 0){
+    insights.push({ icon:'💎', text:`Capital ${fmtSigned(yCap)}` });
+  }
+
+  // Cantidad de movimientos este mes
+  const totalMov = getMonth(curMi).entries.length;
+  if(totalMov >= 5){
+    insights.push({ icon:'📝', text:`${totalMov} movimientos en ${MONTHS[curMi]}` });
+  }
+
+  return insights;
+}
+
+function renderInsights(){
+  const el = document.getElementById('insights-bar');
+  if(!el) return;
+  const ins = generateInsights();
+  el.innerHTML = ins.map(i=>`
+    <div class="insight-chip">
+      ${i.icon?`<span class="ic-icon">${i.icon}</span>`:''}
+      <span>${esc(i.text)}</span>
+    </div>
+  `).join('');
+}
+
+// ── #39 Vista wallet (cards) ────────────────────────────────────────
+let currentView = 'tabs';
+
+function setView(view){
+  currentView = view;
+  const wv = document.getElementById('wallet-view');
+  const tabs = document.getElementById('month-tabs');
+  const panels = document.getElementById('month-panels');
+  const annual = document.getElementById('panel-annual');
+  const btnTabs = document.getElementById('vt-tabs');
+  const btnWallet = document.getElementById('vt-wallet');
+
+  if(view === 'wallet'){
+    wv.classList.add('active');
+    tabs.style.display = 'none';
+    panels.style.display = 'none';
+    annual.style.display = 'none';
+    btnTabs.classList.remove('active');
+    btnWallet.classList.add('active');
+    renderWallet();
+  } else {
+    wv.classList.remove('active');
+    tabs.style.display = 'flex';
+    panels.style.display = '';
+    btnTabs.classList.add('active');
+    btnWallet.classList.remove('active');
+    if(annualActive){
+      annual.style.display = 'block';
+    } else {
+      annual.style.display = 'none';
+    }
+  }
+}
+
+function renderWallet(){
+  const stack = document.getElementById('wallet-stack');
+  if(!stack) return;
+  const curMi = new Date().getMonth();
+  let html = '';
+  MONTHS.forEach((name, mi)=>{
+    const t = monthTotals(mi);
+    if(t.inc === 0 && t.exp === 0 && mi !== curMi) return;
+    const pct = t.inc > 0 ? Math.round((t.inc - t.exp) / t.inc * 100) : null;
+    const isCurrent = mi === curMi;
+    const netColor = t.net >= 0 ? 'var(--green)' : 'var(--red)';
+    const pctColor = pct === null ? 'var(--muted)' : (pct >= 0 ? 'var(--green)' : 'var(--red)');
+    html += `
+      <div class="wallet-card ${isCurrent ? 'current' : ''}" onclick="setView('tabs');switchMonth(${mi})">
+        <div class="wc-header">
+          <div>
+            <div class="wc-month">${name}</div>
+            <div class="wc-badge">${isCurrent ? '★ Mes actual' : (t.inc>0||t.exp>0?'Con movimientos':'Sin datos')}</div>
+          </div>
+          <div class="wc-pct" style="color:${pctColor}">${pct === null ? '—' : (pct>=0?'+':'')+pct+'%'}</div>
+        </div>
+        <div class="wc-body">
+          <div>
+            <div class="wc-stat-lbl">Ganado</div>
+            <div class="wc-stat-val" style="color:var(--green)">+${fmt(t.inc)}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="wc-stat-lbl">Gastado</div>
+            <div class="wc-stat-val" style="color:var(--red)">-${fmt(t.exp)}</div>
+          </div>
+          <div style="grid-column:1/-1;text-align:center;padding-top:8px;border-top:1px solid var(--border)">
+            <div class="wc-stat-lbl">Balance</div>
+            <div class="wc-stat-val" style="color:${netColor}">${fmtSigned(t.net)}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  stack.innerHTML = html || '<div style="text-align:center;color:var(--muted);padding:2rem;font-size:13px">Sin meses con datos aún</div>';
+}
+
+// ── #43 Sistema de logros ───────────────────────────────────────────
+const ACHIEVEMENTS = [
+  { id:'first_move',  icon:'🎯', name:'Primer paso',           desc:'Registra tu primer movimiento',
+    check: () => MONTHS.some((_,mi)=> getMonth(mi).entries.length > 0) },
+  { id:'ten_moves',   icon:'📝', name:'En marcha',             desc:'10 movimientos registrados',
+    check: () => MONTHS.reduce((s,_,mi)=>s+getMonth(mi).entries.length,0) >= 10 },
+  { id:'fifty_moves', icon:'📚', name:'Constancia',            desc:'50 movimientos en total',
+    check: () => MONTHS.reduce((s,_,mi)=>s+getMonth(mi).entries.length,0) >= 50 },
+  { id:'hundred_moves', icon:'🏛️', name:'Centurión',            desc:'100 movimientos registrados',
+    check: () => MONTHS.reduce((s,_,mi)=>s+getMonth(mi).entries.length,0) >= 100 },
+  { id:'first_save',  icon:'💰', name:'Primer ahorro',         desc:'Cierra un mes con balance positivo',
+    check: () => MONTHS.some((_,mi)=>{ const t = monthTotals(mi); return t.inc>0 && t.net>0; }) },
+  { id:'three_saves', icon:'🏆', name:'Triple corona',         desc:'3 meses seguidos con balance positivo',
+    check: () => {
+      for(let i=0;i<=9;i++){
+        let ok = true;
+        for(let j=0;j<3;j++){
+          const t = monthTotals(i+j);
+          if(!(t.inc>0 && t.net>0)){ ok=false; break; }
+        }
+        if(ok) return true;
+      }
+      return false;
+    } },
+  { id:'twenty_pct',  icon:'🔥', name:'Ahorrador 20%',         desc:'Ahorra 20%+ en un mes',
+    check: () => MONTHS.some((_,mi)=>{ const t = monthTotals(mi); return t.inc>0 && ((t.inc-t.exp)/t.inc) >= 0.20; }) },
+  { id:'fifty_pct',   icon:'💎', name:'Ahorrador pro',         desc:'Ahorra 50%+ en un mes',
+    check: () => MONTHS.some((_,mi)=>{ const t = monthTotals(mi); return t.inc>0 && ((t.inc-t.exp)/t.inc) >= 0.50; }) },
+  { id:'cap_10k',     icon:'🌱', name:'Capital $10k',          desc:'Alcanza $10,000 de capital',
+    check: () => yearTotals().yCap >= 10000 },
+  { id:'cap_50k',     icon:'🌳', name:'Capital $50k',          desc:'Alcanza $50,000 de capital',
+    check: () => yearTotals().yCap >= 50000 },
+  { id:'cap_100k',    icon:'🏔️', name:'Capital $100k',         desc:'Alcanza $100,000 de capital',
+    check: () => yearTotals().yCap >= 100000 },
+  { id:'six_months',  icon:'📅', name:'Medio año',             desc:'Movimientos en 6 meses distintos',
+    check: () => MONTHS.filter((_,mi)=> getMonth(mi).entries.length > 0).length >= 6 },
+  { id:'full_year',   icon:'🌟', name:'Año completo',          desc:'Movimientos en los 12 meses',
+    check: () => MONTHS.every((_,mi)=> getMonth(mi).entries.length > 0) },
+  { id:'diverse',     icon:'🎨', name:'Diversificado',         desc:'Usa 5 categorías distintas',
+    check: () => {
+      const cats = new Set();
+      MONTHS.forEach((_,mi)=> getMonth(mi).entries.forEach(e=> cats.add(e.cat)));
+      return cats.size >= 5;
+    } }
+];
+
+// Estado local de logros ya notificados (en este dispositivo)
+function getUnlockedSet(){
+  try {
+    return new Set(JSON.parse(localStorage.getItem('ach_unlocked_2026') || '[]'));
+  } catch { return new Set(); }
+}
+function saveUnlockedSet(set){
+  try { localStorage.setItem('ach_unlocked_2026', JSON.stringify([...set])); } catch{}
+}
+
+function checkAchievements(showToast = true){
+  const unlocked = getUnlockedSet();
+  const newlyUnlocked = [];
+  ACHIEVEMENTS.forEach(a=>{
+    let ok = false;
+    try { ok = a.check(); } catch {}
+    if(ok && !unlocked.has(a.id)){
+      unlocked.add(a.id);
+      newlyUnlocked.push(a);
+    }
+  });
+  if(newlyUnlocked.length){
+    saveUnlockedSet(unlocked);
+    if(showToast){
+      // Mostrar el primero, los demás en cola
+      newlyUnlocked.forEach((a, i)=>{
+        setTimeout(()=> showAchToast(a), i * 3500);
+      });
+    }
+  }
+  updateAchFab();
+}
+
+function showAchToast(ach){
+  const toast = document.getElementById('ach-toast');
+  document.getElementById('ach-toast-icon').textContent = ach.icon;
+  document.getElementById('ach-toast-name').textContent = ach.name;
+  document.getElementById('ach-toast-desc').textContent = ach.desc;
+  toast.classList.add('show');
+  setTimeout(()=> toast.classList.remove('show'), 3000);
+}
+
+function updateAchFab(){
+  const fab = document.getElementById('ach-fab');
+  const cnt = document.getElementById('ach-count');
+  const unlocked = getUnlockedSet();
+  if(!fab || !cnt) return;
+  if(unlocked.size > 0){
+    fab.classList.add('visible');
+    cnt.textContent = unlocked.size;
+  } else {
+    fab.classList.remove('visible');
+  }
+}
+
+function openAchPanel(){
+  const list = document.getElementById('ach-list');
+  const unlocked = getUnlockedSet();
+  list.innerHTML = ACHIEVEMENTS.map(a=>{
+    const isUnlocked = unlocked.has(a.id);
+    return `<div class="ach-item ${isUnlocked?'unlocked':'locked'}">
+      <div class="ai-icon">${isUnlocked?a.icon:'🔒'}</div>
+      <div class="ai-info">
+        <div class="ai-name">${esc(a.name)}</div>
+        <div class="ai-desc">${esc(a.desc)}</div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('ach-panel').classList.add('show');
+}
+function closeAchPanel(){
+  document.getElementById('ach-panel').classList.remove('show');
+}
+
+// ── Hook: ejecutar todas las features visuales al renderizar ────────
+const _origRenderAll = renderAll;
+window.renderAll = function(){
+  _origRenderAll();
+  updateBalanceThermometer();
+  renderInsights();
+  // Decorar pestañas con sparkline + indicador mes actual
+  const curMi = new Date().getMonth();
+  document.querySelectorAll('.mtab').forEach((t, i)=>{
+    if(i < 12){
+      // Indicador de mes actual
+      t.classList.toggle('is-current', i === curMi);
+      // Agregar sparkline (sin afectar el texto)
+      const existing = t.querySelector('.mtab-spark');
+      if(existing) existing.remove();
+      const spark = monthSparkline(i);
+      if(spark){
+        t.insertAdjacentHTML('beforeend', spark);
+      }
+    }
+  });
+  // Si está en vista wallet, refrescar también
+  if(currentView === 'wallet') renderWallet();
+  // Revisar logros
+  checkAchievements(true);
+};
+
+// Hook switchMonth para actualizar termómetro
+const _origSwitchMonth = switchMonth;
+window.switchMonth = function(mi){
+  _origSwitchMonth(mi);
+  updateBalanceThermometer();
+};
+const _origSwitchToAnnual = switchToAnnual;
+window.switchToAnnual = function(){
+  _origSwitchToAnnual();
+  updateBalanceThermometer();
+};
+
+// ══════════════════════════════════════════════════════════════════════════
+// FIN FEATURES VISUALES NUEVAS
+// ══════════════════════════════════════════════════════════════════════════
 
 // ── Firebase ──────────────────────────────────────────────────────────────
 const firebaseConfig = {
