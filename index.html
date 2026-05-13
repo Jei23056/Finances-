@@ -1585,14 +1585,17 @@ function applyMonthTabColors(){
   });
 }
 
-// ── #33 Insights contextuales (SOLO del mes actual) ─────────────────
+// ── #33 Insights contextuales (del mes SELECCIONADO) ────────────────
 function generateInsights(){
   const insights = [];
   const now = new Date();
-  const curMi = now.getMonth();
-  const t = monthTotals(curMi);
+  // Si está en vista anual, usar el mes actual. Si no, el mes activo
+  const selMi = annualActive ? now.getMonth() : activeMonth;
+  const t = monthTotals(selMi);
+  const md = getMonth(selMi);
+  const mesNombre = MONTHS[selMi];
 
-  // Saludo según hora
+  // #1 Saludo según hora
   const h = now.getHours();
   let saludo;
   if(h>=5 && h<12) saludo = '☀️ Buen día';
@@ -1600,45 +1603,82 @@ function generateInsights(){
   else saludo = '🌙 Buena noche';
   insights.push({ icon:'', text: saludo });
 
-  // Insight de gasto vs ingreso este mes
+  // #2 % Ahorro del mes seleccionado
   if(t.inc > 0){
     const pct = Math.round((t.inc - t.exp) / t.inc * 100);
     if(pct >= 30){
-      insights.push({ icon:'🔥', text:`Ahorrando ${pct}% en ${MONTHS[curMi]}` });
+      insights.push({ icon:'🔥', text:`Ahorrando ${pct}% en ${mesNombre}` });
     } else if(pct >= 0){
-      insights.push({ icon:'💪', text:`Ahorro de ${pct}% este mes` });
+      insights.push({ icon:'💪', text:`Ahorro de ${pct}% en ${mesNombre}` });
     } else {
       insights.push({ icon:'⚠️', text:`Llevas ${Math.abs(pct)}% sobre tu ingreso` });
     }
   }
 
-  // Comparativa con mes anterior (sigue siendo info relevante al mes actual)
-  if(curMi > 0){
-    const tp = monthTotals(curMi - 1);
+  // #3 Comparativa con mes anterior
+  if(selMi > 0){
+    const tp = monthTotals(selMi - 1);
     if(t.exp > 0 && tp.exp > 0){
       const diff = Math.round((t.exp - tp.exp) / tp.exp * 100);
       if(Math.abs(diff) >= 10){
         const updown = diff > 0 ? '📈' : '📉';
         const verbo  = diff > 0 ? 'más' : 'menos';
-        insights.push({ icon:updown, text:`Gastas ${Math.abs(diff)}% ${verbo} que ${MONTHS[curMi-1]}` });
+        insights.push({ icon:updown, text:`Gastas ${Math.abs(diff)}% ${verbo} que ${MONTHS[selMi-1]}` });
       }
     }
   }
 
-  // Top categoría del mes
+  // #4 Top gasto del mes seleccionado
   const expMap = {};
-  getMonth(curMi).entries.filter(e=>e.type==='expense').forEach(e=>{
+  md.entries.filter(e=>e.type==='expense').forEach(e=>{
     expMap[e.cat] = (expMap[e.cat]||0) + e.amount;
   });
-  const topCat = Object.entries(expMap).sort((a,b)=>b[1]-a[1])[0];
+  const expEntries = Object.entries(expMap).sort((a,b)=>b[1]-a[1]);
+  const topCat = expEntries[0];
   if(topCat){
     insights.push({ icon:'🎯', text:`Top gasto: ${topCat[0]} (${fmt(topCat[1])})` });
   }
 
-  // Cantidad de movimientos este mes
-  const totalMov = getMonth(curMi).entries.length;
+  // #5 Cantidad de movimientos del mes seleccionado
+  const totalMov = md.entries.length;
   if(totalMov >= 5){
-    insights.push({ icon:'📝', text:`${totalMov} movimientos en ${MONTHS[curMi]}` });
+    insights.push({ icon:'📝', text:`${totalMov} movimientos en ${mesNombre}` });
+  }
+
+  // #6 NUEVO — Días sin gastar (en este mes)
+  // Cuenta días únicos del mes con al menos un gasto, calcula la mayor racha
+  if(md.entries.length > 0){
+    const expDates = new Set(
+      md.entries.filter(e=>e.type==='expense').map(e=>e.date)
+    );
+    // Días que han pasado del mes (si es mes actual) o días totales del mes (si es pasado)
+    const today = now.getDate();
+    const yearNow = now.getFullYear();
+    const monthNow = now.getMonth();
+    let diasTotales;
+    if(selMi === monthNow){
+      diasTotales = today;
+    } else if(selMi < monthNow){
+      diasTotales = new Date(yearNow, selMi+1, 0).getDate();
+    } else {
+      diasTotales = 0;
+    }
+    if(diasTotales > 0){
+      const diasSinGasto = diasTotales - expDates.size;
+      if(diasSinGasto >= 3){
+        insights.push({ icon:'🎉', text:`${diasSinGasto} días sin gastar en ${mesNombre}` });
+      }
+    }
+  }
+
+  // #7 NUEVO — Insight raro: concentración de gastos
+  if(expEntries.length >= 3){
+    const totalExp = expEntries.reduce((s,[,v])=>s+v, 0);
+    const top3 = expEntries.slice(0,3).reduce((s,[,v])=>s+v, 0);
+    const concentracion = Math.round(top3 / totalExp * 100);
+    if(concentracion >= 70){
+      insights.push({ icon:'✨', text:`${concentracion}% de tu gasto se va en 3 categorías` });
+    }
   }
 
   return insights;
@@ -1797,7 +1837,7 @@ window.renderAll = function(){
   checkAchievements(true);
 };
 
-// Hook switchMonth para re-aplicar colores y mes actual
+// Hook switchMonth para re-aplicar colores, mes actual e insights
 const _origSwitchMonth = switchMonth;
 window.switchMonth = function(mi){
   _origSwitchMonth(mi);
@@ -1808,6 +1848,8 @@ window.switchMonth = function(mi){
     if(i < 12) t.classList.toggle('is-current', i === curMi);
   });
   applyMonthTabColors();
+  // Re-renderizar insights con el nuevo mes seleccionado
+  renderInsights();
 };
 const _origSwitchToAnnual = switchToAnnual;
 window.switchToAnnual = function(){
@@ -1819,6 +1861,8 @@ window.switchToAnnual = function(){
     if(i < 12) t.classList.toggle('is-current', i === curMi);
   });
   applyMonthTabColors();
+  // Re-renderizar insights
+  renderInsights();
 };
 
 // ══════════════════════════════════════════════════════════════════════════
