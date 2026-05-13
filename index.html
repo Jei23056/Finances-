@@ -1865,6 +1865,20 @@ window.switchToAnnual = function(){
   renderInsights();
 };
 
+// Hook resetYear para también limpiar los logros
+const _origResetYear = resetYear;
+window.resetYear = function(){
+  // Guardar cuántos logros había antes para detectar si realmente se reseteó
+  const hadAnyData = MONTHS.some((_,mi)=> hasData(mi));
+  _origResetYear();
+  // Si después de resetYear ya no hay datos, también limpiamos logros
+  const stillHasData = MONTHS.some((_,mi)=> hasData(mi));
+  if(hadAnyData && !stillHasData){
+    try { localStorage.removeItem('ach_unlocked_2026'); } catch{}
+    updateAchFab();
+  }
+};
+
 // ══════════════════════════════════════════════════════════════════════════
 // FIN FEATURES VISUALES NUEVAS
 // ══════════════════════════════════════════════════════════════════════════
