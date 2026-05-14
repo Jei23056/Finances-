@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Full Year 2026</title>
+<title>Full Year</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet" />
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -124,7 +124,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   header h1 { font-size:1.4rem; }
 }
 
-/* ── #2 Brillo sutil en tarjetas del año ─────────────────────────── */
 .ycard { position:relative; overflow:hidden; }
 .ycard::before {
   content:'';
@@ -147,9 +146,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 }
 .ycard > * { position:relative; z-index:2; }
 
-/* ── #10 (REMOVIDO) — Termómetro del balance ─────────────────── */
-
-/* ── #4 Puntos en pestañas (actual + con datos) ─────────────────── */
 .mtab { position:relative; }
 .mtab.has-data::after {
   content:'';
@@ -171,8 +167,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   50%     { transform:scale(1.4); opacity:.6;  }
 }
 
-/* ── #7 (REMOVIDO) — Mini-gráfico en pestañas ───────────────────── */
-/* En su lugar: color de fondo según balance del mes */
 .mtab.month-positive {
   background:rgba(45,212,160,0.10);
   border-color:rgba(45,212,160,0.35);
@@ -189,7 +183,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   color:var(--text);
 }
 
-/* ── #9 Borde gradiente animado en pestaña activa ───────────────── */
 .mtab.active {
   background:var(--surf);
   border:1px solid transparent;
@@ -206,7 +199,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   50%     { background-position:0% 0%, 100% 50%; }
 }
 
-/* ── #26 Pestaña activa se eleva con sombra dorada ───────────────── */
 .month-scroll {
   padding-top:6px !important;
   padding-bottom:8px !important;
@@ -217,7 +209,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   box-shadow:0 4px 14px rgba(232,185,106,0.25), 0 0 0 1px rgba(232,185,106,0.15);
 }
 
-/* ── #33 Mensajes contextuales (insights) ───────────────────────── */
 .insights-bar {
   display:flex; gap:8px; overflow-x:auto;
   margin-bottom:1.25rem; padding-bottom:4px;
@@ -240,81 +231,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   to   { opacity:1; transform:translateY(0); }
 }
 
-/* ── #39 Vista "Cards" tipo Apple Wallet (toggle) ───────────────── */
-.view-toggle {
-  display:flex; gap:4px; margin-bottom:1rem;
-  background:var(--card); border:1px solid var(--border);
-  border-radius:999px; padding:3px; width:fit-content;
-}
-.vt-btn {
-  padding:6px 14px; background:transparent; border:none;
-  border-radius:999px; font-size:12px;
-  font-family:'DM Sans',sans-serif; color:var(--muted2);
-  cursor:pointer; transition:all .2s;
-}
-.vt-btn.active {
-  background:var(--surf); color:var(--text);
-  box-shadow:0 1px 3px rgba(0,0,0,.3);
-}
-
-#wallet-view { display:none; padding:1rem 0; }
-#wallet-view.active { display:block; animation:wallet-fade .4s ease; }
-@keyframes wallet-fade {
-  from { opacity:0; transform:translateY(10px); }
-  to   { opacity:1; transform:translateY(0); }
-}
-.wallet-stack {
-  display:flex; flex-direction:column;
-  align-items:center; padding:1rem 0;
-  perspective:1000px;
-}
-.wallet-card {
-  width:92%; max-width:480px;
-  background:linear-gradient(135deg, var(--card2), var(--card));
-  border:1px solid var(--border2);
-  border-radius:18px; padding:1.2rem 1.4rem;
-  margin-top:-45px; cursor:pointer;
-  transition:transform .35s cubic-bezier(.34,1.4,.64,1), margin-top .35s;
-  box-shadow:0 -4px 18px rgba(0,0,0,0.35);
-  position:relative; overflow:hidden;
-}
-.wallet-card:first-child { margin-top:0; }
-.wallet-card:hover { transform:translateY(-6px) scale(1.02); }
-.wallet-card.current { border-color:var(--gold); }
-.wallet-card.current::before {
-  content:''; position:absolute; top:0; left:0; right:0;
-  height:3px; background:linear-gradient(90deg, var(--gold), #fff5d6, var(--gold));
-  background-size:200% 100%; animation:wallet-shine 3s linear infinite;
-}
-@keyframes wallet-shine { to { background-position:200% 0; } }
-.wc-header {
-  display:flex; justify-content:space-between; align-items:flex-start;
-  margin-bottom:14px;
-}
-.wc-month {
-  font-family:'DM Serif Display',serif; font-size:1.5rem;
-  color:var(--text);
-}
-.wc-badge {
-  font-size:10px; letter-spacing:.06em; text-transform:uppercase;
-  color:var(--muted); margin-top:3px;
-}
-.wc-pct {
-  font-family:'DM Serif Display',serif; font-size:1.2rem;
-}
-.wc-body {
-  display:grid; grid-template-columns:1fr 1fr; gap:12px;
-  padding-top:12px; border-top:1px solid var(--border);
-}
-.wc-stat-lbl {
-  font-size:9px; letter-spacing:.07em; text-transform:uppercase;
-  color:var(--muted); margin-bottom:3px;
-}
-.wc-stat-val {
-  font-family:'DM Serif Display',serif; font-size:1rem;
-}
-
-/* ── #43 Sistema de logros (achievements) ───────────────────────── */
 .achievement-toast {
   position:fixed; top:20px; left:50%;
   transform:translateX(-50%) translateY(-20px);
@@ -348,7 +264,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   font-size:11px; color:var(--muted); margin-top:2px;
 }
 
-/* Botón flotante para ver logros */
 #ach-fab {
   position:fixed; bottom:20px; left:20px;
   width:42px; height:42px; border-radius:50%;
@@ -369,7 +284,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   padding:0 4px;
 }
 
-/* Panel de logros */
 #ach-panel {
   position:fixed; inset:0; z-index:9500;
   background:rgba(0,0,0,0.7); backdrop-filter:blur(6px);
@@ -410,7 +324,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 }
 .ach-close:hover { color:var(--text); }
 
-/* ── Menú "Guardar / Exportar" ──────────────────────────────────── */
 .save-menu-item {
   display:flex; align-items:center; gap:10px;
   width:100%; padding:10px 12px; background:transparent; border:none;
@@ -456,7 +369,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   border-radius:999px; padding:4px 12px; opacity:0; transition:opacity .3s; }
 #save-indicator.show { opacity:1; }
 
-/* ── Splash Screen ─────────────────────────────────────────────────────── */
 #splash-screen {
   position:fixed; inset:0; z-index:9999;
   background:var(--bg);
@@ -541,7 +453,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 </head>
 <body>
 
-<!-- #43 Achievement Toast -->
 <div class="achievement-toast" id="ach-toast">
   <div class="ach-icon" id="ach-toast-icon">🏆</div>
   <div>
@@ -551,12 +462,10 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   </div>
 </div>
 
-<!-- #43 FAB de logros -->
 <div id="ach-fab" onclick="openAchPanel()" title="Logros">
   🏆<div class="ach-count" id="ach-count">0</div>
 </div>
 
-<!-- #43 Panel de logros -->
 <div id="ach-panel" onclick="if(event.target.id==='ach-panel')closeAchPanel()">
   <div class="ach-modal">
     <h3>🏆 Mis Logros <button class="ach-close" onclick="closeAchPanel()">×</button></h3>
@@ -564,7 +473,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   </div>
 </div>
 
-<!-- Splash Screen -->
 <div id="splash-screen">
   <div class="splash-particles" id="splash-particles"></div>
   <div class="splash-logo">💰</div>
@@ -573,7 +481,7 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   <div class="splash-bar-wrap">
     <div class="splash-bar-fill"></div>
   </div>
-  <div class="splash-tagline">Mis Finanzas · 2026</div>
+  <div class="splash-tagline" id="splash-tagline">Mis Finanzas</div>
 </div>
 
 <div id="login-screen" style="display:flex">
@@ -605,7 +513,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   <div class="ycard sav"><div class="ycard-lbl">Capital actual</div><div class="ycard-val" id="y-cap">$0.00</div></div>
 </div>
 
-<!-- #33 Insights bar -->
 <div class="insights-bar" id="insights-bar"></div>
 
 <div class="month-scroll" id="month-tabs"></div>
@@ -622,7 +529,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
       <button onclick="toggleHistory()" style="padding:8px 16px;background:transparent;border:1px solid var(--border2);border-radius:var(--rs);color:var(--muted2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .18s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted2)'">🕓 Historial</button>
       <button onclick="resetYear()" style="padding:8px 16px;background:var(--rdim);border:1px solid var(--red);border-radius:var(--rs);color:var(--red);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .18s" onmouseover="this.style.background='rgba(240,96,80,.2)'" onmouseout="this.style.background='var(--rdim)'">🗑️ Restablecer año</button>
 
-      <!-- Menú desplegable -->
       <div id="save-menu" style="display:none;position:absolute;top:calc(100% + 6px);left:0;background:var(--card2);border:1px solid var(--border2);border-radius:var(--rs);padding:6px;z-index:200;min-width:240px;box-shadow:0 8px 24px rgba(0,0,0,0.4)">
         <button onclick="menuExportPDF()" class="save-menu-item">📄 <div><div style="font-weight:500">Exportar como PDF</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Descarga un reporte profesional</div></div></button>
         <button onclick="menuSaveToHistory()" class="save-menu-item">📦 <div><div style="font-weight:500">Guardar en historial</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Guarda en Firebase para verlo después</div></div></button>
@@ -631,10 +537,8 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
     </div>
   </div>
 
-  <!-- Mejor y peor mes -->
   <div id="best-worst-bar" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.5rem"></div>
 
-  <!-- Panel historial -->
   <div id="history-panel" style="display:none;margin-bottom:1.5rem">
     <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem">
       <div class="sec-lbl" style="margin-bottom:1rem">Años anteriores guardados</div>
@@ -671,10 +575,23 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 <div id="save-indicator">Guardado ✓</div>
 
 <div style="text-align:center;padding:2rem 0 1rem;font-size:11px;color:var(--muted);letter-spacing:.06em">
-  Design by <span style="color:var(--muted2)">Jeiron</span> &amp; <span style="color:var(--muted2)">Claude</span> ✦ 2026
+  Design by <span style="color:var(--muted2)">Jeiron</span> &amp; <span style="color:var(--muted2)">Claude</span> ✦ <span id="footer-year"></span>
 </div>
 
 <script>
+// ══════════════════════════════════════════════════════════════════════════
+// AÑO DINÁMICO — se detecta automáticamente
+// ══════════════════════════════════════════════════════════════════════════
+const CURRENT_YEAR = new Date().getFullYear();
+const FINANZAS_KEY = `finanzas_${CURRENT_YEAR}`;
+const LOGROS_KEY   = `logros_${CURRENT_YEAR}`;
+const LS_LOGROS    = `ach_unlocked_${CURRENT_YEAR}`;
+
+// Actualizar UI con año actual
+document.title = `Full Year ${CURRENT_YEAR}`;
+document.getElementById('splash-tagline').textContent = `Mis Finanzas · ${CURRENT_YEAR}`;
+document.getElementById('footer-year').textContent = CURRENT_YEAR;
+
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 const EXPENSE_CATS = [
@@ -733,7 +650,6 @@ function esc(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ── Animación count-up para números ───────────────────────────────
 const _animState = new WeakMap();
 function animateNumber(el, toValue, options){
   if(!el) return;
@@ -743,7 +659,6 @@ function animateNumber(el, toValue, options){
   const isPercent = options.percent || false;
   const signed   = options.signed || false;
 
-  // Cancela animación anterior si existe
   const prev = _animState.get(el);
   if(prev && prev.raf) cancelAnimationFrame(prev.raf);
 
@@ -753,7 +668,6 @@ function animateNumber(el, toValue, options){
   function tick(now){
     const elapsed = now - start;
     const t = Math.min(elapsed / duration, 1);
-    // easeOutCubic — empieza rápido y desacelera
     const eased = 1 - Math.pow(1 - t, 3);
     const current = fromValue + (toValue - fromValue) * eased;
 
@@ -834,7 +748,6 @@ function renderYear(){
       hintEl.style.color = 'var(--muted)';
     }
   } else {
-    // Reset cuando no hay ingresos
     _animState.set(netEl, { raf: null, current: 0 });
     netEl.textContent = '—';
     netEl.style.color = 'var(--muted)';
@@ -986,7 +899,6 @@ function renderMonth(mi){
     </div>
   `;
 
-  // Animar los 4 valores del resumen del mes
   const nums = panel.querySelectorAll('.mcard-num');
   if(nums[0]) animateNumber(nums[0], t.start, { prefix:'$' });
   if(nums[1]) animateNumber(nums[1], t.inc,   { prefix:'$' });
@@ -1138,7 +1050,6 @@ function renderAnnual(){
     const LIMIT = 3;
     const expanded = annualExpandState[type] === true;
     const visible = expanded ? dataArr : dataArr.slice(0, LIMIT);
-    const hidden  = dataArr.length - LIMIT;
 
     const rowsHTML = visible.map(d=>{
       const catDef = cats.find(c=>c.v===d.k);
@@ -1171,8 +1082,6 @@ function renderAnnual(){
   document.getElementById('annual-exp-bars').innerHTML = catListHTML(expData, 'expense');
   document.getElementById('annual-inc-bars').innerHTML = catListHTML(incData, 'income');
 
-  // ── Mejor y peor mes ─────────────────────────────────────────────────
-  // Se considera mes solo si hubo ingresos Y gastos (mes "real")
   const monthsWithData = MONTHS.map((name,mi)=>{
     const t = monthTotals(mi);
     return { name, mi, t };
@@ -1180,7 +1089,6 @@ function renderAnnual(){
 
   const bwEl = document.getElementById('best-worst-bar');
   if(monthsWithData.length >= 2){
-    // Se ordena por monto neto (dinero real que quedó/faltó), no por porcentaje
     const scored = monthsWithData.map(m=>({
       ...m, pct: Math.round((m.t.inc - m.t.exp) / m.t.inc * 100)
     })).sort((a,b)=>b.t.net - a.t.net);
@@ -1256,7 +1164,6 @@ function hasData(mi){
   return (data[mi]?.entries?.length||0) > 0;
 }
 
-// ── Historial de años ────────────────────────────────────────────────────
 let historyVisible = false;
 
 function toggleHistory(){
@@ -1269,17 +1176,16 @@ function toggleHistory(){
 
 async function saveYearToHistory(){
   if(!currentUser) return;
-  const year = new Date().getFullYear();
   const hasAny = MONTHS.some((_,mi)=> hasData(mi));
   if(!hasAny){ alert('No hay datos que guardar en este año.'); return; }
-  const ok = confirm(`¿Guardar ${year} en el historial?\n\nPodrás consultarlo después sin perder nada.`);
+  const ok = confirm(`¿Guardar ${CURRENT_YEAR} en el historial?\n\nPodrás consultarlo después sin perder nada.`);
   if(!ok) return;
   try {
     await db.collection('users').doc(currentUser.uid)
-      .collection('historial').doc(String(year))
-      .set({ year, savedAt: new Date().toISOString(), finanzas: data });
+      .collection('historial').doc(String(CURRENT_YEAR))
+      .set({ year: CURRENT_YEAR, savedAt: new Date().toISOString(), finanzas: data });
     const ind = document.getElementById('save-indicator');
-    ind.textContent = `Año ${year} guardado ✓`;
+    ind.textContent = `Año ${CURRENT_YEAR} guardado ✓`;
     ind.classList.add('show');
     setTimeout(()=>{ ind.classList.remove('show'); ind.textContent = 'Guardado ✓'; }, 2500);
     if(historyVisible) renderHistoryList();
@@ -1293,7 +1199,6 @@ async function renderHistoryList(){
   try {
     const snap = await db.collection('users').doc(currentUser.uid).collection('historial').orderBy('year','desc').get();
     if(snap.empty){ el.innerHTML = '<div style="font-size:12px;color:var(--muted)">Sin historial aún. Usa "📦 Guardar año" antes de restablecer.</div>'; return; }
-    // Guardar los datos en memoria para que el botón "Ver PDF" los pueda usar
     window._historyCache = {};
     el.innerHTML = snap.docs.map(doc=>{
       const d = doc.data();
@@ -1486,73 +1391,6 @@ function renderCapitalChart(){
   canvas.onmouseleave = () => { tooltip.style.display = 'none'; };
 }
 
-function exportPDF(){
-  const {yInc, yExp, yNet} = yearTotals();
-  const savPctYear = yInc > 0 ? Math.round(yNet / yInc * 100) : 0;
-
-  let html = `<html><head><meta charset="UTF-8">
-  <style>
-    body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; padding: 32px; max-width: 720px; margin: 0 auto; }
-    h1 { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
-    .subtitle { font-size: 13px; color: #888; margin-bottom: 32px; }
-    .month-block { margin-bottom: 28px; page-break-inside: avoid; }
-    .month-title { font-size: 16px; font-weight: 700; border-bottom: 2px solid #e0e0e0; padding-bottom: 6px; margin-bottom: 12px; }
-    .row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; border-bottom: 1px solid #f0f0f0; }
-    .row:last-child { border-bottom: none; }
-    .lbl { color: #555; }
-    .green { color: #18a87a; font-weight: 600; }
-    .red   { color: #d94f3f; font-weight: 600; }
-    .year-summary { background: #f8f8f8; border-radius: 10px; padding: 20px 24px; margin-bottom: 32px; }
-    .year-summary h2 { font-size: 18px; font-weight: 700; margin-bottom: 14px; }
-    .ys-row { display:flex; justify-content:space-between; font-size:14px; padding:5px 0; border-bottom:1px solid #e8e8e8; }
-    .ys-row:last-child { border-bottom:none; }
-    @media print { body { padding: 16px; } }
-  </style></head><body>
-  <h1>📊 Resumen Financiero 2026</h1>
-  <div class="subtitle">Generado el ${new Date().toLocaleDateString('es-DO',{day:'2-digit',month:'long',year:'numeric'})}</div>
-  <div class="year-summary">
-    <h2>Resumen del Año Completo</h2>
-    <div class="ys-row"><span class="lbl">Total ganado</span><span class="green">+${fmt(yInc)}</span></div>
-    <div class="ys-row"><span class="lbl">Total gastado</span><span class="red">-${fmt(yExp)}</span></div>
-    <div class="ys-row"><span class="lbl">Balance neto</span><span class="${yNet>=0?'green':'red'}">${yNet>=0?'+':''}${fmt(yNet)}</span></div>
-    <div class="ys-row"><span class="lbl">% Ahorrado del año</span><span class="${savPctYear>=0?'green':'red'}">${savPctYear}%</span></div>
-  </div>`;
-
-  MONTHS.forEach((name, mi) => {
-    const md = getMonth(mi);
-    const t  = monthTotals(mi);
-    if(t.inc === 0 && t.exp === 0) return;
-    const savPct = t.inc > 0 ? Math.round((t.inc - t.exp) / t.inc * 100) : null;
-    const expMap = {}, incMap = {};
-    md.entries.filter(e=>e.type==='expense').forEach(e=>{ expMap[e.cat]=(expMap[e.cat]||0)+e.amount; });
-    md.entries.filter(e=>e.type==='income' ).forEach(e=>{ incMap[e.cat]=(incMap[e.cat]||0)+e.amount; });
-    const expCats = Object.entries(expMap).sort((a,b)=>b[1]-a[1]);
-    const incCats = Object.entries(incMap).sort((a,b)=>b[1]-a[1]);
-
-    html += `<div class="month-block">
-      <div class="month-title">${name}</div>
-      <div class="row"><span class="lbl">Ganado</span><span class="green">+${fmt(t.inc)}</span></div>
-      <div class="row"><span class="lbl">Gastado</span><span class="red">-${fmt(t.exp)}</span></div>
-      <div class="row"><span class="lbl">Balance</span><span class="${t.net>=0?'green':'red'}">${t.net>=0?'+':''}${fmt(t.net)}</span></div>
-      ${savPct!==null?`<div class="row"><span class="lbl">% Ahorrado</span><span class="${savPct>=0?'green':'red'}">${savPct}%</span></div>`:''}`;
-    if(expCats.length){
-      html += `<div style="margin-top:10px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Gastos por categoría</div>`;
-      expCats.forEach(([k,v])=>{ html += `<div class="row"><span class="lbl" style="padding-left:8px">${esc(k)}</span><span class="red">-${fmt(v)}</span></div>`; });
-    }
-    if(incCats.length){
-      html += `<div style="margin-top:10px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Ingresos por categoría</div>`;
-      incCats.forEach(([k,v])=>{ html += `<div class="row"><span class="lbl" style="padding-left:8px">${esc(k)}</span><span class="green">+${fmt(v)}</span></div>`; });
-    }
-    html += `</div>`;
-  });
-
-  html += `</body></html>`;
-  const win = window.open('', '_blank');
-  win.document.write(html);
-  win.document.close();
-  setTimeout(()=>win.print(), 600);
-}
-
 function buildSkeleton(){
   const tabsEl   = document.getElementById('month-tabs');
   const panelsEl = document.getElementById('month-panels');
@@ -1590,36 +1428,27 @@ function renderAll(){
   });
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-// FEATURES VISUALES NUEVAS (solo agregan, no modifican lógica existente)
-// ══════════════════════════════════════════════════════════════════════════
+function updateBalanceThermometer(){ }
 
-// ── #10 (REMOVIDO) — Termómetro del balance ─────────────────────────
-function updateBalanceThermometer(){ /* removido */ }
-
-// ── (REMOVIDO #7 mini-sparkline) — Color de pestaña según balance ───
 function applyMonthTabColors(){
   document.querySelectorAll('.mtab').forEach((t, i)=>{
     if(i >= 12) return;
     t.classList.remove('month-positive', 'month-negative');
     const tot = monthTotals(i);
-    if(tot.inc === 0 && tot.exp === 0) return; // sin datos, sin color
+    if(tot.inc === 0 && tot.exp === 0) return;
     if(tot.net >= 0) t.classList.add('month-positive');
     else             t.classList.add('month-negative');
   });
 }
 
-// ── #33 Insights contextuales (del mes SELECCIONADO) ────────────────
 function generateInsights(){
   const insights = [];
   const now = new Date();
-  // Si está en vista anual, usar el mes actual. Si no, el mes activo
   const selMi = annualActive ? now.getMonth() : activeMonth;
   const t = monthTotals(selMi);
   const md = getMonth(selMi);
   const mesNombre = MONTHS[selMi];
 
-  // #1 Saludo según hora
   const h = now.getHours();
   let saludo;
   if(h>=5 && h<12) saludo = '☀️ Buen día';
@@ -1627,7 +1456,6 @@ function generateInsights(){
   else saludo = '🌙 Buena noche';
   insights.push({ icon:'', text: saludo });
 
-  // #2 % Ahorro del mes seleccionado
   if(t.inc > 0){
     const pct = Math.round((t.inc - t.exp) / t.inc * 100);
     if(pct >= 30){
@@ -1639,7 +1467,6 @@ function generateInsights(){
     }
   }
 
-  // #3 Comparativa con mes anterior
   if(selMi > 0){
     const tp = monthTotals(selMi - 1);
     if(t.exp > 0 && tp.exp > 0){
@@ -1652,7 +1479,6 @@ function generateInsights(){
     }
   }
 
-  // #4 Top gasto del mes seleccionado
   const expMap = {};
   md.entries.filter(e=>e.type==='expense').forEach(e=>{
     expMap[e.cat] = (expMap[e.cat]||0) + e.amount;
@@ -1663,19 +1489,15 @@ function generateInsights(){
     insights.push({ icon:'🎯', text:`Top gasto: ${topCat[0]} (${fmt(topCat[1])})` });
   }
 
-  // #5 Cantidad de movimientos del mes seleccionado
   const totalMov = md.entries.length;
   if(totalMov >= 5){
     insights.push({ icon:'📝', text:`${totalMov} movimientos en ${mesNombre}` });
   }
 
-  // #6 NUEVO — Días sin gastar (en este mes)
-  // Cuenta días únicos del mes con al menos un gasto, calcula la mayor racha
   if(md.entries.length > 0){
     const expDates = new Set(
       md.entries.filter(e=>e.type==='expense').map(e=>e.date)
     );
-    // Días que han pasado del mes (si es mes actual) o días totales del mes (si es pasado)
     const today = now.getDate();
     const yearNow = now.getFullYear();
     const monthNow = now.getMonth();
@@ -1695,7 +1517,6 @@ function generateInsights(){
     }
   }
 
-  // #7 NUEVO — Insight raro: concentración de gastos
   if(expEntries.length >= 3){
     const totalExp = expEntries.reduce((s,[,v])=>s+v, 0);
     const top3 = expEntries.slice(0,3).reduce((s,[,v])=>s+v, 0);
@@ -1720,10 +1541,6 @@ function renderInsights(){
   `).join('');
 }
 
-// ── #39 (REMOVIDO) — Vista wallet (cards) ──────────────────────────
-// La vista de cards fue removida; ahora solo queda la vista de pestañas.
-
-// ── #43 Sistema de logros ───────────────────────────────────────────
 const ACHIEVEMENTS = [
   { id:'first_move',  icon:'🎯', name:'Primer paso',           desc:'Registra tu primer movimiento',
     check: () => MONTHS.some((_,mi)=> getMonth(mi).entries.length > 0) },
@@ -1773,27 +1590,22 @@ const ACHIEVEMENTS = [
     check: () => MONTHS.some((_,mi)=>{ const t = monthTotals(mi); return t.inc>0 && t.exp <= t.inc * 0.5; }) }
 ];
 
-// Estado de logros — sincronizado con Firebase + cache local
 let _achievementsCache = null;
 
 function getUnlockedSet(){
-  // Si tenemos cache cargado de Firebase, usarlo
   if(_achievementsCache !== null) return new Set(_achievementsCache);
-  // Sino, leer del localStorage como fallback
   try {
-    return new Set(JSON.parse(localStorage.getItem('ach_unlocked_2026') || '[]'));
+    return new Set(JSON.parse(localStorage.getItem(LS_LOGROS) || '[]'));
   } catch { return new Set(); }
 }
 
 function saveUnlockedSet(set){
   const arr = [...set];
   _achievementsCache = arr;
-  // Guardar en localStorage (cache rápido)
-  try { localStorage.setItem('ach_unlocked_2026', JSON.stringify(arr)); } catch{}
-  // Guardar en Firebase (sincroniza entre dispositivos)
+  try { localStorage.setItem(LS_LOGROS, JSON.stringify(arr)); } catch{}
   if(currentUser){
     db.collection('users').doc(currentUser.uid)
-      .set({ logros_2026: arr }, { merge: true })
+      .set({ [LOGROS_KEY]: arr }, { merge: true })
       .catch(e=>console.error('Error guardando logros:', e));
   }
 }
@@ -1803,10 +1615,9 @@ async function loadAchievementsFromFirebase(){
   try {
     const doc = await db.collection('users').doc(currentUser.uid).get();
     if(doc.exists){
-      const remote = doc.data().logros_2026 || [];
+      const remote = doc.data()[LOGROS_KEY] || [];
       _achievementsCache = remote;
-      // Sincronizar también el localStorage para acceso offline
-      try { localStorage.setItem('ach_unlocked_2026', JSON.stringify(remote)); } catch{}
+      try { localStorage.setItem(LS_LOGROS, JSON.stringify(remote)); } catch{}
     } else {
       _achievementsCache = [];
     }
@@ -1830,7 +1641,6 @@ function checkAchievements(showToast = true){
   if(newlyUnlocked.length){
     saveUnlockedSet(unlocked);
     if(showToast){
-      // Mostrar el primero, los demás en cola
       newlyUnlocked.forEach((a, i)=>{
         setTimeout(()=> showAchToast(a), i * 3500);
       });
@@ -1880,13 +1690,11 @@ function closeAchPanel(){
   document.getElementById('ach-panel').classList.remove('show');
 }
 
-// ── Hook: ejecutar todas las features visuales al renderizar ────────
 const _origRenderAll = renderAll;
 window.renderAll = function(){
   _origRenderAll();
   updateBalanceThermometer();
   renderInsights();
-  // Decorar pestañas con color por balance + indicador mes actual
   const curMi = new Date().getMonth();
   document.querySelectorAll('.mtab').forEach((t, i)=>{
     if(i < 12){
@@ -1894,39 +1702,32 @@ window.renderAll = function(){
     }
   });
   applyMonthTabColors();
-  // Revisar logros
   checkAchievements(true);
 };
 
-// Hook switchMonth para re-aplicar colores, mes actual e insights
 const _origSwitchMonth = switchMonth;
 window.switchMonth = function(mi){
   _origSwitchMonth(mi);
   updateBalanceThermometer();
-  // Re-aplicar indicador de mes actual y colores
   const curMi = new Date().getMonth();
   document.querySelectorAll('.mtab').forEach((t, i)=>{
     if(i < 12) t.classList.toggle('is-current', i === curMi);
   });
   applyMonthTabColors();
-  // Re-renderizar insights con el nuevo mes seleccionado
   renderInsights();
 };
 const _origSwitchToAnnual = switchToAnnual;
 window.switchToAnnual = function(){
   _origSwitchToAnnual();
   updateBalanceThermometer();
-  // Re-aplicar indicador de mes actual y colores
   const curMi = new Date().getMonth();
   document.querySelectorAll('.mtab').forEach((t, i)=>{
     if(i < 12) t.classList.toggle('is-current', i === curMi);
   });
   applyMonthTabColors();
-  // Re-renderizar insights
   renderInsights();
 };
 
-// ── Menú "Guardar / Exportar" ─────────────────────────────────
 function toggleSaveMenu(e){
   if(e) e.stopPropagation();
   const m = document.getElementById('save-menu');
@@ -1947,18 +1748,16 @@ function menuExportPDF(){
 }
 async function menuSaveToHistory(){
   document.getElementById('save-menu').style.display = 'none';
-  // Guarda en historial Y abre el PDF (mismo comportamiento que "Hacer ambas")
   if(!currentUser) return;
-  const year = new Date().getFullYear();
   const hasAny = MONTHS.some((_,mi)=> hasData(mi));
   if(!hasAny){ alert('No hay datos para guardar ni exportar.'); return; }
   try {
     await db.collection('users').doc(currentUser.uid)
-      .collection('historial').doc(String(year))
-      .set({ year, savedAt: new Date().toISOString(), finanzas: data });
+      .collection('historial').doc(String(CURRENT_YEAR))
+      .set({ year: CURRENT_YEAR, savedAt: new Date().toISOString(), finanzas: data });
     const ind = document.getElementById('save-indicator');
     if(ind){
-      ind.textContent = `Año ${year} guardado ✓`;
+      ind.textContent = `Año ${CURRENT_YEAR} guardado ✓`;
       ind.classList.add('show');
       setTimeout(()=>{ ind.classList.remove('show'); ind.textContent = 'Guardado ✓'; }, 2500);
     }
@@ -1968,18 +1767,16 @@ async function menuSaveToHistory(){
 }
 async function menuSaveBoth(){
   document.getElementById('save-menu').style.display = 'none';
-  // Primero guardar en historial (sin alert al final), luego abrir el PDF
   if(!currentUser) return;
-  const year = new Date().getFullYear();
   const hasAny = MONTHS.some((_,mi)=> hasData(mi));
   if(!hasAny){ alert('No hay datos para guardar ni exportar.'); return; }
   try {
     await db.collection('users').doc(currentUser.uid)
-      .collection('historial').doc(String(year))
-      .set({ year, savedAt: new Date().toISOString(), finanzas: data });
+      .collection('historial').doc(String(CURRENT_YEAR))
+      .set({ year: CURRENT_YEAR, savedAt: new Date().toISOString(), finanzas: data });
     const ind = document.getElementById('save-indicator');
     if(ind){
-      ind.textContent = `Año ${year} guardado ✓`;
+      ind.textContent = `Año ${CURRENT_YEAR} guardado ✓`;
       ind.classList.add('show');
       setTimeout(()=>{ ind.classList.remove('show'); ind.textContent = 'Guardado ✓'; }, 2500);
     }
@@ -1988,21 +1785,17 @@ async function menuSaveBoth(){
   } catch(e){ alert('Error: ' + e.message); }
 }
 
-// ── PDF Profesional ─────────────────────────────────────────────
 function exportPDFPro(historicalData, historicalYear){
-  // Si se pasan datos históricos, los usamos temporalmente.
-  // Si no, usamos los del año actual (comportamiento original).
   const isHistorical = !!historicalData;
   const originalData = data;
   if(isHistorical) data = historicalData;
 
-  const year = historicalYear || new Date().getFullYear();
+  const year = historicalYear || CURRENT_YEAR;
   const userName = (currentUser && (currentUser.displayName || currentUser.email)) || 'Usuario';
   const {yInc, yExp, yNet, yCap} = yearTotals();
   const savPctYear = yInc > 0 ? Math.round(yNet / yInc * 100) : 0;
   const dateStr = new Date().toLocaleDateString('es-DO',{day:'2-digit',month:'long',year:'numeric'});
 
-  // Top categorías del año
   const expMap = {}, incMap = {};
   MONTHS.forEach((_,mi)=>{
     getMonth(mi).entries.filter(e=>e.type==='expense').forEach(e=>{ expMap[e.cat]=(expMap[e.cat]||0)+e.amount; });
@@ -2011,7 +1804,6 @@ function exportPDFPro(historicalData, historicalYear){
   const topExp = Object.entries(expMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
   const topInc = Object.entries(incMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
 
-  // Mejor y peor mes
   const monthsReal = MONTHS.map((name,mi)=>({name,mi,t:monthTotals(mi)})).filter(m=>m.t.inc>0 && m.t.exp>0);
   let bestMonth = null, worstMonth = null;
   if(monthsReal.length >= 2){
@@ -2020,15 +1812,12 @@ function exportPDFPro(historicalData, historicalYear){
     worstMonth = sorted[sorted.length-1];
   }
 
-  // Logros desbloqueados
   const unlocked = getUnlockedSet();
   const unlockedList = ACHIEVEMENTS.filter(a => unlocked.has(a.id));
 
-  // Total movimientos
   let totalMov = 0;
   MONTHS.forEach((_,mi)=> totalMov += getMonth(mi).entries.length);
 
-  // Mes con más movimientos
   let mostActiveMonth = null;
   let maxMov = 0;
   MONTHS.forEach((name, mi)=>{
@@ -2036,7 +1825,6 @@ function exportPDFPro(historicalData, historicalYear){
     if(c > maxMov){ maxMov = c; mostActiveMonth = name; }
   });
 
-  // Generar SVG del gráfico de evolución del capital
   function generateCapitalSVG(){
     let lastDataMonth = -1;
     MONTHS.forEach((_,mi)=>{ if(getMonth(mi).entries.length > 0) lastDataMonth = mi; });
@@ -2138,13 +1926,11 @@ function exportPDFPro(historicalData, historicalYear){
     ${mostActiveMonth ? `· <strong>Mes más activo:</strong> ${mostActiveMonth} (${maxMov} mov.)` : ''}
   </div>`;
 
-  // Gráfico de evolución
   const svg = generateCapitalSVG();
   if(svg){
     html += `<h2>📈 Evolución del Capital</h2>${svg}`;
   }
 
-  // Mejor y peor mes
   if(bestMonth && worstMonth){
     const bp = bestMonth.t.inc>0 ? Math.round((bestMonth.t.inc-bestMonth.t.exp)/bestMonth.t.inc*100) : 0;
     const wp = worstMonth.t.inc>0 ? Math.round((worstMonth.t.inc-worstMonth.t.exp)/worstMonth.t.inc*100) : 0;
@@ -2167,7 +1953,6 @@ function exportPDFPro(historicalData, historicalYear){
     </div>`;
   }
 
-  // Top categorías
   if(topExp.length || topInc.length){
     html += `<h2>🎯 Top Categorías del Año</h2><div class="bw-grid">`;
     if(topExp.length){
@@ -2183,7 +1968,6 @@ function exportPDFPro(historicalData, historicalYear){
     html += `</div>`;
   }
 
-  // Logros desbloqueados
   if(unlockedList.length){
     html += `<h2>🏅 Logros Desbloqueados (${unlockedList.length}/${ACHIEVEMENTS.length})</h2>
     <div class="ach-grid">`;
@@ -2196,7 +1980,6 @@ function exportPDFPro(historicalData, historicalYear){
     html += `</div>`;
   }
 
-  // Detalle mes a mes
   html += `<h2 style="page-break-before:always">📅 Detalle Mes a Mes</h2>`;
   let renderedAny = false;
   MONTHS.forEach((name, mi) => {
@@ -2243,7 +2026,6 @@ function exportPDFPro(historicalData, historicalYear){
   win.document.close();
   setTimeout(()=>win.print(), 700);
 
-  // Restaurar los datos originales si veníamos de un año histórico
   if(isHistorical) data = originalData;
 }
 const _origResetYear = resetYear;
@@ -2252,30 +2034,18 @@ window.resetYear = function(){
   _origResetYear();
   const stillHasData = MONTHS.some((_,mi)=> hasData(mi));
   if(hadAnyData && !stillHasData){
-    // Borrar local
-    try { localStorage.removeItem('ach_unlocked_2026'); } catch{}
+    try { localStorage.removeItem(LS_LOGROS); } catch{}
     _achievementsCache = [];
-    // Borrar en Firebase (sincroniza a todos los dispositivos)
     if(currentUser){
       db.collection('users').doc(currentUser.uid)
-        .set({ logros_2026: [] }, { merge: true })
+        .set({ [LOGROS_KEY]: [] }, { merge: true })
         .catch(e=>console.error('Error borrando logros:', e));
     }
     updateAchFab();
   }
 };
 
-// Hook loadFromFirebase para cargar también los logros
-const _origLoadFromFirebase = loadFromFirebase;
-window.loadFromFirebase = async function(){
-  await _origLoadFromFirebase();
-  await loadAchievementsFromFirebase();
-  updateAchFab();
-};
-
-// ══════════════════════════════════════════════════════════════════════════
-// FIN FEATURES VISUALES NUEVAS
-// ══════════════════════════════════════════════════════════════════════════
+const _origLoadFromFirebase_inner = function(){ return loadFromFirebase(); };
 
 // ── Firebase ──────────────────────────────────────────────────────────────
 const firebaseConfig = {
@@ -2312,7 +2082,14 @@ auth.onAuthStateChanged(async user => {
     currentUser = user;
     document.getElementById('user-name').textContent = user.displayName || user.email;
     showApp();
+    // ► PASO 1: Migración una sola vez (datos viejos `finanzas` → `finanzas_YYYY`)
+    await migrateLegacyDataIfNeeded();
+    // ► PASO 2: Archivado automático de años anteriores al actual
+    await autoArchivePastYears();
+    // ► PASO 3: Cargar los datos del año actual
     await loadFromFirebase();
+    await loadAchievementsFromFirebase();
+    updateAchFab();
     buildSkeleton();
     renderAll();
     dismissSplash();
@@ -2323,17 +2100,124 @@ auth.onAuthStateChanged(async user => {
   }
 });
 
+// ══════════════════════════════════════════════════════════════════════════
+// MIGRACIÓN AUTOMÁTICA (UNA SOLA VEZ EN LA VIDA)
+// Copia el campo viejo `finanzas` → `finanzas_${año}` la primera vez.
+// El campo viejo NO se borra (queda como backup).
+// Protegida por bandera `_migrated:true` para que NUNCA se repita.
+// ══════════════════════════════════════════════════════════════════════════
+async function migrateLegacyDataIfNeeded(){
+  if(!currentUser) return;
+  try {
+    const ref = db.collection('users').doc(currentUser.uid);
+    const doc = await ref.get();
+    if(!doc.exists) return;
+    const d = doc.data() || {};
+
+    // Si ya está migrado, NO hacer nada NUNCA MÁS
+    if(d._migrated === true) return;
+
+    const legacy = d.finanzas;
+    const hasLegacy = legacy && typeof legacy === 'object' && Object.keys(legacy).length > 0;
+    const hasCurrentYearKey = d[FINANZAS_KEY] && typeof d[FINANZAS_KEY] === 'object' && Object.keys(d[FINANZAS_KEY]).length > 0;
+
+    if(hasLegacy && !hasCurrentYearKey){
+      // Mostrar indicador
+      const ind = document.getElementById('save-indicator');
+      if(ind){ ind.textContent = 'Migrando datos…'; ind.classList.add('show'); }
+
+      // Copia los datos viejos al campo del año actual y marca como migrado
+      await ref.set({
+        [FINANZAS_KEY]: legacy,
+        _migrated: true,
+        _migratedAt: new Date().toISOString(),
+        _migratedToYear: CURRENT_YEAR
+      }, { merge: true });
+
+      if(ind){
+        ind.textContent = '✓ Datos migrados';
+        setTimeout(()=>{ ind.classList.remove('show'); ind.textContent = 'Guardado ✓'; }, 2000);
+      }
+    } else {
+      // No hay datos viejos para migrar. Solo marcar la bandera.
+      await ref.set({ _migrated: true, _migratedAt: new Date().toISOString() }, { merge: true });
+    }
+  } catch(e){
+    console.error('Error en migración:', e);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// ARCHIVADO AUTOMÁTICO DE AÑOS PASADOS
+// Si existen `finanzas_2026`, `finanzas_2025`... y el año actual es mayor,
+// archiva esos años al historial automáticamente.
+// NO sobrescribe si ya está guardado en el historial (revisa primero).
+// ══════════════════════════════════════════════════════════════════════════
+async function autoArchivePastYears(){
+  if(!currentUser) return;
+  try {
+    const ref = db.collection('users').doc(currentUser.uid);
+    const doc = await ref.get();
+    if(!doc.exists) return;
+    const d = doc.data() || {};
+
+    // Buscar todos los campos tipo `finanzas_YYYY` donde YYYY < CURRENT_YEAR
+    const yearsToArchive = [];
+    Object.keys(d).forEach(key => {
+      const m = key.match(/^finanzas_(\d{4})$/);
+      if(m){
+        const yearNum = parseInt(m[1], 10);
+        if(yearNum < CURRENT_YEAR){
+          const finanzasObj = d[key];
+          if(finanzasObj && typeof finanzasObj === 'object' && Object.keys(finanzasObj).length > 0){
+            yearsToArchive.push({ year: yearNum, data: finanzasObj });
+          }
+        }
+      }
+    });
+
+    if(yearsToArchive.length === 0) return;
+
+    const ind = document.getElementById('save-indicator');
+    if(ind){ ind.textContent = 'Archivando año anterior…'; ind.classList.add('show'); }
+
+    for(const item of yearsToArchive){
+      const histRef = ref.collection('historial').doc(String(item.year));
+      const histDoc = await histRef.get();
+      // SOLO archivar si NO existe ya en el historial (para no sobrescribir)
+      if(!histDoc.exists){
+        await histRef.set({
+          year: item.year,
+          savedAt: new Date().toISOString(),
+          autoArchived: true,
+          finanzas: item.data
+        });
+        console.log(`Año ${item.year} archivado automáticamente`);
+      }
+    }
+
+    if(ind){
+      ind.textContent = '✓ Año anterior archivado';
+      setTimeout(()=>{ ind.classList.remove('show'); ind.textContent = 'Guardado ✓'; }, 2500);
+    }
+  } catch(e){
+    console.error('Error en archivado automático:', e);
+  }
+}
+
 async function loadFromFirebase(){
   try {
     const doc = await db.collection('users').doc(currentUser.uid).get();
-    data = doc.exists ? (doc.data().finanzas || {}) : {};
+    // Carga los datos del año actual: `finanzas_${año}`
+    data = doc.exists ? (doc.data()[FINANZAS_KEY] || {}) : {};
   } catch(e){ console.error('Error cargando datos:', e); data = {}; }
 }
 
 function save(){
   if(!currentUser) return;
   const ind = document.getElementById('save-indicator');
-  db.collection('users').doc(currentUser.uid).set({ finanzas: data }, { merge: true })
+  // Guardar en el campo del año actual: `finanzas_${año}`
+  db.collection('users').doc(currentUser.uid).set({ [FINANZAS_KEY]: data }, { merge: true })
     .then(()=>{
       if(ind){ ind.classList.add('show'); setTimeout(()=>ind.classList.remove('show'), 1500); }
     })
@@ -2343,7 +2227,6 @@ function save(){
 
 // ── Splash Screen ─────────────────────────────────────────────────────────
 (function initSplash(){
-  // Saludo dinámico según hora del día
   const greetEl = document.getElementById('splash-greeting');
   if(greetEl){
     const h = new Date().getHours();
@@ -2354,7 +2237,6 @@ function save(){
     greetEl.textContent = greeting;
   }
 
-  // Generate floating particles
   const container = document.getElementById('splash-particles');
   const colors = ['#e8b96a','#2dd4a0','#60a5fa','#f06050','#fff'];
   for(let i = 0; i < 28; i++){
@@ -2372,7 +2254,6 @@ function save(){
     container.appendChild(p);
   }
 
-  // Hide splash after minimum 2.8s (Firebase may dismiss it earlier)
   setTimeout(()=>{ dismissSplash(); }, 2800);
 })();
 
