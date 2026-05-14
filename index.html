@@ -610,6 +610,7 @@ const EXPENSE_CATS = [
   {v:'Universidad',     l:'📚 Universidad'},
   {v:'Amigos',          l:'🤝 Amigos'},
   {v:'Avance efectivo', l:'💸 Avance efectivo'},
+  {v:'Retiros ATM',     l:'🏧 Retiros ATM'},
   {v:'Comisión',        l:'🏦 Comisión'},
   {v:'Gigantes',        l:'⚾ Gigantes'},
   {v:'Ghostm',          l:'👻 Ghostm'},
@@ -1902,8 +1903,20 @@ function exportPDFPro(historicalData, historicalYear){
     .ach-name { font-size:12px; font-weight:600; }
     .ach-desc { font-size:10px; color:#888; }
     .footer { text-align:center; padding-top:30px; margin-top:30px; border-top:1px solid #e0e0e0; font-size:10px; color:#999; }
-    @media print { body { padding:0; } }
+    @media print { body { padding:0; } .back-btn-float { display:none !important; } }
+    .back-btn-float {
+      position:fixed; top:16px; left:16px; z-index:9999;
+      display:flex; align-items:center; gap:8px;
+      padding:10px 18px; background:#1a1a1a; color:#fff;
+      border:none; border-radius:999px; cursor:pointer;
+      font-family:'Segoe UI', Arial, sans-serif; font-size:13px; font-weight:500;
+      box-shadow:0 4px 14px rgba(0,0,0,0.25);
+      transition:transform .15s, background .15s;
+    }
+    .back-btn-float:hover { background:#333; transform:translateX(-2px); }
+    .back-btn-float:active { transform:scale(.96); }
   </style></head><body>
+  <button class="back-btn-float" onclick="window.close(); setTimeout(function(){ history.back(); }, 100);">← Volver</button>
 
   <div class="cover">
     <div class="cover-logo">💰</div>
