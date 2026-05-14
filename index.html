@@ -902,6 +902,9 @@ function renderMonth(mi){
 
   const sc = md.startCapital ?? 0;
 
+  const currentType = monthTypes[mi] || 'expense';
+  const catsForType = currentType === 'expense' ? EXPENSE_CATS : INCOME_CATS;
+
   panel.innerHTML = `
     <div class="msummary">
       <div class="mcard">
@@ -944,12 +947,7 @@ function renderMonth(mi){
           <label>Categoría</label>
           <select id="cat-${mi}">
             <option value="">Selecciona…</option>
-            <optgroup label="── Gastos ──">
-              ${EXPENSE_CATS.map(c=>`<option value="${esc(c.v)}">${esc(c.l||c.v)}</option>`).join('')}
-            </optgroup>
-            <optgroup label="── Ingresos ──">
-              ${INCOME_CATS.map(c=>`<option value="${esc(c.v)}">${esc(c.l||c.v)}</option>`).join('')}
-            </optgroup>
+            ${catsForType.map(c=>`<option value="${esc(c.v)}">${esc(c.l||c.v)}</option>`).join('')}
           </select>
         </div>
         <div class="fdesc">
@@ -1003,7 +1001,13 @@ const monthTypes = {};
 function setType(mi, type){
   monthTypes[mi] = type;
   setTypeVisual(mi, type);
-  document.getElementById(`cat-${mi}`).value = '';
+  const sel = document.getElementById(`cat-${mi}`);
+  if(sel){
+    const cats = type === 'expense' ? EXPENSE_CATS : INCOME_CATS;
+    sel.innerHTML = '<option value="">Selecciona…</option>' +
+      cats.map(c=>`<option value="${esc(c.v)}">${esc(c.l||c.v)}</option>`).join('');
+    sel.value = '';
+  }
 }
 function setTypeVisual(mi, type){
   const be = document.getElementById(`tbtn-exp-${mi}`);
