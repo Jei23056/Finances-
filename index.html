@@ -570,6 +570,26 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   </div>
 </div>
 
+<div id="panel-since" style="display:none">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1.5rem">
+    <div style="font-size:13px;color:var(--text);font-weight:500">Acumulado histórico</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:2px">Suma de todos tus años: el año actual más los años guardados en el historial. Esto no se borra al restablecer un año.</div>
+  </div>
+
+  <div id="since-totals" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.5rem"></div>
+
+  <div class="cats-grid" style="margin-bottom:1.5rem">
+    <div class="cat-block">
+      <h3 id="since-exp-title">En qué he gastado más</h3>
+      <div id="since-exp-bars"><div style="font-size:12px;color:var(--muted);padding:4px 0">Sin datos</div></div>
+    </div>
+    <div class="cat-block">
+      <h3 id="since-inc-title">De dónde he ganado más</h3>
+      <div id="since-inc-bars"><div style="font-size:12px;color:var(--muted);padding:4px 0">Sin datos</div></div>
+    </div>
+  </div>
+</div>
+
 </div>
 </div>
 <div id="save-indicator">Guardado ✓</div>
@@ -583,6 +603,8 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 // AÑO DINÁMICO — se detecta automáticamente
 // ══════════════════════════════════════════════════════════════════════════
 const CURRENT_YEAR = new Date().getFullYear();
+// ► Año desde el que empezaste a usar la app (para la pestaña "Desde XXXX")
+const SINCE_YEAR = 2026;
 const FINANZAS_KEY = `finanzas_${CURRENT_YEAR}`;
 const LOGROS_KEY   = `logros_${CURRENT_YEAR}`;
 const LS_LOGROS    = `ach_unlocked_${CURRENT_YEAR}`;
@@ -631,6 +653,8 @@ const INCOME_CATS = [
 ];
 
 let data = {};
+// ► Cache del historial para la pestaña "Desde 2026"
+let historialFinanzasCache = {};
 
 function getMonth(m){
   if(!data[m]) data[m] = { entries:[], startCapital: m===0 ? 0 : null };
@@ -1011,6 +1035,8 @@ function toggleAnnualExpand(type){
 function switchMonth(mi){
   annualActive = false;
   activeMonth = mi;
+  const _ps = document.getElementById('panel-since'); if(_ps) _ps.style.display='none';
+  const _ts = document.getElementById('mtab-since'); if(_ts) _ts.className='mtab';
   document.getElementById('panel-annual').style.display = 'none';
   document.getElementById('mtab-annual').className = 'mtab';
   document.querySelectorAll('.mtab').forEach((t,i)=>{
@@ -1024,6 +1050,8 @@ function switchMonth(mi){
 
 function switchToAnnual(){
   annualActive = true;
+  const _ps = document.getElementById('panel-since'); if(_ps) _ps.style.display='none';
+  const _ts = document.getElementById('mtab-since'); if(_ts) _ts.className='mtab';
   document.querySelectorAll('.month-panel').forEach(p=>{ p.className = 'month-panel'; });
   document.querySelectorAll('.mtab').forEach((t,i)=>{
     if(i < 12) t.className = 'mtab' + (hasData(i)?' has-data':'');
@@ -1159,6 +1187,110 @@ function renderAnnual(){
   document.getElementById('annual-month-bars').innerHTML = html || '<div style="font-size:12px;color:var(--muted)">Sin datos aún</div>';
 
   renderCapitalChart();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// PESTAÑA "DESDE XXXX" — Acumulado de todos los años (actual + historial)
+// ══════════════════════════════════════════════════════════════════════════
+async function loadHistorialParaSince(){
+  if(!currentUser) return;
+  try {
+    const snap = await db.collection('users').doc(currentUser.uid)
+                         .collection('historial').get();
+    historialFinanzasCache = {};
+    snap.docs.forEach(doc=>{
+      const d = doc.data();
+      if(d && d.finanzas) historialFinanzasCache[d.year] = d.finanzas;
+    });
+  } catch(e){
+    console.error('Error cargando historial para Desde:', e);
+  }
+}
+
+function totalesDesde(){
+  const expMap = {}, incMap = {};
+  let totalInc = 0, totalExp = 0;
+
+  function acumular(finanzasObj){
+    if(!finanzasObj || typeof finanzasObj !== 'object') return;
+    Object.keys(finanzasObj).forEach(mKey=>{
+      const md = finanzasObj[mKey];
+      if(!md || !Array.isArray(md.entries)) return;
+      md.entries.forEach(e=>{
+        if(e.type === 'expense'){
+          expMap[e.cat] = (expMap[e.cat]||0) + e.amount;
+          totalExp += e.amount;
+        } else if(e.type === 'income'){
+          incMap[e.cat] = (incMap[e.cat]||0) + e.amount;
+          totalInc += e.amount;
+        }
+      });
+    });
+  }
+
+  // 1) Año actual (datos en vivo)
+  acumular(data);
+
+  // 2) Años del historial — sin contar el año actual dos veces
+  Object.keys(historialFinanzasCache).forEach(year=>{
+    if(parseInt(year,10) === CURRENT_YEAR) return;
+    acumular(historialFinanzasCache[year]);
+  });
+
+  return {
+    expData: Object.entries(expMap).map(([k,v])=>({k,v:parseFloat(v.toFixed(2))})).sort((a,b)=>b.v-a.v),
+    incData: Object.entries(incMap).map(([k,v])=>({k,v:parseFloat(v.toFixed(2))})).sort((a,b)=>b.v-a.v),
+    totalInc: parseFloat(totalInc.toFixed(2)),
+    totalExp: parseFloat(totalExp.toFixed(2))
+  };
+}
+
+function renderSince(){
+  const { expData, incData, totalInc, totalExp } = totalesDesde();
+
+  const yearsSet = new Set([CURRENT_YEAR]);
+  Object.keys(historialFinanzasCache).forEach(y=> yearsSet.add(parseInt(y,10)));
+  const years = [...yearsSet].sort((a,b)=>a-b);
+  const rango = years.length > 1
+    ? `${years[0]} – ${years[years.length-1]}`
+    : `${years[0]}`;
+
+  const expTitle = document.getElementById('since-exp-title');
+  const incTitle = document.getElementById('since-inc-title');
+  if(expTitle) expTitle.textContent = `En qué he gastado más (${rango})`;
+  if(incTitle) incTitle.textContent = `De dónde he ganado más (${rango})`;
+
+  const totEl = document.getElementById('since-totals');
+  if(totEl){
+    totEl.innerHTML = `
+      <div class="ycard inc"><div class="ycard-lbl">Total ganado (histórico)</div><div class="ycard-val">${fmt(totalInc)}</div></div>
+      <div class="ycard exp"><div class="ycard-lbl">Total gastado (histórico)</div><div class="ycard-val">${fmt(totalExp)}</div></div>
+    `;
+  }
+
+  document.getElementById('since-exp-bars').innerHTML = barsHTML(expData, 'var(--red)');
+  document.getElementById('since-inc-bars').innerHTML = barsHTML(incData, 'var(--green)');
+}
+
+async function switchToSince(){
+  annualActive = false;
+  document.querySelectorAll('.month-panel').forEach(p=>{ p.className = 'month-panel'; });
+  document.querySelectorAll('.mtab').forEach((t,i)=>{
+    if(i < 12) t.className = 'mtab' + (hasData(i)?' has-data':'');
+  });
+  const annTab = document.getElementById('mtab-annual');
+  if(annTab) annTab.className = 'mtab';
+  document.getElementById('panel-annual').style.display = 'none';
+
+  const sinceTab = document.getElementById('mtab-since');
+  if(sinceTab) sinceTab.className = 'mtab active';
+  document.getElementById('panel-since').style.display = 'block';
+
+  document.getElementById('since-exp-bars').innerHTML = '<div style="font-size:12px;color:var(--muted);padding:4px 0">Cargando…</div>';
+  document.getElementById('since-inc-bars').innerHTML = '<div style="font-size:12px;color:var(--muted);padding:4px 0">Cargando…</div>';
+
+  await loadHistorialParaSince();
+  renderSince();
 }
 
 function hasData(mi){
@@ -1417,6 +1549,13 @@ function buildSkeleton(){
   annualBtn.textContent = '📊 Año completo';
   annualBtn.onclick = ()=>switchToAnnual();
   tabsEl.appendChild(annualBtn);
+
+  const sinceBtn = document.createElement('button');
+  sinceBtn.id = 'mtab-since';
+  sinceBtn.className = 'mtab';
+  sinceBtn.textContent = `📈 Desde ${SINCE_YEAR}`;
+  sinceBtn.onclick = ()=>switchToSince();
+  tabsEl.appendChild(sinceBtn);
 }
 
 function renderAll(){
