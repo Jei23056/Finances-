@@ -475,6 +475,27 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 .cc-keep.on {
   background:var(--gldim); border-color:var(--gold); color:var(--gold); font-weight:500;
 }
+.cc-closed { opacity:.72; }
+.cc-badge {
+  display:inline-block; font-size:9px; letter-spacing:.05em; text-transform:uppercase;
+  background:var(--gldim); color:var(--gold); border:1px solid var(--gold);
+  border-radius:999px; padding:1px 7px; vertical-align:middle; margin-left:4px;
+  font-family:'DM Sans',sans-serif;
+}
+.cc-year-pick {
+  display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+  margin-bottom:.7rem; padding-bottom:.6rem; border-bottom:1px solid var(--border);
+}
+.cc-year-lbl { font-size:11px; color:var(--muted); }
+.cc-year-btn {
+  background:var(--surf); border:1px solid var(--border2);
+  border-radius:var(--rs); padding:3px 11px; cursor:pointer;
+  font-family:'DM Sans',sans-serif; font-size:12px; color:var(--muted2); transition:all .15s;
+}
+.cc-year-btn:hover { border-color:var(--gold); color:var(--gold); }
+.cc-year-btn.on {
+  background:var(--gldim); border-color:var(--gold); color:var(--gold); font-weight:500;
+}
 .cc-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:.9rem; }
 .cc-stat { background:var(--surf); border:1px solid var(--border); border-radius:var(--rs); padding:.6rem .7rem; }
 .cc-stat-lbl { font-size:9px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin-bottom:3px; }
@@ -990,7 +1011,7 @@ function renderMonth(mi){
           <label>¿Con cuál tarjeta?</label>
           <select id="tarjeta-${mi}" class="tarjeta-select">
             <option value="">Selecciona tarjeta…</option>
-            ${tarjetas.map(t=>`<option value="${esc(t.nombre)}">${esc(t.nombre)}</option>`).join('')}
+            ${tarjetas.filter(t=>t.cerrada!==true).map(t=>`<option value="${esc(t.nombre)}">${esc(t.nombre)}</option>`).join('')}
           </select>
         </div>
       </div>
@@ -1426,54 +1447,57 @@ function saveTarjetas(){
 }
 
 // Acepta el nombre de la tarjeta O el objeto tarjeta completo.
-// Si la tarjeta tiene `manualMeses`, usa esos números fijos en vez de los movimientos.
 function _resolveCard(arg){
   if(arg && typeof arg === 'object') return arg;
   return tarjetas.find(t => t.nombre === arg) || { nombre: arg };
 }
 
-function cardSpent(arg){
-  const tj = _resolveCard(arg);
-  // Si tiene desglose manual, el total sale de ahí
-  if(tj.manualMeses && typeof tj.manualMeses === 'object'){
-    let total = 0;
-    Object.values(tj.manualMeses).forEach(v=>{ total += (parseFloat(v)||0); });
-    return parseFloat(total.toFixed(2));
+// Años que una tarjeta tiene registrados (los guardados + el actual), ascendente.
+// Si la tarjeta está CERRADA, no se agrega el año actual: solo sus años reales.
+function cardYears(tj){
+  const set = new Set();
+  if(tj && tj.aniosMeses && typeof tj.aniosMeses === 'object'){
+    Object.keys(tj.aniosMeses).forEach(y=>set.add(parseInt(y)));
   }
-  let total = 0;
-  MONTHS.forEach((_,mi)=>{
-    const md = data[mi];
-    if(!md || !md.entries) return;
-    md.entries.forEach(e=>{
-      if(e.type==='expense' && e.cat==='Crédito' && e.tarjeta===tj.nombre){
-        total += e.amount;
-      }
-    });
-  });
-  return parseFloat(total.toFixed(2));
+  if(!tj || tj.cerrada !== true){
+    set.add(CURRENT_YEAR);
+  }
+  const arr = [...set].filter(y=>!isNaN(y)).sort((a,b)=>a-b);
+  // Si quedó vacía (tarjeta cerrada sin años guardados), mostrar al menos el actual
+  return arr.length ? arr : [CURRENT_YEAR];
 }
 
-// Devuelve el gasto de una tarjeta mes por mes: [{mi, mName, gastado}]
-function cardSpentByMonth(arg){
+// Desglose mes a mes de una tarjeta para un año dado: [{mi,mName,gastado}]
+// - Año actual: en vivo (movimientos de Crédito + manualMeses si los tiene).
+// - Años pasados: leído de aniosMeses[año] (fotografía guardada al cerrar el año).
+function cardSpentByMonth(arg, year){
   const tj = _resolveCard(arg);
+  const yr = year || CURRENT_YEAR;
   const out = [];
-  MONTHS.forEach((mName,mi)=>{
-    let m = 0;
-    // Si tiene desglose manual, el monto del mes sale de ahí
-    if(tj.manualMeses && typeof tj.manualMeses === 'object'){
-      m = parseFloat(tj.manualMeses[mi]) || 0;
-    } else {
-      const md = data[mi];
-      if(md && md.entries){
-        md.entries.forEach(e=>{
-          if(e.type==='expense' && e.cat==='Crédito' && e.tarjeta===tj.nombre){
-            m += e.amount;
-          }
-        });
+
+  if(yr !== CURRENT_YEAR){
+    const guardado = (tj.aniosMeses && tj.aniosMeses[yr]) || {};
+    MONTHS.forEach((mName,mi)=>{
+      out.push({ mi, mName, gastado: parseFloat(guardado[mi]||0) });
+    });
+  } else {
+    MONTHS.forEach((mName,mi)=>{
+      let m = 0;
+      if(tj.manualMeses && typeof tj.manualMeses === 'object' && tj.manualMeses[mi]!==undefined){
+        m = parseFloat(tj.manualMeses[mi]) || 0;
+      } else {
+        const md = data[mi];
+        if(md && md.entries){
+          md.entries.forEach(e=>{
+            if(e.type==='expense' && e.cat==='Crédito' && e.tarjeta===tj.nombre){
+              m += e.amount;
+            }
+          });
+        }
       }
-    }
-    out.push({ mi, mName, gastado: parseFloat(m.toFixed(2)) });
-  });
+      out.push({ mi, mName, gastado: parseFloat(m.toFixed(2)) });
+    });
+  }
   // Orden de ciclo: Diciembre (mi=11) primero, luego Enero..Noviembre
   out.sort((a,b)=>{
     const oa = a.mi === 11 ? -1 : a.mi;
@@ -1482,6 +1506,18 @@ function cardSpentByMonth(arg){
   });
   return out;
 }
+
+// Gasto total de una tarjeta en un año dado (actual por defecto)
+function cardSpent(arg, year){
+  const tj = _resolveCard(arg);
+  let total = 0;
+  cardSpentByMonth(tj, year).forEach(m=>{ total += m.gastado; });
+  return parseFloat(total.toFixed(2));
+}
+
+// Alias con nombre explícito de año (usados por renderCards y el PDF)
+function cardSpentByMonthForYear(arg, year){ return cardSpentByMonth(arg, year); }
+function cardSpentForYear(arg, year){ return cardSpent(arg, year); }
 
 function switchToCards(){
   annualActive = false;
@@ -1517,17 +1553,21 @@ function renderCards(){
     const puntos  = (tj.puntos!==undefined && tj.puntos!=='') ? tj.puntos : '—';
     const lastYearTotal = cardLastYearTotal(tj);
     const lastYearTxt = (lastYearTotal===null) ? '—' : fmt(lastYearTotal);
-    const mantener = tj.mantener === true;
-    return `<div class="credit-card">
+    const cerrada = tj.cerrada === true;
+    // Año seleccionado para el desglose (por defecto el actual)
+    const years = cardYears(tj);
+    const selYear = (tj._viewYear && years.includes(tj._viewYear)) ? tj._viewYear : CURRENT_YEAR;
+    const mesesSel = cardSpentByMonth(tj, selYear).filter(m=>m.gastado>0);
+    return `<div class="credit-card ${cerrada?'cc-closed':''}">
       <div class="cc-head">
         <div>
-          <div class="cc-name">💳 ${esc(tj.nombre)}</div>
+          <div class="cc-name">💳 ${esc(tj.nombre)} ${cerrada?'<span class="cc-badge">Cerrada</span>':''}</div>
           <div class="cc-sub">${tj.desde ? 'Desde '+esc(tj.desde) : 'Tarjeta de crédito'}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
-          <button class="cc-keep ${mantener?'on':''}" onclick="toggleCardKeep(${idx})"
-            title="${mantener?'Esta tarjeta se mantiene aunque pase el año o restablezcas':'Activar para que esta tarjeta no se borre al restablecer'}">
-            ${mantener?'🔒 Mantener':'🔓 Mantener'}
+          <button class="cc-keep ${cerrada?'on':''}" onclick="toggleCardClosed(${idx})"
+            title="${cerrada?'Tarjeta cerrada: ya no aparece al registrar gastos. Su historial se conserva.':'Cerrar: marca esta tarjeta como que ya no la usas. Su historial se conserva para siempre.'}">
+            ${cerrada?'🔒 Cerrada':'🔓 Cerrar'}
           </button>
           <button class="cc-del" onclick="delCard(${idx})" title="Eliminar tarjeta">×</button>
         </div>
@@ -1538,7 +1578,7 @@ function renderCards(){
           <div class="cc-stat-val" style="color:var(--muted2)">${fmt(inicio)}<button class="cc-edit" onclick="editCardStart(${idx})" title="Modificar">✏️</button></div>
         </div>
         <div class="cc-stat">
-          <div class="cc-stat-lbl">Gastado</div>
+          <div class="cc-stat-lbl">Gastado (${CURRENT_YEAR})</div>
           <div class="cc-stat-val" style="color:var(--red)">${fmt(gastado)}</div>
         </div>
         <div class="cc-stat">
@@ -1551,10 +1591,14 @@ function renderCards(){
         </div>
       </div>
       <div class="cc-track"><div class="cc-fill" style="width:${fillW}%;background:${usoColor}"></div></div>
-      <button class="cc-toggle" onclick="toggleCardMonths(${idx})" id="cc-toggle-${idx}">📅 Ver desglose por mes ▾</button>
+      <button class="cc-toggle" onclick="toggleCardMonths(${idx})" id="cc-toggle-${idx}">📅 Ver desglose por año ▾</button>
       <div class="cc-months" id="cc-months-${idx}" style="display:none">
-        ${cardSpentByMonth(tj).filter(m=>m.gastado>0).length
-          ? cardSpentByMonth(tj).filter(m=>m.gastado>0).map(m=>{
+        <div class="cc-year-pick">
+          <span class="cc-year-lbl">Año:</span>
+          ${years.map(y=>`<button class="cc-year-btn ${y===selYear?'on':''}" onclick="setCardViewYear(${idx},${y})">${y}</button>`).join('')}
+        </div>
+        ${mesesSel.length
+          ? mesesSel.map(m=>{
               const mUso = inicio>0 ? (m.gastado/inicio*100) : 0;
               const mColor = mUso>=100 ? 'var(--red)' : mUso>=75 ? 'var(--gold)' : 'var(--green)';
               return `<div class="cc-month-row">
@@ -1564,29 +1608,47 @@ function renderCards(){
                 <div class="cc-month-pct" style="color:${mColor}">${mUso.toFixed(2)}%</div>
               </div>`;
             }).join('')
-          : '<div style="font-size:12px;color:var(--muted);padding:6px 2px">Esta tarjeta aún no tiene gastos en ningún mes.</div>'}
+          : `<div style="font-size:12px;color:var(--muted);padding:6px 2px">Sin gastos registrados en ${selYear}.</div>`}
       </div>
     </div>`;
   }).join('');
 }
 
-// Activa o desactiva "Mantener" en una tarjeta
-function toggleCardKeep(idx){
+// Cambia el año que se muestra en el desglose de una tarjeta
+function setCardViewYear(idx, year){
   const tj = tarjetas[idx];
   if(!tj) return;
-  tj.mantener = !(tj.mantener === true);
-  saveTarjetas();
+  tj._viewYear = year;
   renderCards();
+  // Mantener el desglose abierto tras el re-render
+  const box = document.getElementById(`cc-months-${idx}`);
+  const btn = document.getElementById(`cc-toggle-${idx}`);
+  if(box){ box.style.display = 'block'; }
+  if(btn){ btn.textContent = '📅 Ocultar desglose ▴'; }
 }
 
-// Despliega u oculta el desglose por mes de una tarjeta
+// Marca o desmarca una tarjeta como "Cerrada" (ya no se usa para gastos nuevos)
+function toggleCardClosed(idx){
+  const tj = tarjetas[idx];
+  if(!tj) return;
+  const cerrar = !(tj.cerrada === true);
+  if(cerrar){
+    if(!confirm(`¿Cerrar la tarjeta "${tj.nombre}"?\n\nYa no aparecerá al registrar gastos nuevos, pero TODO su historial se conserva y lo puedes seguir viendo.`)) return;
+  }
+  tj.cerrada = cerrar;
+  saveTarjetas();
+  renderCards();
+  refreshCardSelects();
+}
+
+// Despliega u oculta el desglose por año de una tarjeta
 function toggleCardMonths(idx){
   const box = document.getElementById(`cc-months-${idx}`);
   const btn = document.getElementById(`cc-toggle-${idx}`);
   if(!box || !btn) return;
   const visible = box.style.display !== 'none';
   box.style.display = visible ? 'none' : 'block';
-  btn.textContent = visible ? '📅 Ver desglose por mes ▾' : '📅 Ocultar desglose ▴';
+  btn.textContent = visible ? '📅 Ver desglose por año ▾' : '📅 Ocultar desglose ▴';
 }
 
 function addCard(){
@@ -1717,17 +1779,11 @@ async function setupInitialCardIfNeeded(){
       needSave = true;
     }
 
-    // ── PARTE C: activar "Mantener" en la Mastercard (una sola vez) ─────
-    if(d._cardsKeepSetup !== true){
-      const tjMaster = tarjetas.find(t => t.nombre.toLowerCase() === TARJETA_INICIAL.toLowerCase());
-      if(tjMaster) tjMaster.mantener = true;
-      needSave = true;
-    }
-
     // Garantizar campos nuevos en todas las tarjetas
     tarjetas.forEach(tj=>{
-      if(typeof tj.mantener !== 'boolean') tj.mantener = false;
+      if(typeof tj.cerrada !== 'boolean') tj.cerrada = false;
       if(!tj.totalesPorAnio || typeof tj.totalesPorAnio !== 'object') tj.totalesPorAnio = {};
+      if(!tj.aniosMeses || typeof tj.aniosMeses !== 'object') tj.aniosMeses = {};
     });
 
     // ── Guardar tarjetas y banderas ────────────────────────────────────
@@ -1736,7 +1792,6 @@ async function setupInitialCardIfNeeded(){
         [TARJETAS_KEY_V2]: tarjetas,
         _cardsSetup: true,
         _cardsManualSetup: true,
-        _cardsKeepSetup: true,
         _cardsSetupAt: new Date().toISOString()
       }, { merge: true });
     }
@@ -1749,11 +1804,9 @@ async function setupInitialCardIfNeeded(){
 
 // ══════════════════════════════════════════════════════════════════════════
 // CIERRE DE AÑO PARA TARJETAS
-// Si el último año procesado es distinto del año actual, "cierra" el año
-// anterior: guarda el gasto total de cada tarjeta en `totalesPorAnio[año]`
-// y reinicia el desglose del año nuevo (manualMeses se limpia).
-// Las tarjetas NO se borran — sobreviven todas. La bandera `mantener` solo
-// afecta al botón Restablecer, no al cambio de año.
+// Cuando cambia el año, guarda una "fotografía" del desglose mensual de cada
+// tarjeta en `aniosMeses[año]`. NADA se borra — el desglose del año viejo
+// queda guardado para siempre y se ve con el selector "Ver desglose por año".
 // ══════════════════════════════════════════════════════════════════════════
 async function rolloverCardsIfNewYear(){
   if(!currentUser) return;
@@ -1763,21 +1816,39 @@ async function rolloverCardsIfNewYear(){
     const d = doc.exists ? (doc.data() || {}) : {};
 
     const lastYear = d._cardsLastYear;
-    // Primera vez: solo registrar el año actual, sin cerrar nada
     if(lastYear === undefined || lastYear === null){
       await ref.set({ _cardsLastYear: CURRENT_YEAR }, { merge: true });
       return;
     }
-    // Mismo año: nada que hacer
     if(lastYear === CURRENT_YEAR) return;
 
-    // Cambió el año: cerrar cada año pendiente entre lastYear y CURRENT_YEAR-1
+    // Cambió el año: fotografiar el desglose del año viejo en cada tarjeta
     tarjetas.forEach(tj=>{
-      if(!tj.totalesPorAnio) tj.totalesPorAnio = {};
-      // El gasto del año que se cierra = lo que la tarjeta tenía calculado
-      const totalCerrado = cardSpent(tj);
-      tj.totalesPorAnio[lastYear] = totalCerrado;
-      // Reiniciar el desglose para el año nuevo
+      // Las tarjetas CERRADAS se saltan: ya no se usan, no se les crea
+      // desglose nuevo ni se les toca nada. Quedan congeladas tal cual.
+      if(tj.cerrada === true) return;
+      if(!tj.aniosMeses || typeof tj.aniosMeses !== 'object') tj.aniosMeses = {};
+      if(!tj.aniosMeses[lastYear]){
+        const foto = {};
+        MONTHS.forEach((_,mi)=>{
+          let m = 0;
+          if(tj.manualMeses && typeof tj.manualMeses === 'object' && tj.manualMeses[mi]!==undefined){
+            m = parseFloat(tj.manualMeses[mi]) || 0;
+          } else {
+            const md = data[mi];
+            if(md && md.entries){
+              md.entries.forEach(e=>{
+                if(e.type==='expense' && e.cat==='Crédito' && e.tarjeta===tj.nombre){
+                  m += e.amount;
+                }
+              });
+            }
+          }
+          if(m>0) foto[mi] = parseFloat(m.toFixed(2));
+        });
+        tj.aniosMeses[lastYear] = foto;
+      }
+      // El año nuevo arranca con un desglose limpio (lo viejo ya quedó archivado)
       delete tj.manualMeses;
     });
 
@@ -1792,18 +1863,30 @@ async function rolloverCardsIfNewYear(){
 
 // Devuelve el gasto total del año pasado para una tarjeta (o null si no hay)
 function cardLastYearTotal(tj){
-  if(!tj || !tj.totalesPorAnio) return null;
+  if(!tj) return null;
   const prev = CURRENT_YEAR - 1;
-  const v = tj.totalesPorAnio[prev];
-  return (v===undefined || v===null) ? null : parseFloat(v);
+  if(tj.aniosMeses && tj.aniosMeses[prev]){
+    let t = 0;
+    Object.values(tj.aniosMeses[prev]).forEach(v=>{ t += (parseFloat(v)||0); });
+    return parseFloat(t.toFixed(2));
+  }
+  // Compatibilidad con el formato viejo
+  if(tj.totalesPorAnio && tj.totalesPorAnio[prev]!==undefined){
+    return parseFloat(tj.totalesPorAnio[prev]);
+  }
+  return null;
 }
 
 // Refresca todos los selectores de tarjeta abiertos en los formularios de mes
 function refreshCardSelects(){
   document.querySelectorAll('.tarjeta-select').forEach(sel=>{
     const cur = sel.value;
+    const activas = tarjetas.filter(t=>t.cerrada!==true);
     sel.innerHTML = '<option value="">Selecciona tarjeta…</option>' +
-      tarjetas.map(t=>`<option value="${esc(t.nombre)}">${esc(t.nombre)}</option>`).join('');
+      activas.map(t=>`<option value="${esc(t.nombre)}">${esc(t.nombre)}</option>`).join('');
+    if(cur && !activas.some(t=>t.nombre===cur) && tarjetas.some(t=>t.nombre===cur)){
+      sel.innerHTML += `<option value="${esc(cur)}">${esc(cur)} (cerrada)</option>`;
+    }
     if(tarjetas.some(t=>t.nombre===cur)) sel.value = cur;
   });
 }
@@ -1905,22 +1988,16 @@ async function deleteYearFromHistory(year){
 }
 
 function resetYear(){
-  const confirmed = confirm('⚠️ ¿Estás seguro?\n\nEsto borrará TODOS los movimientos de los 12 meses de forma permanente.\n\nLas tarjetas con 🔒 Mantener activado NO se borran.\n\nEsta acción no se puede deshacer.');
+  const confirmed = confirm('⚠️ ¿Estás seguro?\n\nEsto borrará TODOS los movimientos de los 12 meses de forma permanente.\n\nTus tarjetas y su historial NO se borran.\n\nEsta acción no se puede deshacer.');
   if(!confirmed) return;
   const confirmed2 = confirm('¿Confirmas que quieres borrar TODO el año?\n\nPresiona Aceptar para continuar.');
   if(!confirmed2) return;
   data = {};
   save();
-  // Tarjetas: conservar solo las que tienen "Mantener" activado.
-  // A las conservadas se les limpia el desglose manual (empiezan limpias).
-  const conservadas = tarjetas.filter(tj => tj.mantener === true);
-  conservadas.forEach(tj => { delete tj.manualMeses; });
-  tarjetas = conservadas;
-  saveTarjetas();
   buildSkeleton();
   renderAll();
   switchToAnnual();
-  alert('✅ Año restablecido. Las tarjetas con 🔒 Mantener se conservaron.');
+  alert('✅ Año restablecido. Tus tarjetas y su historial se conservaron.');
 }
 
 function renderCapitalChart(){
@@ -2679,32 +2756,36 @@ function exportPDFPro(historicalData, historicalYear, historicalCards){
     html += `<h2 style="page-break-before:always">💳 Tarjetas de Crédito</h2>`;
     pdfTarjetas.forEach(tj=>{
       const inicio  = tj.inicio || 0;
-      // Usa cardSpentByMonth: respeta el desglose manual si la tarjeta lo tiene
-      const mesesArr = cardSpentByMonth(tj).filter(m=>m.gastado>0);
-      let gastado = 0;
-      mesesArr.forEach(m=>{ gastado += m.gastado; });
-      gastado = parseFloat(gastado.toFixed(2));
-      const uso = inicio>0 ? (gastado/inicio*100) : 0;
-      const usoCls = uso>=100 ? 'red' : uso>=75 ? 'gold' : 'green';
       const puntos = (tj.puntos!==undefined && tj.puntos!=='') ? tj.puntos : '—';
+      const gastadoActual = cardSpentForYear(tj, CURRENT_YEAR);
+      const usoAct = inicio>0 ? (gastadoActual/inicio*100) : 0;
+      const usoCls = usoAct>=100 ? 'red' : usoAct>=75 ? 'gold' : 'green';
       html += `<div class="month-block">
-        <div class="month-title"><span>💳 ${esc(tj.nombre)}</span>
+        <div class="month-title"><span>💳 ${esc(tj.nombre)}${tj.cerrada?' (Cerrada)':''}</span>
           <span style="font-size:12px;color:#888">${tj.desde ? 'Desde '+esc(tj.desde) : ''}</span>
         </div>
         <div class="kpi-grid">
           <div class="kpi"><div class="kpi-lbl">Inicio</div><div class="kpi-val">${fmt(inicio)}</div></div>
-          <div class="kpi"><div class="kpi-lbl">Gastado</div><div class="kpi-val red">-${fmt(gastado)}</div></div>
-          <div class="kpi"><div class="kpi-lbl">Uso</div><div class="kpi-val ${usoCls}">${uso.toFixed(2)}%</div></div>
+          <div class="kpi"><div class="kpi-lbl">Gastado ${CURRENT_YEAR}</div><div class="kpi-val red">-${fmt(gastadoActual)}</div></div>
+          <div class="kpi"><div class="kpi-lbl">Uso ${CURRENT_YEAR}</div><div class="kpi-val ${usoCls}">${usoAct.toFixed(2)}%</div></div>
           <div class="kpi"><div class="kpi-lbl">Puntos</div><div class="kpi-val gold">${esc(String(puntos))}</div></div>
         </div>`;
-      if(mesesArr.length){
-        html += `<h3>Gastado por mes</h3>`;
+      // Desglose por cada año que tenga la tarjeta
+      const years = cardYears(tj);
+      let algunGasto = false;
+      years.forEach(yr=>{
+        const mesesArr = cardSpentByMonthForYear(tj, yr).filter(m=>m.gastado>0);
+        if(!mesesArr.length) return;
+        algunGasto = true;
+        let totYr = 0; mesesArr.forEach(m=>totYr+=m.gastado);
+        html += `<h3>Año ${yr} — total ${fmt(totYr)}</h3>`;
         mesesArr.forEach(p=>{
           const mUso = inicio>0 ? (p.gastado/inicio*100) : 0;
           const mCls = mUso>=100 ? 'red' : mUso>=75 ? 'gold' : 'green';
           html += `<div class="row"><span class="lbl" style="padding-left:8px">${esc(p.mName)}</span><span><span class="red">-${fmt(p.gastado)}</span> &nbsp; <span class="${mCls}">${mUso.toFixed(2)}%</span></span></div>`;
         });
-      } else {
+      });
+      if(!algunGasto){
         html += `<div style="font-size:12px;color:#888;padding:6px 0">Sin gastos de crédito registrados para esta tarjeta.</div>`;
       }
       html += `</div>`;
@@ -2959,8 +3040,9 @@ async function loadFromFirebase(){
     if(!Array.isArray(tarjetas)) tarjetas = [];
     // Asegurar que cada tarjeta tenga los campos nuevos
     tarjetas.forEach(tj=>{
-      if(typeof tj.mantener !== 'boolean') tj.mantener = false;
+      if(typeof tj.cerrada !== 'boolean') tj.cerrada = false;
       if(!tj.totalesPorAnio || typeof tj.totalesPorAnio !== 'object') tj.totalesPorAnio = {};
+      if(!tj.aniosMeses || typeof tj.aniosMeses !== 'object') tj.aniosMeses = {};
     });
   } catch(e){ console.error('Error cargando datos:', e); data = {}; tarjetas = []; }
 }
