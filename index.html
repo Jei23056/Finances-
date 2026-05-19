@@ -1414,13 +1414,27 @@ function saveTarjetas(){
     .catch(e=>console.error('Error guardando tarjetas:', e));
 }
 
-function cardSpent(nombre){
+// Acepta el nombre de la tarjeta O el objeto tarjeta completo.
+// Si la tarjeta tiene `manualMeses`, usa esos números fijos en vez de los movimientos.
+function _resolveCard(arg){
+  if(arg && typeof arg === 'object') return arg;
+  return tarjetas.find(t => t.nombre === arg) || { nombre: arg };
+}
+
+function cardSpent(arg){
+  const tj = _resolveCard(arg);
+  // Si tiene desglose manual, el total sale de ahí
+  if(tj.manualMeses && typeof tj.manualMeses === 'object'){
+    let total = 0;
+    Object.values(tj.manualMeses).forEach(v=>{ total += (parseFloat(v)||0); });
+    return parseFloat(total.toFixed(2));
+  }
   let total = 0;
   MONTHS.forEach((_,mi)=>{
     const md = data[mi];
     if(!md || !md.entries) return;
     md.entries.forEach(e=>{
-      if(e.type==='expense' && e.cat==='Crédito' && e.tarjeta===nombre){
+      if(e.type==='expense' && e.cat==='Crédito' && e.tarjeta===tj.nombre){
         total += e.amount;
       }
     });
@@ -1429,17 +1443,23 @@ function cardSpent(nombre){
 }
 
 // Devuelve el gasto de una tarjeta mes por mes: [{mi, mName, gastado}]
-function cardSpentByMonth(nombre){
+function cardSpentByMonth(arg){
+  const tj = _resolveCard(arg);
   const out = [];
   MONTHS.forEach((mName,mi)=>{
-    const md = data[mi];
     let m = 0;
-    if(md && md.entries){
-      md.entries.forEach(e=>{
-        if(e.type==='expense' && e.cat==='Crédito' && e.tarjeta===nombre){
-          m += e.amount;
-        }
-      });
+    // Si tiene desglose manual, el monto del mes sale de ahí
+    if(tj.manualMeses && typeof tj.manualMeses === 'object'){
+      m = parseFloat(tj.manualMeses[mi]) || 0;
+    } else {
+      const md = data[mi];
+      if(md && md.entries){
+        md.entries.forEach(e=>{
+          if(e.type==='expense' && e.cat==='Crédito' && e.tarjeta===tj.nombre){
+            m += e.amount;
+          }
+        });
+      }
     }
     out.push({ mi, mName, gastado: parseFloat(m.toFixed(2)) });
   });
@@ -1603,6 +1623,17 @@ function editCardPoints(idx){
 const TARJETA_INICIAL = 'Mastercard Banreservas';
 let _cardsSetupDone = false;
 
+// Cifras de la Mastercard provistas manualmente por el usuario.
+// Índices de mes: Ene=0, Feb=1, Mar=2, Abr=3, May=4 … Dic=11.
+const MASTERCARD_MANUAL = {
+  11: 10216.74,  // Diciembre 2025
+  0:  12844.22,  // Enero
+  1:  11933.70,  // Febrero
+  2:  9180.85,   // Marzo
+  3:  11982.12,  // Abril
+  4:  11589.25   // Mayo
+};
+
 async function setupInitialCardIfNeeded(){
   if(!currentUser) return;
   try {
@@ -1610,40 +1641,57 @@ async function setupInitialCardIfNeeded(){
     const doc = await ref.get();
     const d = doc.exists ? (doc.data() || {}) : {};
 
-    // Si ya se hizo la configuración inicial, no repetir nunca
-    if(d._cardsSetup === true){ _cardsSetupDone = true; return; }
+    let needSave = false;
 
-    // 1) Crear la tarjeta inicial si aún no existe
-    if(!tarjetas.some(t => t.nombre.toLowerCase() === TARJETA_INICIAL.toLowerCase())){
-      tarjetas.push({
-        id: Date.now(),
-        nombre: TARJETA_INICIAL,
-        inicio: 12000,
-        puntos: '',
-        desde: 'Diciembre 2025'
+    // ── PARTE A: configuración inicial (una sola vez) ──────────────────
+    if(d._cardsSetup !== true){
+      // 1) Crear la tarjeta inicial si aún no existe
+      if(!tarjetas.some(t => t.nombre.toLowerCase() === TARJETA_INICIAL.toLowerCase())){
+        tarjetas.push({
+          id: Date.now(),
+          nombre: TARJETA_INICIAL,
+          inicio: 12000,
+          puntos: '',
+          desde: 'Diciembre 2025'
+        });
+      }
+      // 2) Asignar a esa tarjeta todos los gastos de "Crédito" sin tarjeta
+      let cambios = 0;
+      MONTHS.forEach((_,mi)=>{
+        const md = data[mi];
+        if(!md || !md.entries) return;
+        md.entries.forEach(e=>{
+          if(e.type==='expense' && e.cat==='Crédito' && !e.tarjeta){
+            e.tarjeta = TARJETA_INICIAL;
+            cambios++;
+          }
+        });
       });
+      if(cambios > 0) save();
+      needSave = true;
     }
 
-    // 2) Asignar a esa tarjeta todos los gastos de "Crédito" sin tarjeta
-    let cambios = 0;
-    MONTHS.forEach((_,mi)=>{
-      const md = data[mi];
-      if(!md || !md.entries) return;
-      md.entries.forEach(e=>{
-        if(e.type==='expense' && e.cat==='Crédito' && !e.tarjeta){
-          e.tarjeta = TARJETA_INICIAL;
-          cambios++;
-        }
-      });
-    });
+    // ── PARTE B: cargar las cifras manuales de la Mastercard (una vez) ──
+    if(d._cardsManualSetup !== true){
+      let tj = tarjetas.find(t => t.nombre.toLowerCase() === TARJETA_INICIAL.toLowerCase());
+      if(!tj){
+        tj = { id: Date.now(), nombre: TARJETA_INICIAL, inicio: 12000, puntos: '', desde: 'Diciembre 2025' };
+        tarjetas.push(tj);
+      }
+      tj.inicio = 12000;
+      tj.manualMeses = Object.assign({}, MASTERCARD_MANUAL);
+      needSave = true;
+    }
 
-    // 3) Guardar finanzas (si hubo cambios), tarjetas y la bandera
-    if(cambios > 0) save();
-    await ref.set({
-      [TARJETAS_KEY]: tarjetas,
-      _cardsSetup: true,
-      _cardsSetupAt: new Date().toISOString()
-    }, { merge: true });
+    // ── Guardar tarjetas y banderas ────────────────────────────────────
+    if(needSave){
+      await ref.set({
+        [TARJETAS_KEY]: tarjetas,
+        _cardsSetup: true,
+        _cardsManualSetup: true,
+        _cardsSetupAt: new Date().toISOString()
+      }, { merge: true });
+    }
 
     _cardsSetupDone = true;
   } catch(e){
@@ -2526,19 +2574,10 @@ function exportPDFPro(historicalData, historicalYear, historicalCards){
     html += `<h2 style="page-break-before:always">💳 Tarjetas de Crédito</h2>`;
     pdfTarjetas.forEach(tj=>{
       const inicio  = tj.inicio || 0;
-      // Gastado: suma de movimientos type=expense, cat='Crédito', tarjeta=esta, todos los meses
+      // Usa cardSpentByMonth: respeta el desglose manual si la tarjeta lo tiene
+      const mesesArr = cardSpentByMonth(tj).filter(m=>m.gastado>0);
       let gastado = 0;
-      const porMes = [];
-      MONTHS.forEach((mName,mi)=>{
-        const md = getMonth(mi);
-        let mTotal = 0;
-        md.entries.forEach(e=>{
-          if(e.type==='expense' && e.cat==='Crédito' && e.tarjeta===tj.nombre){
-            mTotal += e.amount;
-          }
-        });
-        if(mTotal>0){ porMes.push({mName, mTotal}); gastado += mTotal; }
-      });
+      mesesArr.forEach(m=>{ gastado += m.gastado; });
       gastado = parseFloat(gastado.toFixed(2));
       const uso = inicio>0 ? (gastado/inicio*100) : 0;
       const usoCls = uso>=100 ? 'red' : uso>=75 ? 'gold' : 'green';
@@ -2553,9 +2592,13 @@ function exportPDFPro(historicalData, historicalYear, historicalCards){
           <div class="kpi"><div class="kpi-lbl">Uso</div><div class="kpi-val ${usoCls}">${uso.toFixed(2)}%</div></div>
           <div class="kpi"><div class="kpi-lbl">Puntos</div><div class="kpi-val gold">${esc(String(puntos))}</div></div>
         </div>`;
-      if(porMes.length){
+      if(mesesArr.length){
         html += `<h3>Gastado por mes</h3>`;
-        porMes.forEach(p=>{ html += `<div class="row"><span class="lbl" style="padding-left:8px">${esc(p.mName)}</span><span class="red">-${fmt(p.mTotal)}</span></div>`; });
+        mesesArr.forEach(p=>{
+          const mUso = inicio>0 ? (p.gastado/inicio*100) : 0;
+          const mCls = mUso>=100 ? 'red' : mUso>=75 ? 'gold' : 'green';
+          html += `<div class="row"><span class="lbl" style="padding-left:8px">${esc(p.mName)}</span><span><span class="red">-${fmt(p.gastado)}</span> &nbsp; <span class="${mCls}">${mUso.toFixed(2)}%</span></span></div>`;
+        });
       } else {
         html += `<div style="font-size:12px;color:#888;padding:6px 0">Sin gastos de crédito registrados para esta tarjeta.</div>`;
       }
