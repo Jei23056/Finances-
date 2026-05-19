@@ -1463,6 +1463,12 @@ function cardSpentByMonth(arg){
     }
     out.push({ mi, mName, gastado: parseFloat(m.toFixed(2)) });
   });
+  // Orden de ciclo: Diciembre (mi=11) primero, luego Enero..Noviembre
+  out.sort((a,b)=>{
+    const oa = a.mi === 11 ? -1 : a.mi;
+    const ob = b.mi === 11 ? -1 : b.mi;
+    return oa - ob;
+  });
   return out;
 }
 
