@@ -471,6 +471,24 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 .cc-stat-val { font-family:'DM Serif Display',serif; font-size:1.05rem; }
 .cc-edit { background:none; border:none; color:var(--muted); cursor:pointer; font-size:11px; margin-left:3px; }
 .cc-track { height:8px; background:var(--surf); border-radius:4px; overflow:hidden; }
+.cc-toggle {
+  width:100%; margin-top:.85rem; padding:8px;
+  background:transparent; border:1px solid var(--border2);
+  border-radius:var(--rs); color:var(--muted2);
+  font-family:'DM Sans',sans-serif; font-size:12px; cursor:pointer; transition:all .18s;
+}
+.cc-toggle:hover { border-color:var(--gold); color:var(--gold); }
+.cc-months { margin-top:.7rem; }
+.cc-month-row {
+  display:flex; align-items:center; gap:8px;
+  padding:7px 0; border-bottom:1px solid var(--border);
+}
+.cc-month-row:last-child { border-bottom:none; }
+.cc-month-name { font-size:12px; color:var(--muted2); width:74px; flex-shrink:0; }
+.cc-month-bar  { flex:1; height:10px; background:var(--surf); border-radius:3px; overflow:hidden; }
+.cc-month-fill { height:100%; border-radius:3px; transition:width .45s cubic-bezier(.4,0,.2,1); min-width:2px; }
+.cc-month-amt  { font-size:12px; color:var(--text); width:90px; text-align:right; flex-shrink:0; }
+.cc-month-pct  { font-family:'DM Serif Display',serif; font-size:.9rem; width:64px; text-align:right; flex-shrink:0; }
 .cc-fill  { height:100%; border-radius:4px; transition:width .5s cubic-bezier(.4,0,.2,1); min-width:2px; }
 .cc-add-form { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:1.15rem; margin-bottom:1.25rem; }
 .cc-add-inputs { display:grid; grid-template-columns:1fr 140px; gap:8px; }
@@ -1410,6 +1428,24 @@ function cardSpent(nombre){
   return parseFloat(total.toFixed(2));
 }
 
+// Devuelve el gasto de una tarjeta mes por mes: [{mi, mName, gastado}]
+function cardSpentByMonth(nombre){
+  const out = [];
+  MONTHS.forEach((mName,mi)=>{
+    const md = data[mi];
+    let m = 0;
+    if(md && md.entries){
+      md.entries.forEach(e=>{
+        if(e.type==='expense' && e.cat==='Crédito' && e.tarjeta===nombre){
+          m += e.amount;
+        }
+      });
+    }
+    out.push({ mi, mName, gastado: parseFloat(m.toFixed(2)) });
+  });
+  return out;
+}
+
 function switchToCards(){
   annualActive = false;
   document.querySelectorAll('.month-panel').forEach(p=>{ p.className = 'month-panel'; });
@@ -1470,8 +1506,33 @@ function renderCards(){
         </div>
       </div>
       <div class="cc-track"><div class="cc-fill" style="width:${fillW}%;background:${usoColor}"></div></div>
+      <button class="cc-toggle" onclick="toggleCardMonths(${idx})" id="cc-toggle-${idx}">📅 Ver desglose por mes ▾</button>
+      <div class="cc-months" id="cc-months-${idx}" style="display:none">
+        ${cardSpentByMonth(tj.nombre).filter(m=>m.gastado>0).length
+          ? cardSpentByMonth(tj.nombre).filter(m=>m.gastado>0).map(m=>{
+              const mUso = inicio>0 ? (m.gastado/inicio*100) : 0;
+              const mColor = mUso>=100 ? 'var(--red)' : mUso>=75 ? 'var(--gold)' : 'var(--green)';
+              return `<div class="cc-month-row">
+                <div class="cc-month-name">${esc(m.mName)}</div>
+                <div class="cc-month-bar"><div class="cc-month-fill" style="width:${Math.min(100,mUso)}%;background:${mColor}"></div></div>
+                <div class="cc-month-amt">${fmt(m.gastado)}</div>
+                <div class="cc-month-pct" style="color:${mColor}">${mUso.toFixed(2)}%</div>
+              </div>`;
+            }).join('')
+          : '<div style="font-size:12px;color:var(--muted);padding:6px 2px">Esta tarjeta aún no tiene gastos en ningún mes.</div>'}
+      </div>
     </div>`;
   }).join('');
+}
+
+// Despliega u oculta el desglose por mes de una tarjeta
+function toggleCardMonths(idx){
+  const box = document.getElementById(`cc-months-${idx}`);
+  const btn = document.getElementById(`cc-toggle-${idx}`);
+  if(!box || !btn) return;
+  const visible = box.style.display !== 'none';
+  box.style.display = visible ? 'none' : 'block';
+  btn.textContent = visible ? '📅 Ver desglose por mes ▾' : '📅 Ocultar desglose ▴';
 }
 
 function addCard(){
