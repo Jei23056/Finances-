@@ -465,6 +465,16 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 .cc-sub  { font-size:11px; color:var(--muted); margin-top:2px; }
 .cc-del  { background:none; border:none; color:var(--muted); font-size:18px; cursor:pointer; line-height:1; padding:2px 4px; transition:color .15s; }
 .cc-del:hover { color:var(--red); }
+.cc-keep {
+  background:transparent; border:1px solid var(--border2);
+  border-radius:999px; padding:4px 10px; cursor:pointer;
+  font-family:'DM Sans',sans-serif; font-size:11px; color:var(--muted2);
+  transition:all .15s; white-space:nowrap;
+}
+.cc-keep:hover { border-color:var(--gold); color:var(--gold); }
+.cc-keep.on {
+  background:var(--gldim); border-color:var(--gold); color:var(--gold); font-weight:500;
+}
 .cc-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:.9rem; }
 .cc-stat { background:var(--surf); border:1px solid var(--border); border-radius:var(--rs); padding:.6rem .7rem; }
 .cc-stat-lbl { font-size:9px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin-bottom:3px; }
@@ -688,7 +698,8 @@ const SINCE_YEAR = 2026;
 const FINANZAS_KEY = `finanzas_${CURRENT_YEAR}`;
 const LOGROS_KEY   = `logros_${CURRENT_YEAR}`;
 const LS_LOGROS    = `ach_unlocked_${CURRENT_YEAR}`;
-const TARJETAS_KEY = `tarjetas_${CURRENT_YEAR}`;
+const TARJETAS_KEY = `tarjetas_${CURRENT_YEAR}`;   // ← clave vieja (por año), solo para migrar
+const TARJETAS_KEY_V2 = 'tarjetas_v2';             // ← clave nueva: tarjetas persistentes entre años
 
 // Actualizar UI con año actual
 document.title = `Full Year ${CURRENT_YEAR}`;
@@ -1407,7 +1418,7 @@ async function switchToSince(){
 function saveTarjetas(){
   if(!currentUser) return;
   const ind = document.getElementById('save-indicator');
-  db.collection('users').doc(currentUser.uid).set({ [TARJETAS_KEY]: tarjetas }, { merge: true })
+  db.collection('users').doc(currentUser.uid).set({ [TARJETAS_KEY_V2]: tarjetas }, { merge: true })
     .then(()=>{
       if(ind){ ind.classList.add('show'); setTimeout(()=>ind.classList.remove('show'), 1500); }
     })
@@ -1501,17 +1512,25 @@ function renderCards(){
     const inicio  = tj.inicio || 0;
     const gastado = cardSpent(tj.nombre);
     const uso     = inicio>0 ? (gastado/inicio*100) : 0;
-    const usoTxt  = uso.toFixed(2) + '%';
     const fillW   = Math.min(100, uso);
     const usoColor = uso>=100 ? 'var(--red)' : uso>=75 ? 'var(--gold)' : 'var(--green)';
     const puntos  = (tj.puntos!==undefined && tj.puntos!=='') ? tj.puntos : '—';
+    const lastYearTotal = cardLastYearTotal(tj);
+    const lastYearTxt = (lastYearTotal===null) ? '—' : fmt(lastYearTotal);
+    const mantener = tj.mantener === true;
     return `<div class="credit-card">
       <div class="cc-head">
         <div>
           <div class="cc-name">💳 ${esc(tj.nombre)}</div>
           <div class="cc-sub">${tj.desde ? 'Desde '+esc(tj.desde) : 'Tarjeta de crédito'}</div>
         </div>
-        <button class="cc-del" onclick="delCard(${idx})" title="Eliminar tarjeta">×</button>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="cc-keep ${mantener?'on':''}" onclick="toggleCardKeep(${idx})"
+            title="${mantener?'Esta tarjeta se mantiene aunque pase el año o restablezcas':'Activar para que esta tarjeta no se borre al restablecer'}">
+            ${mantener?'🔒 Mantener':'🔓 Mantener'}
+          </button>
+          <button class="cc-del" onclick="delCard(${idx})" title="Eliminar tarjeta">×</button>
+        </div>
       </div>
       <div class="cc-stats">
         <div class="cc-stat">
@@ -1523,8 +1542,8 @@ function renderCards(){
           <div class="cc-stat-val" style="color:var(--red)">${fmt(gastado)}</div>
         </div>
         <div class="cc-stat">
-          <div class="cc-stat-lbl">Uso</div>
-          <div class="cc-stat-val" style="color:${usoColor}">${usoTxt}</div>
+          <div class="cc-stat-lbl">Año pasado</div>
+          <div class="cc-stat-val" style="color:var(--muted2)">${lastYearTxt}</div>
         </div>
         <div class="cc-stat">
           <div class="cc-stat-lbl">Puntos</div>
@@ -1534,8 +1553,8 @@ function renderCards(){
       <div class="cc-track"><div class="cc-fill" style="width:${fillW}%;background:${usoColor}"></div></div>
       <button class="cc-toggle" onclick="toggleCardMonths(${idx})" id="cc-toggle-${idx}">📅 Ver desglose por mes ▾</button>
       <div class="cc-months" id="cc-months-${idx}" style="display:none">
-        ${cardSpentByMonth(tj.nombre).filter(m=>m.gastado>0).length
-          ? cardSpentByMonth(tj.nombre).filter(m=>m.gastado>0).map(m=>{
+        ${cardSpentByMonth(tj).filter(m=>m.gastado>0).length
+          ? cardSpentByMonth(tj).filter(m=>m.gastado>0).map(m=>{
               const mUso = inicio>0 ? (m.gastado/inicio*100) : 0;
               const mColor = mUso>=100 ? 'var(--red)' : mUso>=75 ? 'var(--gold)' : 'var(--green)';
               return `<div class="cc-month-row">
@@ -1549,6 +1568,15 @@ function renderCards(){
       </div>
     </div>`;
   }).join('');
+}
+
+// Activa o desactiva "Mantener" en una tarjeta
+function toggleCardKeep(idx){
+  const tj = tarjetas[idx];
+  if(!tj) return;
+  tj.mantener = !(tj.mantener === true);
+  saveTarjetas();
+  renderCards();
 }
 
 // Despliega u oculta el desglose por mes de una tarjeta
@@ -1689,12 +1717,26 @@ async function setupInitialCardIfNeeded(){
       needSave = true;
     }
 
+    // ── PARTE C: activar "Mantener" en la Mastercard (una sola vez) ─────
+    if(d._cardsKeepSetup !== true){
+      const tjMaster = tarjetas.find(t => t.nombre.toLowerCase() === TARJETA_INICIAL.toLowerCase());
+      if(tjMaster) tjMaster.mantener = true;
+      needSave = true;
+    }
+
+    // Garantizar campos nuevos en todas las tarjetas
+    tarjetas.forEach(tj=>{
+      if(typeof tj.mantener !== 'boolean') tj.mantener = false;
+      if(!tj.totalesPorAnio || typeof tj.totalesPorAnio !== 'object') tj.totalesPorAnio = {};
+    });
+
     // ── Guardar tarjetas y banderas ────────────────────────────────────
     if(needSave){
       await ref.set({
-        [TARJETAS_KEY]: tarjetas,
+        [TARJETAS_KEY_V2]: tarjetas,
         _cardsSetup: true,
         _cardsManualSetup: true,
+        _cardsKeepSetup: true,
         _cardsSetupAt: new Date().toISOString()
       }, { merge: true });
     }
@@ -1703,6 +1745,57 @@ async function setupInitialCardIfNeeded(){
   } catch(e){
     console.error('Error en configuración inicial de tarjetas:', e);
   }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// CIERRE DE AÑO PARA TARJETAS
+// Si el último año procesado es distinto del año actual, "cierra" el año
+// anterior: guarda el gasto total de cada tarjeta en `totalesPorAnio[año]`
+// y reinicia el desglose del año nuevo (manualMeses se limpia).
+// Las tarjetas NO se borran — sobreviven todas. La bandera `mantener` solo
+// afecta al botón Restablecer, no al cambio de año.
+// ══════════════════════════════════════════════════════════════════════════
+async function rolloverCardsIfNewYear(){
+  if(!currentUser) return;
+  try {
+    const ref = db.collection('users').doc(currentUser.uid);
+    const doc = await ref.get();
+    const d = doc.exists ? (doc.data() || {}) : {};
+
+    const lastYear = d._cardsLastYear;
+    // Primera vez: solo registrar el año actual, sin cerrar nada
+    if(lastYear === undefined || lastYear === null){
+      await ref.set({ _cardsLastYear: CURRENT_YEAR }, { merge: true });
+      return;
+    }
+    // Mismo año: nada que hacer
+    if(lastYear === CURRENT_YEAR) return;
+
+    // Cambió el año: cerrar cada año pendiente entre lastYear y CURRENT_YEAR-1
+    tarjetas.forEach(tj=>{
+      if(!tj.totalesPorAnio) tj.totalesPorAnio = {};
+      // El gasto del año que se cierra = lo que la tarjeta tenía calculado
+      const totalCerrado = cardSpent(tj);
+      tj.totalesPorAnio[lastYear] = totalCerrado;
+      // Reiniciar el desglose para el año nuevo
+      delete tj.manualMeses;
+    });
+
+    await ref.set({
+      [TARJETAS_KEY_V2]: tarjetas,
+      _cardsLastYear: CURRENT_YEAR
+    }, { merge: true });
+  } catch(e){
+    console.error('Error en cierre de año de tarjetas:', e);
+  }
+}
+
+// Devuelve el gasto total del año pasado para una tarjeta (o null si no hay)
+function cardLastYearTotal(tj){
+  if(!tj || !tj.totalesPorAnio) return null;
+  const prev = CURRENT_YEAR - 1;
+  const v = tj.totalesPorAnio[prev];
+  return (v===undefined || v===null) ? null : parseFloat(v);
 }
 
 // Refresca todos los selectores de tarjeta abiertos en los formularios de mes
@@ -1812,16 +1905,22 @@ async function deleteYearFromHistory(year){
 }
 
 function resetYear(){
-  const confirmed = confirm('⚠️ ¿Estás seguro?\n\nEsto borrará TODOS los movimientos de los 12 meses de forma permanente.\n\nEsta acción no se puede deshacer.');
+  const confirmed = confirm('⚠️ ¿Estás seguro?\n\nEsto borrará TODOS los movimientos de los 12 meses de forma permanente.\n\nLas tarjetas con 🔒 Mantener activado NO se borran.\n\nEsta acción no se puede deshacer.');
   if(!confirmed) return;
   const confirmed2 = confirm('¿Confirmas que quieres borrar TODO el año?\n\nPresiona Aceptar para continuar.');
   if(!confirmed2) return;
   data = {};
   save();
+  // Tarjetas: conservar solo las que tienen "Mantener" activado.
+  // A las conservadas se les limpia el desglose manual (empiezan limpias).
+  const conservadas = tarjetas.filter(tj => tj.mantener === true);
+  conservadas.forEach(tj => { delete tj.manualMeses; });
+  tarjetas = conservadas;
+  saveTarjetas();
   buildSkeleton();
   renderAll();
   switchToAnnual();
-  alert('✅ Año restablecido. ¡Listo para empezar de cero!');
+  alert('✅ Año restablecido. Las tarjetas con 🔒 Mantener se conservaron.');
 }
 
 function renderCapitalChart(){
@@ -2722,6 +2821,8 @@ auth.onAuthStateChanged(async user => {
     await loadFromFirebase();
     // ► PASO 3.5: Crear tarjeta inicial y asignar gastos de Crédito (una vez)
     await setupInitialCardIfNeeded();
+    // ► PASO 3.6: Cerrar año anterior de tarjetas si cambió el año
+    await rolloverCardsIfNewYear();
     await loadAchievementsFromFirebase();
     updateAchFab();
     buildSkeleton();
@@ -2843,11 +2944,24 @@ async function autoArchivePastYears(){
 async function loadFromFirebase(){
   try {
     const doc = await db.collection('users').doc(currentUser.uid).get();
+    const d = doc.exists ? (doc.data() || {}) : {};
     // Carga los datos del año actual: `finanzas_${año}`
-    data = doc.exists ? (doc.data()[FINANZAS_KEY] || {}) : {};
-    // Carga las tarjetas del año actual: `tarjetas_${año}`
-    tarjetas = doc.exists ? (doc.data()[TARJETAS_KEY] || []) : [];
+    data = d[FINANZAS_KEY] || {};
+    // Carga las tarjetas persistentes (clave nueva v2).
+    // Si la v2 no existe pero sí la vieja por-año, migra copiando (sin borrar la vieja).
+    if(Array.isArray(d[TARJETAS_KEY_V2])){
+      tarjetas = d[TARJETAS_KEY_V2];
+    } else if(Array.isArray(d[TARJETAS_KEY])){
+      tarjetas = d[TARJETAS_KEY];   // se guardará en v2 en la primera operación
+    } else {
+      tarjetas = [];
+    }
     if(!Array.isArray(tarjetas)) tarjetas = [];
+    // Asegurar que cada tarjeta tenga los campos nuevos
+    tarjetas.forEach(tj=>{
+      if(typeof tj.mantener !== 'boolean') tj.mantener = false;
+      if(!tj.totalesPorAnio || typeof tj.totalesPorAnio !== 'object') tj.totalesPorAnio = {};
+    });
   } catch(e){ console.error('Error cargando datos:', e); data = {}; tarjetas = []; }
 }
 
