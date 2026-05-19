@@ -1532,6 +1532,64 @@ function editCardPoints(idx){
   renderCards();
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+// CONFIGURACIÓN INICIAL DE TARJETAS — SE EJECUTA UNA SOLA VEZ
+// Crea la tarjeta "Mastercard Banreservas" (inicio 12000) y asigna a ella
+// TODOS los gastos de categoría "Crédito" que aún no tengan tarjeta marcada.
+// Cada gasto se queda en su mismo mes; solo se le añade el campo `tarjeta`.
+// Protegido con la bandera `_cardsSetup` para no repetirse nunca.
+// ══════════════════════════════════════════════════════════════════════════
+const TARJETA_INICIAL = 'Mastercard Banreservas';
+let _cardsSetupDone = false;
+
+async function setupInitialCardIfNeeded(){
+  if(!currentUser) return;
+  try {
+    const ref = db.collection('users').doc(currentUser.uid);
+    const doc = await ref.get();
+    const d = doc.exists ? (doc.data() || {}) : {};
+
+    // Si ya se hizo la configuración inicial, no repetir nunca
+    if(d._cardsSetup === true){ _cardsSetupDone = true; return; }
+
+    // 1) Crear la tarjeta inicial si aún no existe
+    if(!tarjetas.some(t => t.nombre.toLowerCase() === TARJETA_INICIAL.toLowerCase())){
+      tarjetas.push({
+        id: Date.now(),
+        nombre: TARJETA_INICIAL,
+        inicio: 12000,
+        puntos: '',
+        desde: 'Diciembre 2025'
+      });
+    }
+
+    // 2) Asignar a esa tarjeta todos los gastos de "Crédito" sin tarjeta
+    let cambios = 0;
+    MONTHS.forEach((_,mi)=>{
+      const md = data[mi];
+      if(!md || !md.entries) return;
+      md.entries.forEach(e=>{
+        if(e.type==='expense' && e.cat==='Crédito' && !e.tarjeta){
+          e.tarjeta = TARJETA_INICIAL;
+          cambios++;
+        }
+      });
+    });
+
+    // 3) Guardar finanzas (si hubo cambios), tarjetas y la bandera
+    if(cambios > 0) save();
+    await ref.set({
+      [TARJETAS_KEY]: tarjetas,
+      _cardsSetup: true,
+      _cardsSetupAt: new Date().toISOString()
+    }, { merge: true });
+
+    _cardsSetupDone = true;
+  } catch(e){
+    console.error('Error en configuración inicial de tarjetas:', e);
+  }
+}
+
 // Refresca todos los selectores de tarjeta abiertos en los formularios de mes
 function refreshCardSelects(){
   document.querySelectorAll('.tarjeta-select').forEach(sel=>{
@@ -1574,7 +1632,7 @@ async function saveYearToHistory(){
   try {
     await db.collection('users').doc(currentUser.uid)
       .collection('historial').doc(String(CURRENT_YEAR))
-      .set({ year: CURRENT_YEAR, savedAt: new Date().toISOString(), finanzas: data });
+      .set({ year: CURRENT_YEAR, savedAt: new Date().toISOString(), finanzas: data, tarjetas: tarjetas });
     const ind = document.getElementById('save-indicator');
     ind.textContent = `Año ${CURRENT_YEAR} guardado ✓`;
     ind.classList.add('show');
@@ -1591,9 +1649,11 @@ async function renderHistoryList(){
     const snap = await db.collection('users').doc(currentUser.uid).collection('historial').orderBy('year','desc').get();
     if(snap.empty){ el.innerHTML = '<div style="font-size:12px;color:var(--muted)">Sin historial aún. Usa "📦 Guardar año" antes de restablecer.</div>'; return; }
     window._historyCache = {};
+    window._historyCardsCache = {};
     el.innerHTML = snap.docs.map(doc=>{
       const d = doc.data();
       window._historyCache[d.year] = d.finanzas || {};
+      window._historyCardsCache[d.year] = d.tarjetas || [];
       const savedDate = d.savedAt ? new Date(d.savedAt).toLocaleDateString('es-DO',{day:'2-digit',month:'short',year:'numeric'}) : '';
       return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);gap:12px">
         <div style="flex:1;min-width:0">
@@ -1618,7 +1678,8 @@ async function renderHistoryList(){
 function viewHistoryPDF(year){
   const histData = window._historyCache && window._historyCache[year];
   if(!histData){ alert('No se pudieron cargar los datos del año ' + year); return; }
-  exportPDFPro(histData, year);
+  const histCards = (window._historyCardsCache && window._historyCardsCache[year]) || [];
+  exportPDFPro(histData, year, histCards);
 }
 
 async function deleteYearFromHistory(year){
@@ -2159,7 +2220,7 @@ async function menuSaveToHistory(){
   try {
     await db.collection('users').doc(currentUser.uid)
       .collection('historial').doc(String(CURRENT_YEAR))
-      .set({ year: CURRENT_YEAR, savedAt: new Date().toISOString(), finanzas: data });
+      .set({ year: CURRENT_YEAR, savedAt: new Date().toISOString(), finanzas: data, tarjetas: tarjetas });
     const ind = document.getElementById('save-indicator');
     if(ind){
       ind.textContent = `Año ${CURRENT_YEAR} guardado ✓`;
@@ -2178,7 +2239,7 @@ async function menuSaveBoth(){
   try {
     await db.collection('users').doc(currentUser.uid)
       .collection('historial').doc(String(CURRENT_YEAR))
-      .set({ year: CURRENT_YEAR, savedAt: new Date().toISOString(), finanzas: data });
+      .set({ year: CURRENT_YEAR, savedAt: new Date().toISOString(), finanzas: data, tarjetas: tarjetas });
     const ind = document.getElementById('save-indicator');
     if(ind){
       ind.textContent = `Año ${CURRENT_YEAR} guardado ✓`;
@@ -2190,10 +2251,12 @@ async function menuSaveBoth(){
   } catch(e){ alert('Error: ' + e.message); }
 }
 
-function exportPDFPro(historicalData, historicalYear){
+function exportPDFPro(historicalData, historicalYear, historicalCards){
   const isHistorical = !!historicalData;
   const originalData = data;
   if(isHistorical) data = historicalData;
+  // Tarjetas a mostrar: las del año actual, o las históricas si es un PDF del historial
+  const pdfTarjetas = isHistorical ? (historicalCards || []) : tarjetas;
 
   const year = historicalYear || CURRENT_YEAR;
   const userName = (currentUser && (currentUser.displayName || currentUser.email)) || 'Usuario';
@@ -2397,6 +2460,48 @@ function exportPDFPro(historicalData, historicalYear){
     html += `</div>`;
   }
 
+  // ── Sección Tarjetas de Crédito en el PDF ──────────────────────────────
+  if(pdfTarjetas && pdfTarjetas.length){
+    html += `<h2 style="page-break-before:always">💳 Tarjetas de Crédito</h2>`;
+    pdfTarjetas.forEach(tj=>{
+      const inicio  = tj.inicio || 0;
+      // Gastado: suma de movimientos type=expense, cat='Crédito', tarjeta=esta, todos los meses
+      let gastado = 0;
+      const porMes = [];
+      MONTHS.forEach((mName,mi)=>{
+        const md = getMonth(mi);
+        let mTotal = 0;
+        md.entries.forEach(e=>{
+          if(e.type==='expense' && e.cat==='Crédito' && e.tarjeta===tj.nombre){
+            mTotal += e.amount;
+          }
+        });
+        if(mTotal>0){ porMes.push({mName, mTotal}); gastado += mTotal; }
+      });
+      gastado = parseFloat(gastado.toFixed(2));
+      const uso = inicio>0 ? (gastado/inicio*100) : 0;
+      const usoCls = uso>=100 ? 'red' : uso>=75 ? 'gold' : 'green';
+      const puntos = (tj.puntos!==undefined && tj.puntos!=='') ? tj.puntos : '—';
+      html += `<div class="month-block">
+        <div class="month-title"><span>💳 ${esc(tj.nombre)}</span>
+          <span style="font-size:12px;color:#888">${tj.desde ? 'Desde '+esc(tj.desde) : ''}</span>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi"><div class="kpi-lbl">Inicio</div><div class="kpi-val">${fmt(inicio)}</div></div>
+          <div class="kpi"><div class="kpi-lbl">Gastado</div><div class="kpi-val red">-${fmt(gastado)}</div></div>
+          <div class="kpi"><div class="kpi-lbl">Uso</div><div class="kpi-val ${usoCls}">${uso.toFixed(2)}%</div></div>
+          <div class="kpi"><div class="kpi-lbl">Puntos</div><div class="kpi-val gold">${esc(String(puntos))}</div></div>
+        </div>`;
+      if(porMes.length){
+        html += `<h3>Gastado por mes</h3>`;
+        porMes.forEach(p=>{ html += `<div class="row"><span class="lbl" style="padding-left:8px">${esc(p.mName)}</span><span class="red">-${fmt(p.mTotal)}</span></div>`; });
+      } else {
+        html += `<div style="font-size:12px;color:#888;padding:6px 0">Sin gastos de crédito registrados para esta tarjeta.</div>`;
+      }
+      html += `</div>`;
+    });
+  }
+
   html += `<h2 style="page-break-before:always">📅 Detalle Mes a Mes</h2>`;
   let renderedAny = false;
   MONTHS.forEach((name, mi) => {
@@ -2505,6 +2610,8 @@ auth.onAuthStateChanged(async user => {
     await autoArchivePastYears();
     // ► PASO 3: Cargar los datos del año actual
     await loadFromFirebase();
+    // ► PASO 3.5: Crear tarjeta inicial y asignar gastos de Crédito (una vez)
+    await setupInitialCardIfNeeded();
     await loadAchievementsFromFirebase();
     updateAchFab();
     buildSkeleton();
@@ -2587,7 +2694,7 @@ async function autoArchivePastYears(){
         if(yearNum < CURRENT_YEAR){
           const finanzasObj = d[key];
           if(finanzasObj && typeof finanzasObj === 'object' && Object.keys(finanzasObj).length > 0){
-            yearsToArchive.push({ year: yearNum, data: finanzasObj });
+            yearsToArchive.push({ year: yearNum, data: finanzasObj, tarjetas: d[`tarjetas_${yearNum}`] || [] });
           }
         }
       }
@@ -2607,7 +2714,8 @@ async function autoArchivePastYears(){
           year: item.year,
           savedAt: new Date().toISOString(),
           autoArchived: true,
-          finanzas: item.data
+          finanzas: item.data,
+          tarjetas: item.tarjetas
         });
         console.log(`Año ${item.year} archivado automáticamente`);
       }
