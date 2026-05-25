@@ -124,6 +124,8 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 .search-panel .sp-clear { flex:1; padding:7px; background:transparent; border:1px solid var(--border2); border-radius:var(--rs); color:var(--muted2); font-family:'DM Sans',sans-serif; font-size:12px; cursor:pointer; transition:all .15s; }
 .search-panel .sp-clear:hover { color:var(--text); border-color:var(--text); }
 .search-panel .sp-count { font-size:11px; color:var(--muted); margin-top:6px; text-align:right; }
+.repeat-note { font-size:11px; color:var(--muted2); padding:6px 12px; margin:4px 0; font-style:italic; opacity:.85; display:flex; align-items:center; gap:6px; }
+.repeat-note::before { content:'↓'; color:var(--gold); font-style:normal; font-weight:bold; }
 @media(max-width:600px){
   .year-bar  { grid-template-columns:1fr 1fr; }
   .action-buttons { display:grid !important; grid-template-columns:1fr 1fr; gap:6px !important; width:100%; }
@@ -806,6 +808,39 @@ function fmtSigned(n){
 function todayStr(){
   return new Date().toLocaleDateString('es-DO',{day:'2-digit',month:'short'});
 }
+
+// Parsea un string "24-may", "24 may", "24-may." a número de día del mes (1-31)
+// Devuelve null si no se puede parsear
+function parseDayFromDateStr(s){
+  if(!s) return null;
+  const m = String(s).match(/(\d{1,2})/);
+  return m ? parseInt(m[1],10) : null;
+}
+
+// Devuelve el verbo en infinitivo para "Volviste a ___" según la categoría
+function repeatVerb(cat){
+  const map = {
+    'Gasolina':            'echar gasolina',
+    'Supermercado':        'comprar en supermercado',
+    'Amazon':              'comprar en Amazon',
+    'Tienda / Compras':    'comprar en tienda',
+    'Coffee & Shopping':   'gastar en café',
+    'Crédito':             'usar la tarjeta',
+    'Teléfono':            'pagar teléfono',
+    'Pasola / Vehículo':   'gastar en el vehículo',
+    'Luz / Servicios':     'pagar servicios',
+    'Suscripciones':       'pagar suscripciones',
+    'Juegos / PSN':        'gastar en juegos',
+    'Universidad':         'gastar en la universidad',
+    'Amigos':              'gastar con amigos',
+    'Avance efectivo':     'sacar avance',
+    'Retiros ATM':         'sacar del ATM',
+    'Comisión':            'pagar comisión',
+    'Préstamo dado':       'prestar dinero'
+  };
+  return map[cat] || `gastar en ${cat}`;
+}
+
 function esc(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -1064,16 +1099,6 @@ function renderMonth(mi){
           </select>
         </div>
       </div>
-      <div class="sp-row amt">
-        <div>
-          <label>Monto mínimo</label>
-          <input type="text" id="sp-min-${mi}" placeholder="0" inputmode="decimal" oninput="this.value=this.value.replace(/[^0-9.]/g,'')" />
-        </div>
-        <div>
-          <label>Monto máximo</label>
-          <input type="text" id="sp-max-${mi}" placeholder="Sin límite" inputmode="decimal" oninput="this.value=this.value.replace(/[^0-9.]/g,'')" />
-        </div>
-      </div>
       <div class="sp-actions">
         <button class="sp-clear" onclick="clearFilters(${mi})">Limpiar filtros</button>
         <button class="sp-clear" style="background:var(--gldim);border-color:var(--gold);color:var(--gold)" onclick="applyFilters(${mi})">Aplicar</button>
@@ -1161,17 +1186,24 @@ function toggleSearch(mi){
 }
 
 function onSpTypeChange(mi){
-  // Filtra el dropdown de categoría según el tipo elegido
+  // Reconstruye el dropdown de categoría según el tipo elegido
+  // (usar display:none en <option> no funciona en Safari, hay que reconstruir)
   const typeSel = document.getElementById(`sp-type-${mi}`);
   const catSel  = document.getElementById(`sp-cat-${mi}`);
   if(!typeSel || !catSel) return;
   const t = typeSel.value;
-  catSel.value = ''; // Reset al cambiar tipo
-  [...catSel.options].forEach(opt=>{
-    if(!opt.value) { opt.style.display = ''; return; }
-    const optType = opt.getAttribute('data-type');
-    opt.style.display = (!t || optType===t) ? '' : 'none';
-  });
+
+  let opts = '<option value="">Todas</option>';
+  if(t === 'expense'){
+    opts += EXPENSE_CATS.map(c=>`<option value="${esc(c.v)}">${esc(c.l)}</option>`).join('');
+  } else if(t === 'income'){
+    opts += INCOME_CATS.map(c=>`<option value="${esc(c.v)}">${esc(c.l)}</option>`).join('');
+  } else {
+    // "Todos" → muestra ambas
+    opts += EXPENSE_CATS.map(c=>`<option value="${esc(c.v)}">${esc(c.l)}</option>`).join('');
+    opts += INCOME_CATS.map(c=>`<option value="${esc(c.v)}">${esc(c.l)}</option>`).join('');
+  }
+  catSel.innerHTML = opts;
 }
 
 function applyFilters(mi){
@@ -1179,20 +1211,43 @@ function applyFilters(mi){
   if(!md) return;
   const typeV = document.getElementById(`sp-type-${mi}`).value;
   const catV  = document.getElementById(`sp-cat-${mi}`).value;
-  const minV  = parseFloat(document.getElementById(`sp-min-${mi}`).value);
-  const maxV  = parseFloat(document.getElementById(`sp-max-${mi}`).value);
 
   let results = md.entries.slice().reverse();
   if(typeV) results = results.filter(e => e.type === typeV);
   if(catV)  results = results.filter(e => e.cat === catV);
-  if(!isNaN(minV)) results = results.filter(e => e.amount >= minV);
-  if(!isNaN(maxV)) results = results.filter(e => e.amount <= maxV);
 
   const container = document.querySelector(`#inner-all-${mi} .entries`);
   if(container){
-    container.innerHTML = results.length
-      ? results.map(e => entryHTML(e, mi)).join('')
-      : '<div class="empty">Sin resultados con esos filtros</div>';
+    if(!results.length){
+      container.innerHTML = '<div class="empty">Sin resultados con esos filtros</div>';
+    } else if(catV){
+      // Filtro por categoría específica → intercalar "Volviste a X después de N días"
+      // results está en orden reverso (más reciente primero). Para calcular días entre gastos
+      // recorremos del más viejo al más nuevo.
+      const ordered = results.slice().reverse(); // del más viejo al más nuevo
+      const verb = repeatVerb(catV);
+      const blocks = [];
+      ordered.forEach((e, idx) => {
+        if(idx > 0){
+          const prevDay = parseDayFromDateStr(ordered[idx-1].date);
+          const curDay  = parseDayFromDateStr(e.date);
+          if(prevDay !== null && curDay !== null){
+            const diff = curDay - prevDay;
+            let note = '';
+            if(diff === 0)      note = `Volviste a ${verb} el mismo día`;
+            else if(diff === 1) note = `Volviste a ${verb} al día siguiente`;
+            else if(diff > 1)   note = `Volviste a ${verb} después de ${diff} días`;
+            if(note) blocks.push(`<div class="repeat-note">${esc(note)}</div>`);
+          }
+        }
+        blocks.push(entryHTML(e, mi));
+      });
+      // Invertir el resultado final para que el más reciente quede arriba (como siempre)
+      container.innerHTML = blocks.reverse().join('');
+    } else {
+      // Sin filtro de categoría específica → lista normal
+      container.innerHTML = results.map(e => entryHTML(e, mi)).join('');
+    }
   }
   const countEl = document.getElementById(`sp-count-${mi}`);
   if(countEl) countEl.textContent = `${results.length} resultado${results.length===1?'':'s'}`;
@@ -1201,12 +1256,10 @@ function applyFilters(mi){
 function clearFilters(mi, restoreOnly){
   const typeEl = document.getElementById(`sp-type-${mi}`);
   const catEl  = document.getElementById(`sp-cat-${mi}`);
-  const minEl  = document.getElementById(`sp-min-${mi}`);
-  const maxEl  = document.getElementById(`sp-max-${mi}`);
   if(typeEl) typeEl.value = '';
-  if(catEl)  { catEl.value = ''; [...catEl.options].forEach(opt=>opt.style.display=''); }
-  if(minEl)  minEl.value = '';
-  if(maxEl)  maxEl.value = '';
+  if(catEl)  catEl.value = '';
+  // Reconstruir el dropdown de categoría con todas las opciones
+  if(typeEl) onSpTypeChange(mi);
   const countEl = document.getElementById(`sp-count-${mi}`);
   if(countEl) countEl.textContent = '';
   // Restaurar la lista completa
