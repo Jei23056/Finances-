@@ -109,23 +109,17 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 .inner-tabs { display:flex;gap:4px;margin-bottom:1rem;align-items:center; }
 .itab { padding:6px 14px;background:transparent;border:1px solid var(--border);border-radius:999px;font-size:12px;color:var(--muted);cursor:pointer;transition:all .15s; }
 .itab.active { background:var(--surf);border-color:var(--border2);color:var(--text);font-weight:500; }
-.search-btn { margin-left:auto; width:30px; height:30px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border); border-radius:50%; cursor:pointer; color:var(--muted2); font-size:13px; transition:all .15s; padding:0; }
-.search-btn:hover { border-color:var(--border2); color:var(--text); }
-.search-btn.active { background:var(--gldim); border-color:var(--gold); color:var(--gold); }
-.search-panel { display:none; background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:.9rem; margin-bottom:1rem; }
-.search-panel.open { display:block; }
-.search-panel .sp-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
-.search-panel .sp-row.amt { grid-template-columns:1fr 1fr; }
-.search-panel label { font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:4px; }
-.search-panel input, .search-panel select { width:100%; padding:7px 9px; background:var(--surf); border:1px solid var(--border2); border-radius:var(--rs); color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; outline:none; appearance:none; -webkit-appearance:none; }
-.search-panel select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%236e6c66' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 8px center; padding-right:24px; }
-.search-panel input:focus, .search-panel select:focus { border-color:var(--gold); }
-.search-panel .sp-actions { display:flex; gap:6px; margin-top:4px; }
-.search-panel .sp-clear { flex:1; padding:7px; background:transparent; border:1px solid var(--border2); border-radius:var(--rs); color:var(--muted2); font-family:'DM Sans',sans-serif; font-size:12px; cursor:pointer; transition:all .15s; }
-.search-panel .sp-clear:hover { color:var(--text); border-color:var(--text); }
-.search-panel .sp-count { font-size:11px; color:var(--muted); margin-top:6px; text-align:right; }
 .repeat-note { font-size:11px; color:var(--muted2); padding:6px 12px; margin:4px 0; font-style:italic; opacity:.85; display:flex; align-items:center; gap:6px; }
 .repeat-note::before { content:'↓'; color:var(--gold); font-style:normal; font-weight:bold; }
+.bycat-picker { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:.9rem; margin-bottom:1rem; }
+.bycat-picker label { font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:6px; }
+.bycat-picker select { width:100%; padding:9px 11px; background:var(--surf); border:1px solid var(--border2); border-radius:var(--rs); color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; outline:none; appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%236e6c66' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
+.bycat-picker select:focus { border-color:var(--gold); }
+.bycat-summary { display:none; background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:.85rem 1rem; margin-bottom:1rem; }
+.bycat-summary.show { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.bycat-summary .bs-item { text-align:center; }
+.bycat-summary .bs-lbl { font-size:10px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+.bycat-summary .bs-val { font-family:'DM Serif Display',serif; font-size:1.1rem; font-weight:400; color:var(--text); }
 @media(max-width:600px){
   .year-bar  { grid-template-columns:1fr 1fr; }
   .action-buttons { display:grid !important; grid-template-columns:1fr 1fr; gap:6px !important; width:100%; }
@@ -1077,33 +1071,7 @@ function renderMonth(mi){
       <button class="itab active" id="it-recent-${mi}" onclick="showInner(${mi},'recent')">Recientes</button>
       <button class="itab"        id="it-all-${mi}"    onclick="showInner(${mi},'all')">Todos</button>
       <button class="itab"        id="it-cats-${mi}"   onclick="showInner(${mi},'cats')">Categorías</button>
-      <button class="search-btn" id="sb-${mi}" onclick="toggleSearch(${mi})" title="Buscar / Filtrar">🔍</button>
-    </div>
-
-    <div class="search-panel" id="sp-${mi}">
-      <div class="sp-row">
-        <div>
-          <label>Tipo</label>
-          <select id="sp-type-${mi}" onchange="onSpTypeChange(${mi})">
-            <option value="">Todos</option>
-            <option value="expense">Gastos</option>
-            <option value="income">Ganancias</option>
-          </select>
-        </div>
-        <div>
-          <label>Categoría</label>
-          <select id="sp-cat-${mi}">
-            <option value="">Todas</option>
-            ${EXPENSE_CATS.map(c=>`<option value="${esc(c.v)}" data-type="expense">${esc(c.l)}</option>`).join('')}
-            ${INCOME_CATS.map(c=>`<option value="${esc(c.v)}" data-type="income">${esc(c.l)}</option>`).join('')}
-          </select>
-        </div>
-      </div>
-      <div class="sp-actions">
-        <button class="sp-clear" onclick="clearFilters(${mi})">Limpiar filtros</button>
-        <button class="sp-clear" style="background:var(--gldim);border-color:var(--gold);color:var(--gold)" onclick="applyFilters(${mi})">Aplicar</button>
-      </div>
-      <div class="sp-count" id="sp-count-${mi}"></div>
+      <button class="itab"        id="it-bycat-${mi}"  onclick="showInner(${mi},'bycat')">Por categoría</button>
     </div>
 
     <div id="inner-recent-${mi}">
@@ -1125,6 +1093,22 @@ function renderMonth(mi){
           ${barsHTML(incData,'var(--green)')}
         </div>
       </div>
+    </div>
+    <div id="inner-bycat-${mi}" style="display:none">
+      <div class="bycat-picker">
+        <label>Selecciona una categoría</label>
+        <select id="bc-cat-${mi}" onchange="renderByCat(${mi})">
+          <option value="">— Elige una categoría —</option>
+          <optgroup label="Gastos">
+            ${EXPENSE_CATS.map(c=>`<option value="${esc(c.v)}">${esc(c.l)}</option>`).join('')}
+          </optgroup>
+          <optgroup label="Ganancias">
+            ${INCOME_CATS.map(c=>`<option value="${esc(c.v)}">${esc(c.l)}</option>`).join('')}
+          </optgroup>
+        </select>
+      </div>
+      <div class="bycat-summary" id="bc-summary-${mi}"></div>
+      <div class="entries" id="bc-list-${mi}"></div>
     </div>
   `;
 
@@ -1161,7 +1145,7 @@ function setTypeVisual(mi, type){
 }
 
 function showInner(mi, which){
-  ['recent','all','cats'].forEach(t=>{
+  ['recent','all','cats','bycat'].forEach(t=>{
     const el = document.getElementById(`inner-${t}-${mi}`);
     const bt = document.getElementById(`it-${t}-${mi}`);
     if(el) el.style.display = t===which?'block':'none';
@@ -1169,107 +1153,73 @@ function showInner(mi, which){
   });
 }
 
-// ── BÚSQUEDA / FILTROS POR MES ────────────────────────────────────────────
-function toggleSearch(mi){
-  const panel = document.getElementById(`sp-${mi}`);
-  const btn   = document.getElementById(`sb-${mi}`);
-  if(!panel) return;
-  const isOpen = panel.classList.toggle('open');
-  btn.classList.toggle('active', isOpen);
-  if(isOpen){
-    // Al abrir, saltar al tab "Todos" para ver los resultados
-    showInner(mi, 'all');
-  } else {
-    // Al cerrar, limpiar y restaurar la lista completa
-    clearFilters(mi, true);
-  }
-}
-
-function onSpTypeChange(mi){
-  // Reconstruye el dropdown de categoría según el tipo elegido
-  // (usar display:none en <option> no funciona en Safari, hay que reconstruir)
-  const typeSel = document.getElementById(`sp-type-${mi}`);
-  const catSel  = document.getElementById(`sp-cat-${mi}`);
-  if(!typeSel || !catSel) return;
-  const t = typeSel.value;
-
-  let opts = '<option value="">Todas</option>';
-  if(t === 'expense'){
-    opts += EXPENSE_CATS.map(c=>`<option value="${esc(c.v)}">${esc(c.l)}</option>`).join('');
-  } else if(t === 'income'){
-    opts += INCOME_CATS.map(c=>`<option value="${esc(c.v)}">${esc(c.l)}</option>`).join('');
-  } else {
-    // "Todos" → muestra ambas
-    opts += EXPENSE_CATS.map(c=>`<option value="${esc(c.v)}">${esc(c.l)}</option>`).join('');
-    opts += INCOME_CATS.map(c=>`<option value="${esc(c.v)}">${esc(c.l)}</option>`).join('');
-  }
-  catSel.innerHTML = opts;
-}
-
-function applyFilters(mi){
+// ── TAB "POR CATEGORÍA" ─────────────────────────────────────────────────
+function renderByCat(mi){
   const md = getMonth(mi);
   if(!md) return;
-  const typeV = document.getElementById(`sp-type-${mi}`).value;
-  const catV  = document.getElementById(`sp-cat-${mi}`).value;
+  const catEl   = document.getElementById(`bc-cat-${mi}`);
+  const listEl  = document.getElementById(`bc-list-${mi}`);
+  const sumEl   = document.getElementById(`bc-summary-${mi}`);
+  if(!catEl || !listEl || !sumEl) return;
 
-  let results = md.entries.slice().reverse();
-  if(typeV) results = results.filter(e => e.type === typeV);
-  if(catV)  results = results.filter(e => e.cat === catV);
+  const cat = catEl.value;
+  if(!cat){
+    listEl.innerHTML = '';
+    sumEl.innerHTML = '';
+    sumEl.classList.remove('show');
+    return;
+  }
 
-  const container = document.querySelector(`#inner-all-${mi} .entries`);
-  if(container){
-    if(!results.length){
-      container.innerHTML = '<div class="empty">Sin resultados con esos filtros</div>';
-    } else if(catV){
-      // Filtro por categoría específica → intercalar "Volviste a X después de N días"
-      // results está en orden reverso (más reciente primero). Para calcular días entre gastos
-      // recorremos del más viejo al más nuevo.
-      const ordered = results.slice().reverse(); // del más viejo al más nuevo
-      const verb = repeatVerb(catV);
-      const blocks = [];
-      ordered.forEach((e, idx) => {
-        if(idx > 0){
-          const prevDay = parseDayFromDateStr(ordered[idx-1].date);
-          const curDay  = parseDayFromDateStr(e.date);
-          if(prevDay !== null && curDay !== null){
-            const diff = curDay - prevDay;
-            let note = '';
-            if(diff === 0)      note = `Volviste a ${verb} el mismo día`;
-            else if(diff === 1) note = `Volviste a ${verb} al día siguiente`;
-            else if(diff > 1)   note = `Volviste a ${verb} después de ${diff} días`;
-            if(note) blocks.push(`<div class="repeat-note">${esc(note)}</div>`);
-          }
-        }
-        blocks.push(entryHTML(e, mi));
-      });
-      // Invertir el resultado final para que el más reciente quede arriba (como siempre)
-      container.innerHTML = blocks.reverse().join('');
-    } else {
-      // Sin filtro de categoría específica → lista normal
-      container.innerHTML = results.map(e => entryHTML(e, mi)).join('');
+  // Filtra los movimientos de esa categoría en el mes actual
+  const matched = md.entries.filter(e => e.cat === cat);
+  if(!matched.length){
+    sumEl.classList.remove('show');
+    sumEl.innerHTML = '';
+    listEl.innerHTML = '<div class="empty">Sin movimientos de esta categoría este mes</div>';
+    return;
+  }
+
+  // Resumen: cantidad de veces, total gastado, promedio
+  const total = matched.reduce((s,e)=>s+e.amount, 0);
+  const avg = total / matched.length;
+  sumEl.innerHTML = `
+    <div class="bs-item">
+      <div class="bs-lbl">Movimientos</div>
+      <div class="bs-val">${matched.length}</div>
+    </div>
+    <div class="bs-item">
+      <div class="bs-lbl">Total</div>
+      <div class="bs-val">${fmt(total)}</div>
+    </div>
+    <div class="bs-item">
+      <div class="bs-lbl">Promedio</div>
+      <div class="bs-val">${fmt(avg)}</div>
+    </div>
+  `;
+  sumEl.classList.add('show');
+
+  // Lista con texticos "Volviste a X después de N días"
+  // matched está en orden cronológico (más viejo a más nuevo).
+  // Para el textico recorremos del más viejo al más nuevo.
+  const verb = repeatVerb(cat);
+  const blocks = [];
+  matched.forEach((e, idx) => {
+    if(idx > 0){
+      const prevDay = parseDayFromDateStr(matched[idx-1].date);
+      const curDay  = parseDayFromDateStr(e.date);
+      if(prevDay !== null && curDay !== null){
+        const diff = curDay - prevDay;
+        let note = '';
+        if(diff === 0)      note = `Volviste a ${verb} el mismo día`;
+        else if(diff === 1) note = `Volviste a ${verb} al día siguiente`;
+        else if(diff > 1)   note = `Volviste a ${verb} después de ${diff} días`;
+        if(note) blocks.push(`<div class="repeat-note">${esc(note)}</div>`);
+      }
     }
-  }
-  const countEl = document.getElementById(`sp-count-${mi}`);
-  if(countEl) countEl.textContent = `${results.length} resultado${results.length===1?'':'s'}`;
-}
-
-function clearFilters(mi, restoreOnly){
-  const typeEl = document.getElementById(`sp-type-${mi}`);
-  const catEl  = document.getElementById(`sp-cat-${mi}`);
-  if(typeEl) typeEl.value = '';
-  if(catEl)  catEl.value = '';
-  // Reconstruir el dropdown de categoría con todas las opciones
-  if(typeEl) onSpTypeChange(mi);
-  const countEl = document.getElementById(`sp-count-${mi}`);
-  if(countEl) countEl.textContent = '';
-  // Restaurar la lista completa
-  const md = getMonth(mi);
-  const container = document.querySelector(`#inner-all-${mi} .entries`);
-  if(container && md){
-    container.innerHTML = md.entries.length
-      ? md.entries.slice().reverse().map(e=>entryHTML(e,mi)).join('')
-      : '<div class="empty">Sin movimientos este mes</div>';
-  }
+    blocks.push(entryHTML(e, mi));
+  });
+  // Más reciente arriba
+  listEl.innerHTML = blocks.reverse().join('');
 }
 
 function addEntry(mi){
