@@ -1329,12 +1329,19 @@ function switchToAnnual(){
   const _pc = document.getElementById('panel-cards'); if(_pc) _pc.style.display='none';
   const _tc = document.getElementById('mtab-cards'); if(_tc) _tc.className='mtab';
   document.querySelectorAll('.month-panel').forEach(p=>{ p.className = 'month-panel'; });
+  const presentMonth = new Date().getMonth();
   document.querySelectorAll('.mtab').forEach((t,i)=>{
-    if(i < 12) t.className = 'mtab' + (hasData(i)?' has-data':'');
+    if(i < 12){
+      let cls = 'mtab' + (hasData(i)?' has-data':'');
+      if(i === presentMonth) cls += ' present-month';
+      else cls += ' hideable';
+      t.className = cls;
+    }
   });
   document.getElementById('mtab-annual').className = 'mtab active';
   document.getElementById('panel-annual').style.display = 'block';
   renderAnnual();
+  applyMonthsCollapsed();
 }
 
 function renderAnnual(){
@@ -1551,8 +1558,14 @@ function renderSince(){
 async function switchToSince(){
   annualActive = false;
   document.querySelectorAll('.month-panel').forEach(p=>{ p.className = 'month-panel'; });
+  const presentMonth = new Date().getMonth();
   document.querySelectorAll('.mtab').forEach((t,i)=>{
-    if(i < 12) t.className = 'mtab' + (hasData(i)?' has-data':'');
+    if(i < 12){
+      let cls = 'mtab' + (hasData(i)?' has-data':'');
+      if(i === presentMonth) cls += ' present-month';
+      else cls += ' hideable';
+      t.className = cls;
+    }
   });
   const annTab = document.getElementById('mtab-annual');
   if(annTab) annTab.className = 'mtab';
@@ -1570,6 +1583,7 @@ async function switchToSince(){
 
   await loadHistorialParaSince();
   renderSince();
+  applyMonthsCollapsed();
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1664,8 +1678,14 @@ function cardSpentForYear(arg, year){ return cardSpent(arg, year); }
 function switchToCards(){
   annualActive = false;
   document.querySelectorAll('.month-panel').forEach(p=>{ p.className = 'month-panel'; });
+  const presentMonth = new Date().getMonth();
   document.querySelectorAll('.mtab').forEach((t,i)=>{
-    if(i < 12) t.className = 'mtab' + (hasData(i)?' has-data':'');
+    if(i < 12){
+      let cls = 'mtab' + (hasData(i)?' has-data':'');
+      if(i === presentMonth) cls += ' present-month';
+      else cls += ' hideable';
+      t.className = cls;
+    }
   });
   const annTab = document.getElementById('mtab-annual');
   if(annTab) annTab.className = 'mtab';
@@ -1677,6 +1697,7 @@ function switchToCards(){
   if(cardsTab) cardsTab.className = 'mtab active';
   document.getElementById('panel-cards').style.display = 'block';
   renderCards();
+  applyMonthsCollapsed();
 }
 
 function renderCards(){
@@ -2303,12 +2324,6 @@ function togglePresentMonth(){
 function applyMonthsCollapsed(){
   const tabsEl = document.getElementById('month-tabs');
   if(!tabsEl) return;
-  const presentMonth = new Date().getMonth();
-  // Si el mes activo no es el presente y no estamos en una vista especial,
-  // forzar expandido para que el usuario vea dónde está parado
-  if(activeMonth !== presentMonth && !annualActive){
-    _monthsExpanded = true;
-  }
   const hideables = tabsEl.querySelectorAll('.mtab.hideable');
   hideables.forEach(b => {
     b.style.display = _monthsExpanded ? '' : 'none';
