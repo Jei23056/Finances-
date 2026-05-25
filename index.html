@@ -2356,7 +2356,16 @@ function buildSkeleton(){
     btn.textContent = (mi === presentMonth) ? (name + ' ▾') : name;
     btn.onclick = ()=>{
       if(mi === presentMonth){
-        togglePresentMonth();
+        // Si ya estás viendo el mes presente Y el carrusel, hacer toggle (abrir/cerrar)
+        // Si NO estás en el mes presente (otro mes, año completo, tarjetas, etc.), entrar a él
+        const inPresent = (activeMonth === presentMonth) && !annualActive
+          && document.getElementById('panel-cards').style.display !== 'block'
+          && document.getElementById('panel-since').style.display !== 'block';
+        if(inPresent){
+          togglePresentMonth();
+        } else {
+          switchMonth(mi);
+        }
       } else {
         switchMonth(mi);
       }
