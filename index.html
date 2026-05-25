@@ -694,6 +694,11 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
         <input type="text" id="cc-new-start" placeholder="12000" inputmode="decimal"
           oninput="this.value=this.value.replace(/[^0-9.]/g,'')" onkeydown="if(event.key==='Enter')addCard()" />
       </div>
+      <div>
+        <label>Últimos 4 dígitos</label>
+        <input type="text" id="cc-new-last4" placeholder="4521" inputmode="numeric" maxlength="4"
+          oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')addCard()" />
+      </div>
     </div>
     <button class="btn-add" onclick="addCard()">Agregar tarjeta</button>
   </div>
@@ -1575,7 +1580,7 @@ function renderCards(){
       <div class="cc-stats">
         <div class="cc-stat">
           <div class="cc-stat-lbl">Inicio</div>
-          <div class="cc-stat-val" style="color:var(--muted2)">${fmt(inicio)}<button class="cc-edit" onclick="editCardStart(${idx})" title="Modificar">✏️</button></div>
+          <div class="cc-stat-val" style="color:var(--muted2)">${fmt(inicio)}</div>
         </div>
         <div class="cc-stat">
           <div class="cc-stat-lbl">Gastado (${CURRENT_YEAR})</div>
@@ -1586,8 +1591,8 @@ function renderCards(){
           <div class="cc-stat-val" style="color:var(--muted2)">${lastYearTxt}</div>
         </div>
         <div class="cc-stat">
-          <div class="cc-stat-lbl">Puntos</div>
-          <div class="cc-stat-val" style="color:var(--gold)">${esc(String(puntos))}<button class="cc-edit" onclick="editCardPoints(${idx})" title="Modificar">✏️</button></div>
+          <div class="cc-stat-lbl">Núm. de tarjeta</div>
+          <div class="cc-stat-val" style="color:var(--gold)">${puntos==='—' ? '—' : '•••• '+esc(String(puntos))}</div>
         </div>
       </div>
       <div class="cc-track"><div class="cc-fill" style="width:${fillW}%;background:${usoColor}"></div></div>
@@ -1654,10 +1659,13 @@ function toggleCardMonths(idx){
 function addCard(){
   const nameEl  = document.getElementById('cc-new-name');
   const startEl = document.getElementById('cc-new-start');
+  const last4El = document.getElementById('cc-new-last4');
   const nombre  = nameEl.value.trim();
   const inicio  = parseFloat(startEl.value.replace(/,/g,''));
+  const last4   = last4El.value.trim();
   if(!nombre){ nameEl.focus(); return; }
   if(isNaN(inicio) || inicio<=0){ startEl.focus(); return; }
+  if(!/^\d{4}$/.test(last4)){ alert('Los últimos 4 dígitos deben ser exactamente 4 números.'); last4El.focus(); return; }
   if(tarjetas.some(t=>t.nombre.toLowerCase()===nombre.toLowerCase())){
     alert('Ya existe una tarjeta con ese nombre.');
     return;
@@ -1666,11 +1674,12 @@ function addCard(){
     id: Date.now(),
     nombre,
     inicio: parseFloat(inicio.toFixed(2)),
-    puntos: '',
+    puntos: last4,
     desde: new Date().toLocaleDateString('es-DO',{month:'long',year:'numeric'})
   });
   nameEl.value = '';
   startEl.value = '';
+  last4El.value = '';
   saveTarjetas();
   renderCards();
   refreshCardSelects();
@@ -1779,6 +1788,17 @@ async function setupInitialCardIfNeeded(){
       needSave = true;
     }
 
+    // ── PARTE C: agregar últimos 4 dígitos y total año pasado a la Mastercard (una sola vez) ──
+    if(d._cardsLast4AndPrevSetup !== true){
+      let tj = tarjetas.find(t => t.nombre.toLowerCase() === TARJETA_INICIAL.toLowerCase());
+      if(tj){
+        tj.puntos = '5105';
+        if(!tj.totalesPorAnio || typeof tj.totalesPorAnio !== 'object') tj.totalesPorAnio = {};
+        tj.totalesPorAnio[CURRENT_YEAR - 1] = 10216.74;
+        needSave = true;
+      }
+    }
+
     // Garantizar campos nuevos en todas las tarjetas
     tarjetas.forEach(tj=>{
       if(typeof tj.cerrada !== 'boolean') tj.cerrada = false;
@@ -1792,6 +1812,7 @@ async function setupInitialCardIfNeeded(){
         [TARJETAS_KEY_V2]: tarjetas,
         _cardsSetup: true,
         _cardsManualSetup: true,
+        _cardsLast4AndPrevSetup: true,
         _cardsSetupAt: new Date().toISOString()
       }, { merge: true });
     }
