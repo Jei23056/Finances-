@@ -47,22 +47,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 .ycard.sav .ycard-val { color:var(--blue); }
 .month-scroll { display:flex; gap:4px; overflow-x:auto; padding-bottom:6px; margin-bottom:1.5rem; scrollbar-width:none; }
 .month-scroll::-webkit-scrollbar { display:none; }
-.all-months-btn { background:transparent; border:1px dashed var(--border2); border-radius:999px; padding:5px 14px; font-size:11px; color:var(--muted2); cursor:pointer; transition:all .15s; font-family:'DM Sans',sans-serif; letter-spacing:.03em; }
-.all-months-btn:hover { color:var(--text); border-color:var(--text); }
-.all-months-btn.open { background:var(--gldim); border-style:solid; border-color:var(--gold); color:var(--gold); }
-.all-months-grid { display:none; grid-template-columns:repeat(4, 1fr); gap:8px; margin-bottom:1.5rem; }
-.all-months-grid.open { display:grid; }
-.amg-cell { background:var(--card); border:1px solid var(--border); border-radius:var(--rs); padding:10px 6px; text-align:center; cursor:pointer; transition:all .15s; font-family:'DM Sans',sans-serif; }
-.amg-cell:hover { border-color:var(--border2); transform:translateY(-1px); }
-.amg-cell.has-data { border-color:var(--green); }
-.amg-cell.active { background:var(--text); color:var(--bg); border-color:var(--gold); }
-.amg-cell.active .amg-bal { color:var(--bg); opacity:.75; }
-.amg-name { font-size:12px; font-weight:500; color:var(--text); margin-bottom:3px; }
-.amg-cell.active .amg-name { color:var(--bg); }
-.amg-bal { font-size:11px; color:var(--muted); font-family:'DM Serif Display',serif; }
-.amg-bal.pos { color:var(--green); }
-.amg-bal.neg { color:var(--red); }
-@media (max-width:560px){ .all-months-grid { grid-template-columns:repeat(3, 1fr); } }
 .mtab { flex-shrink:0; padding:7px 14px; background:var(--card); border:1px solid var(--border); border-radius:999px; font-size:13px; color:var(--muted2); cursor:pointer; transition:all .18s; white-space:nowrap; }
 .mtab:hover { border-color:var(--border2); color:var(--text); }
 .mtab.active { background:var(--surf); border-color:var(--border2); color:var(--text); font-weight:500; }
@@ -629,10 +613,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 <div class="insights-bar" id="insights-bar"></div>
 
 <div class="month-scroll" id="month-tabs"></div>
-<div style="text-align:center;margin:-.4rem 0 1rem">
-  <button id="toggle-all-months" onclick="toggleAllMonths()" class="all-months-btn">⊞ Ver todos los meses</button>
-</div>
-<div id="all-months-grid" class="all-months-grid"></div>
 <div id="month-panels"></div>
 
 <div id="panel-annual" style="display:none">
@@ -1326,13 +1306,20 @@ function switchMonth(mi){
   const _tc = document.getElementById('mtab-cards'); if(_tc) _tc.className='mtab';
   document.getElementById('panel-annual').style.display = 'none';
   document.getElementById('mtab-annual').className = 'mtab';
+  const presentMonth = new Date().getMonth();
   document.querySelectorAll('.mtab').forEach((t,i)=>{
-    if(i < 12) t.className = 'mtab' + (i===mi?' active':'') + (hasData(i)?' has-data':'');
+    if(i < 12){
+      let cls = 'mtab' + (i===mi?' active':'') + (hasData(i)?' has-data':'');
+      if(i === presentMonth) cls += ' present-month';
+      else cls += ' hideable';
+      t.className = cls;
+    }
   });
   document.querySelectorAll('.month-panel').forEach((p,i)=>{
     p.className = 'month-panel' + (i===mi?' active':'');
   });
   renderYear();
+  applyMonthsCollapsed();
 }
 
 function switchToAnnual(){
@@ -2305,47 +2292,32 @@ function renderCapitalChart(){
   canvas.onmouseleave = () => { tooltip.style.display = 'none'; };
 }
 
-// ── REJILLA "VER TODOS LOS MESES" ───────────────────────────────────────
-function toggleAllMonths(){
-  const grid = document.getElementById('all-months-grid');
-  const btn  = document.getElementById('toggle-all-months');
-  if(!grid || !btn) return;
-  const isOpen = grid.classList.toggle('open');
-  btn.classList.toggle('open', isOpen);
-  btn.textContent = isOpen ? '⊟ Ver menos' : '⊞ Ver todos los meses';
-  if(isOpen) renderAllMonthsGrid();
+// ── TOGGLE DE MESES (colapsar/expandir desde el mes presente) ────────────
+let _monthsExpanded = false; // por defecto: colapsado (solo se ve el mes presente)
+
+function togglePresentMonth(){
+  _monthsExpanded = !_monthsExpanded;
+  applyMonthsCollapsed();
 }
 
-function renderAllMonthsGrid(){
-  const grid = document.getElementById('all-months-grid');
-  if(!grid) return;
-  grid.innerHTML = MONTHS.map((name, mi)=>{
-    const t = monthTotals(mi);
-    const has = hasData(mi);
-    const balance = t.inc - t.exp;
-    const isActive = (mi === activeMonth && !annualActive);
-    let balText = '—';
-    let balClass = '';
-    if(has){
-      balText = (balance >= 0 ? '+' : '') + fmt(balance);
-      balClass = balance >= 0 ? 'pos' : 'neg';
-    }
-    return `<div class="amg-cell ${has?'has-data':''} ${isActive?'active':''}" onclick="pickMonthFromGrid(${mi})">
-      <div class="amg-name">${name.substring(0,3)}</div>
-      <div class="amg-bal ${balClass}">${balText}</div>
-    </div>`;
-  }).join('');
-}
-
-function pickMonthFromGrid(mi){
-  switchMonth(mi);
-  // Cerrar la rejilla después de elegir un mes
-  const grid = document.getElementById('all-months-grid');
-  const btn  = document.getElementById('toggle-all-months');
-  if(grid && grid.classList.contains('open')){
-    grid.classList.remove('open');
-    btn.classList.remove('open');
-    btn.textContent = '⊞ Ver todos los meses';
+function applyMonthsCollapsed(){
+  const tabsEl = document.getElementById('month-tabs');
+  if(!tabsEl) return;
+  const presentMonth = new Date().getMonth();
+  // Si el mes activo no es el presente y no estamos en una vista especial,
+  // forzar expandido para que el usuario vea dónde está parado
+  if(activeMonth !== presentMonth && !annualActive){
+    _monthsExpanded = true;
+  }
+  const hideables = tabsEl.querySelectorAll('.mtab.hideable');
+  hideables.forEach(b => {
+    b.style.display = _monthsExpanded ? '' : 'none';
+  });
+  // Actualizar el chevron de la pildora del mes presente
+  const present = tabsEl.querySelector('.mtab.present-month');
+  if(present){
+    const name = present.textContent.replace(/ [▾▴]$/, '');
+    present.textContent = name + (_monthsExpanded ? ' ▴' : ' ▾');
   }
 }
 
@@ -2355,11 +2327,25 @@ function buildSkeleton(){
   tabsEl.innerHTML = '';
   panelsEl.innerHTML = '';
 
+  const presentMonth = new Date().getMonth();
+
   MONTHS.forEach((name, mi)=>{
     const btn = document.createElement('button');
-    btn.className = 'mtab' + (mi===activeMonth?' active':'') + (hasData(mi)?' has-data':'');
-    btn.textContent = name;
-    btn.onclick = ()=>switchMonth(mi);
+    let cls = 'mtab' + (mi===activeMonth?' active':'') + (hasData(mi)?' has-data':'');
+    if(mi === presentMonth){
+      cls += ' present-month';
+    } else {
+      cls += ' hideable';
+    }
+    btn.className = cls;
+    btn.textContent = (mi === presentMonth) ? (name + ' ▾') : name;
+    btn.onclick = ()=>{
+      if(mi === presentMonth){
+        togglePresentMonth();
+      } else {
+        switchMonth(mi);
+      }
+    };
     tabsEl.appendChild(btn);
 
     const div = document.createElement('div');
@@ -2388,6 +2374,9 @@ function buildSkeleton(){
   sinceBtn.textContent = `📈 Desde ${SINCE_YEAR}`;
   sinceBtn.onclick = ()=>switchToSince();
   tabsEl.appendChild(sinceBtn);
+
+  // Aplicar el estado colapsado/expandido a las pildoras de meses
+  applyMonthsCollapsed();
 }
 
 function renderAll(){
