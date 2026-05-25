@@ -106,9 +106,24 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 .bval   { font-size:11px;color:var(--muted);width:64px;flex-shrink:0; }
 .mprogress { height:3px;background:var(--surf);border-radius:2px;margin-bottom:1.5rem;overflow:hidden; }
 .mprogress-fill { height:100%;border-radius:2px;transition:width .5s ease; }
-.inner-tabs { display:flex;gap:4px;margin-bottom:1rem; }
+.inner-tabs { display:flex;gap:4px;margin-bottom:1rem;align-items:center; }
 .itab { padding:6px 14px;background:transparent;border:1px solid var(--border);border-radius:999px;font-size:12px;color:var(--muted);cursor:pointer;transition:all .15s; }
 .itab.active { background:var(--surf);border-color:var(--border2);color:var(--text);font-weight:500; }
+.search-btn { margin-left:auto; width:30px; height:30px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border); border-radius:50%; cursor:pointer; color:var(--muted2); font-size:13px; transition:all .15s; padding:0; }
+.search-btn:hover { border-color:var(--border2); color:var(--text); }
+.search-btn.active { background:var(--gldim); border-color:var(--gold); color:var(--gold); }
+.search-panel { display:none; background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:.9rem; margin-bottom:1rem; }
+.search-panel.open { display:block; }
+.search-panel .sp-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
+.search-panel .sp-row.amt { grid-template-columns:1fr 1fr; }
+.search-panel label { font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:4px; }
+.search-panel input, .search-panel select { width:100%; padding:7px 9px; background:var(--surf); border:1px solid var(--border2); border-radius:var(--rs); color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; outline:none; appearance:none; -webkit-appearance:none; }
+.search-panel select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%236e6c66' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 8px center; padding-right:24px; }
+.search-panel input:focus, .search-panel select:focus { border-color:var(--gold); }
+.search-panel .sp-actions { display:flex; gap:6px; margin-top:4px; }
+.search-panel .sp-clear { flex:1; padding:7px; background:transparent; border:1px solid var(--border2); border-radius:var(--rs); color:var(--muted2); font-family:'DM Sans',sans-serif; font-size:12px; cursor:pointer; transition:all .15s; }
+.search-panel .sp-clear:hover { color:var(--text); border-color:var(--text); }
+.search-panel .sp-count { font-size:11px; color:var(--muted); margin-top:6px; text-align:right; }
 @media(max-width:600px){
   .year-bar  { grid-template-columns:1fr 1fr; }
   .action-buttons { display:grid !important; grid-template-columns:1fr 1fr; gap:6px !important; width:100%; }
@@ -1027,6 +1042,43 @@ function renderMonth(mi){
       <button class="itab active" id="it-recent-${mi}" onclick="showInner(${mi},'recent')">Recientes</button>
       <button class="itab"        id="it-all-${mi}"    onclick="showInner(${mi},'all')">Todos</button>
       <button class="itab"        id="it-cats-${mi}"   onclick="showInner(${mi},'cats')">Categorías</button>
+      <button class="search-btn" id="sb-${mi}" onclick="toggleSearch(${mi})" title="Buscar / Filtrar">🔍</button>
+    </div>
+
+    <div class="search-panel" id="sp-${mi}">
+      <div class="sp-row">
+        <div>
+          <label>Tipo</label>
+          <select id="sp-type-${mi}" onchange="onSpTypeChange(${mi})">
+            <option value="">Todos</option>
+            <option value="expense">Gastos</option>
+            <option value="income">Ganancias</option>
+          </select>
+        </div>
+        <div>
+          <label>Categoría</label>
+          <select id="sp-cat-${mi}">
+            <option value="">Todas</option>
+            ${EXPENSE_CATS.map(c=>`<option value="${esc(c.v)}" data-type="expense">${esc(c.l)}</option>`).join('')}
+            ${INCOME_CATS.map(c=>`<option value="${esc(c.v)}" data-type="income">${esc(c.l)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="sp-row amt">
+        <div>
+          <label>Monto mínimo</label>
+          <input type="text" id="sp-min-${mi}" placeholder="0" inputmode="decimal" oninput="this.value=this.value.replace(/[^0-9.]/g,'')" />
+        </div>
+        <div>
+          <label>Monto máximo</label>
+          <input type="text" id="sp-max-${mi}" placeholder="Sin límite" inputmode="decimal" oninput="this.value=this.value.replace(/[^0-9.]/g,'')" />
+        </div>
+      </div>
+      <div class="sp-actions">
+        <button class="sp-clear" onclick="clearFilters(${mi})">Limpiar filtros</button>
+        <button class="sp-clear" style="background:var(--gldim);border-color:var(--gold);color:var(--gold)" onclick="applyFilters(${mi})">Aplicar</button>
+      </div>
+      <div class="sp-count" id="sp-count-${mi}"></div>
     </div>
 
     <div id="inner-recent-${mi}">
@@ -1090,6 +1142,81 @@ function showInner(mi, which){
     if(el) el.style.display = t===which?'block':'none';
     if(bt) bt.className = 'itab'+(t===which?' active':'');
   });
+}
+
+// ── BÚSQUEDA / FILTROS POR MES ────────────────────────────────────────────
+function toggleSearch(mi){
+  const panel = document.getElementById(`sp-${mi}`);
+  const btn   = document.getElementById(`sb-${mi}`);
+  if(!panel) return;
+  const isOpen = panel.classList.toggle('open');
+  btn.classList.toggle('active', isOpen);
+  if(isOpen){
+    // Al abrir, saltar al tab "Todos" para ver los resultados
+    showInner(mi, 'all');
+  } else {
+    // Al cerrar, limpiar y restaurar la lista completa
+    clearFilters(mi, true);
+  }
+}
+
+function onSpTypeChange(mi){
+  // Filtra el dropdown de categoría según el tipo elegido
+  const typeSel = document.getElementById(`sp-type-${mi}`);
+  const catSel  = document.getElementById(`sp-cat-${mi}`);
+  if(!typeSel || !catSel) return;
+  const t = typeSel.value;
+  catSel.value = ''; // Reset al cambiar tipo
+  [...catSel.options].forEach(opt=>{
+    if(!opt.value) { opt.style.display = ''; return; }
+    const optType = opt.getAttribute('data-type');
+    opt.style.display = (!t || optType===t) ? '' : 'none';
+  });
+}
+
+function applyFilters(mi){
+  const md = getMonth(mi);
+  if(!md) return;
+  const typeV = document.getElementById(`sp-type-${mi}`).value;
+  const catV  = document.getElementById(`sp-cat-${mi}`).value;
+  const minV  = parseFloat(document.getElementById(`sp-min-${mi}`).value);
+  const maxV  = parseFloat(document.getElementById(`sp-max-${mi}`).value);
+
+  let results = md.entries.slice().reverse();
+  if(typeV) results = results.filter(e => e.type === typeV);
+  if(catV)  results = results.filter(e => e.cat === catV);
+  if(!isNaN(minV)) results = results.filter(e => e.amount >= minV);
+  if(!isNaN(maxV)) results = results.filter(e => e.amount <= maxV);
+
+  const container = document.querySelector(`#inner-all-${mi} .entries`);
+  if(container){
+    container.innerHTML = results.length
+      ? results.map(e => entryHTML(e, mi)).join('')
+      : '<div class="empty">Sin resultados con esos filtros</div>';
+  }
+  const countEl = document.getElementById(`sp-count-${mi}`);
+  if(countEl) countEl.textContent = `${results.length} resultado${results.length===1?'':'s'}`;
+}
+
+function clearFilters(mi, restoreOnly){
+  const typeEl = document.getElementById(`sp-type-${mi}`);
+  const catEl  = document.getElementById(`sp-cat-${mi}`);
+  const minEl  = document.getElementById(`sp-min-${mi}`);
+  const maxEl  = document.getElementById(`sp-max-${mi}`);
+  if(typeEl) typeEl.value = '';
+  if(catEl)  { catEl.value = ''; [...catEl.options].forEach(opt=>opt.style.display=''); }
+  if(minEl)  minEl.value = '';
+  if(maxEl)  maxEl.value = '';
+  const countEl = document.getElementById(`sp-count-${mi}`);
+  if(countEl) countEl.textContent = '';
+  // Restaurar la lista completa
+  const md = getMonth(mi);
+  const container = document.querySelector(`#inner-all-${mi} .entries`);
+  if(container && md){
+    container.innerHTML = md.entries.length
+      ? md.entries.slice().reverse().map(e=>entryHTML(e,mi)).join('')
+      : '<div class="empty">Sin movimientos este mes</div>';
+  }
 }
 
 function addEntry(mi){
