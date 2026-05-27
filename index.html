@@ -110,7 +110,7 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 .itab { padding:6px 14px;background:transparent;border:1px solid var(--border);border-radius:999px;font-size:12px;color:var(--muted);cursor:pointer;transition:all .15s; }
 .itab.active { background:var(--surf);border-color:var(--border2);color:var(--text);font-weight:500; }
 .repeat-note { font-size:11px; color:var(--muted2); padding:6px 12px; margin:4px 0; font-style:italic; opacity:.85; display:flex; align-items:center; gap:6px; }
-.repeat-note::before { content:'⤴'; color:var(--gold); font-style:normal; font-weight:bold; }
+.repeat-note::before { content:'↑'; color:var(--gold); font-style:normal; font-weight:bold; }
 .bycat-picker { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:.9rem; margin-bottom:1rem; }
 .bycat-picker label { font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:6px; }
 .bycat-picker select { width:100%; padding:9px 11px; background:var(--surf); border:1px solid var(--border2); border-radius:var(--rs); color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; outline:none; appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%236e6c66' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
@@ -1071,7 +1071,7 @@ function renderMonth(mi){
       <button class="itab active" id="it-recent-${mi}" onclick="showInner(${mi},'recent')">Recientes</button>
       <button class="itab"        id="it-all-${mi}"    onclick="showInner(${mi},'all')">Todos</button>
       <button class="itab"        id="it-cats-${mi}"   onclick="showInner(${mi},'cats')">Categorías</button>
-      <button class="itab"        id="it-bycat-${mi}"  onclick="showInner(${mi},'bycat')">Por categoría</button>
+      <button class="itab"        id="it-bycat-${mi}"  onclick="showInner(${mi},'bycat')">Detallado</button>
     </div>
 
     <div id="inner-recent-${mi}">
