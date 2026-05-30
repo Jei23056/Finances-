@@ -827,14 +827,14 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 <div id="panel-analyzer" style="display:none">
   <div class="an-intro">
     <div class="an-intro-title">📄 Analizador de estados de cuenta</div>
-    <div class="an-intro-sub">Sube el PDF de tu estado de cuenta. La IA lo lee, junta los gastos de la misma empresa y te muestra en qué gastaste más. Esta sección es solo para analizar: <b>no afecta</b> tu Gastado, tu balance ni el año completo.</div>
+    <div class="an-intro-sub">Sube el PDF de tu estado de cuenta. Detecta los gastos automáticamente, junta los de la misma empresa y te muestra en qué gastaste más. Esta sección es solo para analizar: <b>no afecta</b> tu Gastado, tu balance ni el año completo. Siempre puedes revisar y corregir antes de guardar.</div>
   </div>
 
   <input type="file" id="an-file" accept="application/pdf" style="display:none" onchange="onAnalyzerPdf(this)" />
   <button class="an-upload" id="an-upload-btn" onclick="document.getElementById('an-file').value='';document.getElementById('an-file').click()">
     <span class="an-upload-icon">⬆️</span>
     Subir estado de cuenta (PDF)
-    <span class="an-upload-hint">PDF con texto · se analiza con IA</span>
+    <span class="an-upload-hint">PDF con texto · detección automática</span>
   </button>
 
   <div id="an-error" style="display:none"></div>
@@ -3449,10 +3449,10 @@ async function onAnalyzerPdf(inputEl){
     if(!text || text.trim().length < 10){
       throw new Error('No se pudo leer texto del PDF. Puede ser un PDF escaneado (imagen).');
     }
-    setPdfStatus(`<div class="pdf-spin"></div>Analizando transacciones con IA…`);
+    setPdfStatus(`<div class="pdf-spin"></div>Detectando transacciones…`);
     const txs = await classifyStatementWithAI(text);
     if(!txs.length){
-      throw new Error('La IA no encontró transacciones de gasto en este estado de cuenta.');
+      throw new Error('No se detectaron transacciones de gasto. Puedes añadirlas a mano.');
     }
     _anImport.txs = txs;
     renderAnalyzerReview();
@@ -3485,48 +3485,88 @@ async function extractPdfText(file){
   return full;
 }
 
-// ── Clasificar con IA: devuelve [{desc, monto, empresa}] ──────────────────
-// "empresa" = nombre normalizado del comercio para poder AGRUPAR (ej: todas
-// las compras de "Supermercado Nacional" bajo "Nacional").
+// ── Clasificar SIN IA (reglas locales): devuelve [{desc, monto, empresa}] ──
+// Funciona 100% en el navegador / GitHub Pages, sin llamar a ninguna API.
+// 1) Recorre línea por línea el texto del PDF.
+// 2) Detecta líneas que contienen un monto (formato 1,234.56).
+// 3) Descarta líneas de pagos, abonos, intereses, saldos y totales.
+// 4) Normaliza el nombre del comercio para poder AGRUPAR cargos del mismo lugar.
 async function classifyStatementWithAI(statementText){
-  const txt = statementText.length > 14000 ? statementText.slice(0,14000) : statementText;
-  const sys = `Eres un asistente que extrae transacciones de gasto de un estado de cuenta de tarjeta de crédito.
-Devuelve SOLO un arreglo JSON válido, sin texto adicional, sin markdown.
-Cada elemento: {"desc": string, "monto": number, "empresa": string}.
-Reglas:
-- "desc": el texto del cargo tal como aparece (comercio + detalle si lo hay), corto y legible.
-- "monto": número positivo, sin símbolos de moneda, punto como separador decimal.
-- "empresa": nombre CORTO y NORMALIZADO del comercio, para agrupar cargos del mismo lugar. Ej: "AMAZON MKTPLACE US*1A2B3" y "Amazon.com" → "Amazon". "APPLE.COM/BILL" → "Apple". "SUPERMERCADO NACIONAL SDQ" → "Nacional".
-- Incluye SOLO cargos/compras (gastos). IGNORA: pagos a la tarjeta, abonos, créditos, reversos, intereses, balances, totales y saldos.
-Si no hay transacciones devuelve [].`;
-  const user = `Estado de cuenta:\n"""\n${txt}\n"""\nDevuelve el arreglo JSON de transacciones de gasto.`;
+  const lines = String(statementText).split('\n').map(l=>l.trim()).filter(Boolean);
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1500,
-      system: sys,
-      messages: [{ role: "user", content: user }]
-    })
-  });
-  if(!response.ok) throw new Error('La IA no respondió correctamente (código '+response.status+').');
-  const data2 = await response.json();
-  let raw = (data2.content || []).map(b=> b.type==='text' ? b.text : '').join('\n');
-  raw = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
-  const start = raw.indexOf('['), end = raw.lastIndexOf(']');
-  if(start!==-1 && end!==-1) raw = raw.slice(start, end+1);
-  let arr;
-  try { arr = JSON.parse(raw); } catch(e){ throw new Error('No se pudo interpretar la respuesta de la IA.'); }
-  if(!Array.isArray(arr)) return [];
-  return arr
-    .map(t=>({
-      desc: String(t.desc || '').trim() || 'Gasto',
-      monto: Math.abs(parseFloat(t.monto)) || 0,
-      empresa: String(t.empresa || '').trim() || 'Otros'
-    }))
-    .filter(t=>t.monto > 0);
+  // Palabras que indican que la línea NO es un gasto (se ignoran)
+  const ignorar = [
+    'pago','pagos','abono','abonos','su pago','gracias por su pago','credito','crédito',
+    'reverso','reversa','devolucion','devolución','interes','interés','intereses',
+    'saldo','balance','total','subtotal','minimo','mínimo','fecha de corte','fecha limite',
+    'fecha límite','limite de credito','límite de crédito','disponible','cargo por mora',
+    'estado de cuenta','resumen','periodo','período','tasa','itbis sobre','pagina','página',
+    'numero de cuenta','número de cuenta','tarjeta terminada','fecha transac','descripcion','descripción'
+  ];
+
+  // Reglas de normalización: si la descripción contiene la palabra clave → empresa
+  const reglas = [
+    [/amazon|amzn/i,                 'Amazon'],
+    [/apple|itunes|app store|icloud/i,'Apple'],
+    [/uber/i,                        'Uber'],
+    [/netflix/i,                     'Netflix'],
+    [/spotify/i,                     'Spotify'],
+    [/playstation|psn|sony/i,        'PlayStation'],
+    [/xbox|microsoft/i,             'Microsoft'],
+    [/google|youtube/i,              'Google'],
+    [/nacional|sirena|jumbo|bravo|pola|super|supermercado|pricesmart|plaza lama/i, 'Supermercado'],
+    [/mcdonald|burger|wendy|kfc|pizza|domino|restaurant|cafe|café|starbucks/i, 'Restaurantes'],
+    [/shell|texaco|esso|sunix|gasolin|combustible|estacion|estación/i, 'Gasolina'],
+    [/claro|altice|viva|telefon|teléfon/i, 'Teléfono'],
+    [/edenorte|edesur|edeeste|edee|luz|electricidad/i, 'Luz / Servicios'],
+    [/farmacia|carol|gbc|los hidalgos/i, 'Farmacia'],
+    [/aliexpress|shein|temu|ebay|wish/i, 'Compras online'],
+    [/zara|adidas|nike|tienda|store|shop/i, 'Tienda'],
+    [/uber eats|pedidosya|glovo|delivery/i, 'Delivery'],
+  ];
+
+  function normalizaEmpresa(desc){
+    for(const [re, nombre] of reglas){ if(re.test(desc)) return nombre; }
+    // Si ninguna regla aplica: usar las primeras 1-2 palabras "limpias" del comercio
+    let limpio = desc.replace(/[*#0-9]+/g,' ').replace(/\s+/g,' ').trim();
+    limpio = limpio.replace(/\b(sdq|rd|us|usa|inc|llc|sa|srl|com|www|http\S*)\b/gi,'').trim();
+    const palabras = limpio.split(' ').filter(Boolean).slice(0,2);
+    const cand = palabras.join(' ').trim();
+    if(cand.length >= 3){
+      // Capitalizar primera letra
+      return cand.charAt(0).toUpperCase() + cand.slice(1).toLowerCase();
+    }
+    return 'Otros';
+  }
+
+  // Regex de monto: 1,234.56  /  1234.56  /  234.50  (al menos 2 decimales)
+  const montoRe = /(\d{1,3}(?:,\d{3})*\.\d{2}|\d+\.\d{2})/g;
+
+  const txs = [];
+  for(const line of lines){
+    const lower = line.toLowerCase();
+    if(ignorar.some(w => lower.includes(w))) continue;
+
+    const montos = line.match(montoRe);
+    if(!montos || !montos.length) continue;
+
+    // El monto del cargo suele ser el ÚLTIMO número de la línea
+    const montoStr = montos[montos.length - 1];
+    const monto = parseFloat(montoStr.replace(/,/g,''));
+    if(!monto || monto <= 0) continue;
+
+    // Descripción = la línea sin los montos ni fechas iniciales
+    let desc = line
+      .replace(montoRe, ' ')                       // quita montos
+      .replace(/^\s*\d{1,2}[\/\-\s][a-zA-Z0-9]{1,4}([\/\-\s]\d{2,4})?\s*/,'') // quita fecha al inicio
+      .replace(/\s+/g,' ')
+      .trim();
+    if(desc.length < 2) desc = 'Gasto';
+    if(desc.length > 60) desc = desc.slice(0,60);
+
+    txs.push({ desc, monto, empresa: normalizaEmpresa(desc) });
+  }
+  return txs;
 }
 
 // ── Modal compartido (revisión) ───────────────────────────────────────────
