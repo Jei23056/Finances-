@@ -40,17 +40,24 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 .ycard.sav::after  { background:var(--blue); }
 .ycard-lbl { font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
 .ycard-val { font-family:'DM Serif Display',serif; font-size:1.5rem; font-weight:400; cursor:default; }
-.ycard.clickable { cursor:pointer; }
+.ycard.clickable { cursor:pointer; padding-top:1.5rem; }
 .ycard.clickable:active { transform:scale(.985); }
 .ycard.usd-mode::after { opacity:.55; }
 .ycard-cur {
-  position:absolute; top:8px; right:10px; z-index:3;
-  font-size:8.5px; letter-spacing:.05em; font-weight:600;
-  padding:2px 6px; border-radius:999px;
+  position:absolute; top:6px; right:8px; z-index:3;
+  font-size:8px; letter-spacing:.04em; font-weight:600;
+  padding:1px 6px; border-radius:999px;
   background:var(--surf); border:1px solid var(--border2); color:var(--muted2);
-  transition:all .18s;
+  transition:all .18s; line-height:1.4;
 }
 .ycard.usd-mode .ycard-cur { background:var(--gldim); border-color:var(--gold); color:var(--gold); }
+.rate-badge {
+  font-size:10px; color:var(--muted2); font-weight:500;
+  padding:3px 9px; border-radius:999px;
+  background:var(--card); border:1px solid var(--border);
+  white-space:nowrap; letter-spacing:.01em;
+}
+.rate-badge b { color:var(--gold); font-weight:600; }
 .ycard-hint { font-size:10px; color:var(--muted); margin-top:3px; }
 .ycard.inc .ycard-val { color:var(--green); }
 .ycard.exp .ycard-val { color:var(--red); }
@@ -144,6 +151,7 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   .year-bar { gap:6px; }
   .msummary { gap:6px; }
   header h1 { font-size:1.4rem; }
+  .rate-badge { font-size:9px; padding:2px 6px; }
 }
 
 .ycard { position:relative; overflow:hidden; }
@@ -609,6 +617,7 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 <header>
   <h1>Mis Finanzas</h1>
   <div class="user-badge">
+    <span id="rate-badge" class="rate-badge" style="display:none" title="Tasa de cambio actual"></span>
     <span id="user-name"></span>
     <button class="btn-signout" onclick="signOut()">Salir</button>
   </div>
@@ -3312,6 +3321,19 @@ async function initExchangeRate(){
 
   // 3) Reaplicar conversión si alguna tarjeta ya estaba en modo USD
   applyCurrencyModes();
+  updateRateBadge();
+}
+
+// Muestra la tasa actual en la esquina del header: "1 USD = 60.33"
+function updateRateBadge(){
+  const el = document.getElementById('rate-badge');
+  if(!el) return;
+  if(usdRate && usdRate > 0){
+    el.innerHTML = `1 USD = <b>${usdRate.toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2})}</b>`;
+    el.style.display = '';
+  } else {
+    el.style.display = 'none';
+  }
 }
 
 // Alterna una tarjeta entre pesos y dólares
