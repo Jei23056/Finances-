@@ -5,14 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Full Year</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet" />
-<!-- PDF.js para leer estados de cuenta (AGREGADO) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script>
-  if (window['pdfjsLib']) {
-    window['pdfjsLib'].GlobalWorkerOptions.workerSrc =
-      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  }
-</script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -48,6 +40,17 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 .ycard.sav::after  { background:var(--blue); }
 .ycard-lbl { font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
 .ycard-val { font-family:'DM Serif Display',serif; font-size:1.5rem; font-weight:400; cursor:default; }
+.ycard.clickable { cursor:pointer; }
+.ycard.clickable:active { transform:scale(.985); }
+.ycard.usd-mode::after { opacity:.55; }
+.ycard-cur {
+  position:absolute; top:8px; right:10px; z-index:3;
+  font-size:8.5px; letter-spacing:.05em; font-weight:600;
+  padding:2px 6px; border-radius:999px;
+  background:var(--surf); border:1px solid var(--border2); color:var(--muted2);
+  transition:all .18s;
+}
+.ycard.usd-mode .ycard-cur { background:var(--gldim); border-color:var(--gold); color:var(--gold); }
 .ycard-hint { font-size:10px; color:var(--muted); margin-top:3px; }
 .ycard.inc .ycard-val { color:var(--green); }
 .ycard.exp .ycard-val { color:var(--red); }
@@ -554,105 +557,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   .cc-add-inputs { grid-template-columns:1fr; }
 }
 
-/* ══ ANALIZADOR DE ESTADOS DE CUENTA (SECCIÓN APARTE — AGREGADO) ══════════ */
-.an-intro { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:1rem 1.15rem; margin-bottom:1.25rem; }
-.an-intro-title { font-size:13px; color:var(--text); font-weight:500; display:flex; align-items:center; gap:7px; }
-.an-intro-sub { font-size:11px; color:var(--muted); margin-top:4px; line-height:1.5; }
-.an-upload {
-  width:100%; padding:1.4rem 1rem; margin-bottom:1.25rem;
-  background:rgba(96,165,250,0.06); border:1.5px dashed var(--blue);
-  border-radius:var(--r); color:var(--blue);
-  font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500;
-  cursor:pointer; transition:all .18s; text-align:center;
-  display:flex; flex-direction:column; align-items:center; gap:6px;
-}
-.an-upload:hover { background:rgba(96,165,250,0.13); }
-.an-upload:active { transform:scale(.99); }
-.an-upload-icon { font-size:1.8rem; }
-.an-upload-hint { font-size:11px; color:var(--muted); font-weight:400; }
-.an-upload:disabled { opacity:.55; cursor:default; }
-
-.an-status { text-align:center; padding:2rem 1rem; color:var(--muted2); font-size:13px; }
-.an-spin { width:34px; height:34px; margin:0 auto 14px; border:3px solid var(--border2); border-top-color:var(--blue); border-radius:50%; animation:pdfspin .8s linear infinite; }
-@keyframes pdfspin { to { transform:rotate(360deg); } }
-.an-err { color:var(--red); font-size:12.5px; padding:1rem; text-align:center; line-height:1.5; background:var(--rdim); border:1px solid var(--red); border-radius:var(--rs); margin-bottom:1.25rem; }
-
-/* Tarjeta de cada estado de cuenta guardado */
-.an-report { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:1.1rem; margin-bottom:12px; animation:si .25s ease; }
-.an-report-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:.9rem; padding-bottom:.8rem; border-bottom:1px solid var(--border); }
-.an-report-title { font-family:'DM Serif Display',serif; font-size:1.15rem; }
-.an-report-meta { font-size:11px; color:var(--muted); margin-top:3px; }
-.an-report-total { font-family:'DM Serif Display',serif; font-size:1.5rem; color:var(--red); white-space:nowrap; }
-.an-report-del { background:none; border:1px solid var(--border); border-radius:999px; color:var(--muted); font-size:11px; cursor:pointer; padding:3px 9px; transition:all .15s; margin-top:6px; }
-.an-report-del:hover { color:var(--red); border-color:var(--red); }
-
-/* Barras por empresa/categoría dentro de un reporte */
-.an-bar-row { display:flex; align-items:center; gap:9px; margin-bottom:8px; }
-.an-bar-row:last-child { margin-bottom:0; }
-.an-bar-name { width:130px; font-size:12.5px; color:var(--muted2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-shrink:0; }
-.an-bar-track { flex:1; height:18px; background:var(--surf); border-radius:4px; overflow:hidden; }
-.an-bar-fill { height:100%; border-radius:4px; background:linear-gradient(90deg,var(--blue),#8ec5ff); display:flex; align-items:center; justify-content:flex-end; padding-right:7px; font-size:10px; font-weight:500; color:var(--bg); transition:width .5s cubic-bezier(.4,0,.2,1); min-width:2px; }
-.an-bar-amt { width:92px; text-align:right; font-size:12px; color:var(--text); flex-shrink:0; }
-.an-bar-count { font-size:10px; color:var(--muted); margin-left:4px; }
-
-.an-report-toggle { background:none; border:none; color:var(--blue); font-size:12px; cursor:pointer; margin-top:.9rem; padding:4px 0; }
-.an-detail { margin-top:.7rem; padding-top:.7rem; border-top:1px dashed var(--border); display:none; }
-.an-detail.show { display:block; }
-.an-detail-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:5px 0; border-bottom:1px solid var(--border); font-size:12px; }
-.an-detail-row:last-child { border-bottom:none; }
-.an-detail-desc { color:var(--muted2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.an-detail-amt { color:var(--text); flex-shrink:0; }
-
-/* Resumen global (suma de todos los estados de cuenta del año) */
-.an-global { background:linear-gradient(135deg,var(--card2),var(--card)); border:1px solid var(--border2); border-radius:var(--r); padding:1.15rem; margin-bottom:1.25rem; position:relative; overflow:hidden; }
-.an-global::after { content:''; position:absolute; top:0;left:0;right:0; height:2px; background:linear-gradient(90deg,var(--blue),var(--green)); }
-.an-global-title { font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:.85rem; }
-.an-global-total { font-family:'DM Serif Display',serif; font-size:1.6rem; color:var(--text); margin-bottom:1rem; }
-
-/* Modal de revisión */
-.pdf-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.72); backdrop-filter:blur(3px); z-index:9000; display:none; align-items:center; justify-content:center; padding:1rem; }
-.pdf-overlay.show { display:flex; }
-.pdf-modal { background:var(--surf); border:1px solid var(--border2); border-radius:var(--r); width:100%; max-width:560px; max-height:88vh; display:flex; flex-direction:column; overflow:hidden; animation:si .25s ease; }
-.pdf-modal-head { padding:1.1rem 1.2rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px; }
-.pdf-modal-head h3 { font-family:'DM Serif Display',serif; font-size:1.2rem; font-weight:400; }
-.pdf-modal-head .pm-close { background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1; }
-.pdf-modal-head .pm-close:hover { color:var(--text); }
-.pdf-modal-sub { font-size:11px; color:var(--muted); margin-top:2px; }
-.pdf-modal-body { padding:1rem 1.2rem; overflow-y:auto; flex:1; }
-.pdf-status { text-align:center; padding:2rem 1rem; color:var(--muted2); font-size:13px; }
-.pdf-spin { width:34px; height:34px; margin:0 auto 14px; border:3px solid var(--border2); border-top-color:var(--blue); border-radius:50%; animation:pdfspin .8s linear infinite; }
-.pdf-tx-row { display:grid; grid-template-columns:1fr 120px 90px 26px; gap:8px; align-items:center; padding:7px 0; border-bottom:1px solid var(--border); }
-.pdf-tx-row:last-child { border-bottom:none; }
-.pdf-tx-desc { font-size:12.5px; }
-.pdf-tx-row select, .pdf-tx-row input, .pdf-tx-desc-in { width:100%; padding:5px 7px; background:var(--card); border:1px solid var(--border2); border-radius:var(--rxs); color:var(--text); font-family:'DM Sans',sans-serif; font-size:11.5px; outline:none; appearance:none; -webkit-appearance:none; }
-.pdf-tx-row select:focus, .pdf-tx-row input:focus, .pdf-tx-desc-in:focus { border-color:var(--gold); }
-.pdf-tx-amt { text-align:right; }
-.pdf-tx-rm { background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;line-height:1; }
-.pdf-tx-rm:hover { color:var(--red); }
-.pdf-tx-header { display:grid; grid-template-columns:1fr 120px 90px 26px; gap:8px; font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); padding-bottom:6px; margin-bottom:2px; border-bottom:1px solid var(--border2); }
-.pdf-modal-foot { padding:1rem 1.2rem; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-.pdf-total { font-size:13px; color:var(--muted2); }
-.pdf-total b { font-family:'DM Serif Display',serif; font-size:1.25rem; color:var(--red); font-weight:400; margin-left:6px; }
-.pdf-foot-btns { display:flex; gap:8px; }
-.pdf-btn { padding:8px 16px; border-radius:var(--rs); font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; border:1px solid var(--border2); background:transparent; color:var(--muted2); transition:all .15s; }
-.pdf-btn:hover { color:var(--text); border-color:var(--text); }
-.pdf-btn.primary { background:var(--gldim); border-color:var(--gold); color:var(--gold); }
-.pdf-btn.primary:hover { background:rgba(232,185,106,.22); }
-.pdf-btn:disabled { opacity:.5; cursor:default; }
-.pdf-err { color:var(--red); font-size:12.5px; padding:1rem; text-align:center; line-height:1.5; }
-.pdf-manual { margin-top:10px; padding:9px; width:100%; background:var(--card); border:1px dashed var(--border2); border-radius:var(--rs); color:var(--muted2); font-size:12px; cursor:pointer; }
-.pdf-manual:hover { color:var(--text); border-color:var(--text); }
-.pdf-namebox { margin-bottom:12px; }
-.pdf-namebox label { font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:5px; }
-.pdf-namebox input { width:100%; padding:8px 10px; background:var(--card); border:1px solid var(--border2); border-radius:var(--rs); color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; outline:none; }
-.pdf-namebox input:focus { border-color:var(--gold); }
-@media(max-width:600px){
-  .pdf-tx-row, .pdf-tx-header { grid-template-columns:1fr 96px 72px 22px; gap:5px; }
-  .pdf-tx-desc { font-size:11px; }
-  .an-bar-name { width:96px; }
-  .an-bar-amt { width:78px; }
-}
-
 </style>
 </head>
 <body>
@@ -711,10 +615,10 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 </header>
 
 <div class="year-bar">
-  <div class="ycard inc"><div class="ycard-lbl">Total ganado</div><div class="ycard-val" id="y-inc">$0.00</div></div>
-  <div class="ycard exp"><div class="ycard-lbl">Total gastado</div><div class="ycard-val" id="y-exp">$0.00</div></div>
+  <div class="ycard inc clickable" id="ycard-inc" onclick="toggleCurrency('inc')"><span class="ycard-cur" id="cur-inc">DOP</span><div class="ycard-lbl">Total ganado</div><div class="ycard-val" id="y-inc">$0.00</div></div>
+  <div class="ycard exp clickable" id="ycard-exp" onclick="toggleCurrency('exp')"><span class="ycard-cur" id="cur-exp">DOP</span><div class="ycard-lbl">Total gastado</div><div class="ycard-val" id="y-exp">$0.00</div></div>
   <div class="ycard net"><div class="ycard-lbl">% Ahorrado</div><div class="ycard-val" id="y-net">—</div><div class="ycard-hint" id="y-net-hint">mes actual</div></div>
-  <div class="ycard sav"><div class="ycard-lbl">Capital actual</div><div class="ycard-val" id="y-cap">$0.00</div></div>
+  <div class="ycard sav clickable" id="ycard-cap" onclick="toggleCurrency('cap')"><span class="ycard-cur" id="cur-cap">DOP</span><div class="ycard-lbl">Capital actual</div><div class="ycard-val" id="y-cap">$0.00</div></div>
 </div>
 
 <div class="insights-bar" id="insights-bar"></div>
@@ -824,24 +728,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   <div class="cards-grid" id="cards-grid"></div>
 </div>
 
-<div id="panel-analyzer" style="display:none">
-  <div class="an-intro">
-    <div class="an-intro-title">📄 Analizador de estados de cuenta</div>
-    <div class="an-intro-sub">Sube el PDF de tu estado de cuenta. Detecta los gastos automáticamente, junta los de la misma empresa y te muestra en qué gastaste más. Esta sección es solo para analizar: <b>no afecta</b> tu Gastado, tu balance ni el año completo. Siempre puedes revisar y corregir antes de guardar.</div>
-  </div>
-
-  <input type="file" id="an-file" accept="application/pdf" style="display:none" onchange="onAnalyzerPdf(this)" />
-  <button class="an-upload" id="an-upload-btn" onclick="document.getElementById('an-file').value='';document.getElementById('an-file').click()">
-    <span class="an-upload-icon">⬆️</span>
-    Subir estado de cuenta (PDF)
-    <span class="an-upload-hint">PDF con texto · detección automática</span>
-  </button>
-
-  <div id="an-error" style="display:none"></div>
-  <div id="an-global"></div>
-  <div id="an-reports"></div>
-</div>
-
 </div>
 </div>
 <div id="save-indicator">Guardado ✓</div>
@@ -862,7 +748,6 @@ const LOGROS_KEY   = `logros_${CURRENT_YEAR}`;
 const LS_LOGROS    = `ach_unlocked_${CURRENT_YEAR}`;
 const TARJETAS_KEY = `tarjetas_${CURRENT_YEAR}`;   // ← clave vieja (por año), solo para migrar
 const TARJETAS_KEY_V2 = 'tarjetas_v2';             // ← clave nueva: tarjetas persistentes entre años
-const ANALYZER_KEY = `analizador_${CURRENT_YEAR}`; // ← clave NUEVA: estados de cuenta analizados (NO toca finanzas)
 
 // Actualizar UI con año actual
 document.title = `Full Year ${CURRENT_YEAR}`;
@@ -910,8 +795,6 @@ const INCOME_CATS = [
 let data = {};
 // ► Lista de tarjetas de crédito del año actual
 let tarjetas = [];
-// ► Reportes del analizador de estados de cuenta (NUEVO, independiente de finanzas)
-let analizadorReportes = [];
 // ► Cache del historial para la pestaña "Desde 2026"
 let historialFinanzasCache = {};
 
@@ -2527,13 +2410,6 @@ function buildSkeleton(){
   sinceBtn.onclick = ()=>switchToSince();
   tabsEl.appendChild(sinceBtn);
 
-  const analyzerBtn = document.createElement('button');
-  analyzerBtn.id = 'mtab-analyzer';
-  analyzerBtn.className = 'mtab';
-  analyzerBtn.textContent = '📄 Estados de cuenta';
-  analyzerBtn.onclick = ()=>switchToAnalyzer();
-  tabsEl.appendChild(analyzerBtn);
-
   // Aplicar el estado colapsado/expandido a las pildoras de meses
   applyMonthsCollapsed();
 }
@@ -2847,37 +2723,6 @@ window.switchToAnnual = function(){
   applyMonthTabColors();
   renderInsights();
 };
-
-// ══ ANALIZADOR: navegación de pestaña (AGREGADO) ════════════════════════
-// Envolvemos las funciones de cambio de pestaña existentes para que también
-// oculten el panel del analizador y apaguen su pestaña. No modifican su lógica.
-function _hideAnalyzerPanel(){
-  const p = document.getElementById('panel-analyzer'); if(p) p.style.display='none';
-  const t = document.getElementById('mtab-analyzer'); if(t) t.className='mtab';
-}
-['switchMonth','switchToAnnual','switchToCards','switchToSince'].forEach(name=>{
-  const orig = window[name];
-  if(typeof orig === 'function'){
-    window[name] = function(){
-      const r = orig.apply(this, arguments);
-      _hideAnalyzerPanel();
-      return r;
-    };
-  }
-});
-
-function switchToAnalyzer(){
-  annualActive = false;
-  document.querySelectorAll('.month-panel').forEach(p=>{ p.className = 'month-panel'; });
-  ['annual','cards','since'].forEach(k=>{
-    const pe = document.getElementById('panel-'+k); if(pe) pe.style.display='none';
-    const te = document.getElementById('mtab-'+k); if(te) te.className='mtab';
-  });
-  document.querySelectorAll('.mtab').forEach((t,i)=>{ if(i<12) t.className = 'mtab' + (hasData(i)?' has-data':''); });
-  const at = document.getElementById('mtab-analyzer'); if(at) at.className='mtab active';
-  const ap = document.getElementById('panel-analyzer'); if(ap) ap.style.display='block';
-  renderAnalyzer();
-}
 
 function toggleSaveMenu(e){
   if(e) e.stopPropagation();
@@ -3303,6 +3148,8 @@ auth.onAuthStateChanged(async user => {
     buildSkeleton();
     renderAll();
     dismissSplash();
+    // ► Cargar tasa de cambio peso→dólar (en segundo plano, no bloquea)
+    initExchangeRate();
   } else {
     currentUser = null;
     dismissSplash();
@@ -3417,355 +3264,105 @@ async function autoArchivePastYears(){
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// ANALIZADOR DE ESTADOS DE CUENTA  (SECCIÓN APARTE — TODO AGREGADO)
-// ──────────────────────────────────────────────────────────────────────────
-// • Sección 100% independiente. NO toca data, tarjetas, ni ningún total.
-// • Guarda en Firebase bajo la clave `analizador_${año}` (merge), separada.
-// • Cada reporte = un PDF analizado: { id, nombre, fecha, total, txs:[{desc,monto,empresa}] }
-// • Agrupa los gastos por "empresa" (comercio normalizado) y muestra en qué gastaste más.
+// CONVERSIÓN A DÓLARES  (TODO AGREGADO — no modifica la lógica existente)
+// • Toca Total Ganado / Total Gastado / Capital Actual para ver el valor en USD.
+// • Tasa traída de open.er-api.com (gratis, sin key, CORS abierto).
+// • A prueba de fallos: si la API falla, usa la última tasa guardada o 60 por defecto.
 // ══════════════════════════════════════════════════════════════════════════
 
-let _anImport = { txs:[], nombre:'' };
+const USD_DOP_FALLBACK = 60;            // tasa por defecto si nunca se ha podido traer
+let usdRate = USD_DOP_FALLBACK;          // cuántos pesos vale 1 dólar
+let usdRateReady = false;
+// Estado de visualización por tarjeta: true = mostrando USD
+const _curMode = { inc:false, exp:false, cap:false };
 
-// Guardar reportes del analizador en Firebase (clave propia, no toca lo demás)
-function saveAnalyzer(){
-  if(!currentUser) return;
-  const ind = document.getElementById('save-indicator');
-  db.collection('users').doc(currentUser.uid)
-    .set({ [ANALYZER_KEY]: analizadorReportes }, { merge: true })
-    .then(()=>{ if(ind){ ind.classList.add('show'); setTimeout(()=>ind.classList.remove('show'),1500); } })
-    .catch(e=>console.error('Error guardando analizador:', e));
-}
-
-// ── Subir y procesar un PDF en el analizador ──────────────────────────────
-async function onAnalyzerPdf(inputEl){
-  const file = inputEl.files && inputEl.files[0];
-  if(!file) return;
-  _anImport = { txs:[], nombre: file.name.replace(/\.pdf$/i,'') };
-  openPdfModal('analyzer');
-  setPdfStatus(`<div class="pdf-spin"></div>Leyendo el PDF…`);
+// Trae la tasa actual; guarda en Firebase para usar offline la próxima vez
+async function initExchangeRate(){
+  // 1) Intentar usar la última tasa guardada (para que funcione al instante / sin internet)
   try {
-    const text = await extractPdfText(file);
-    if(!text || text.trim().length < 10){
-      throw new Error('No se pudo leer texto del PDF. Puede ser un PDF escaneado (imagen).');
+    if(currentUser){
+      const doc = await db.collection('users').doc(currentUser.uid).get();
+      const d = doc.exists ? (doc.data()||{}) : {};
+      if(d.usdRate && typeof d.usdRate === 'number' && d.usdRate > 0){
+        usdRate = d.usdRate;
+        usdRateReady = true;
+      }
     }
-    setPdfStatus(`<div class="pdf-spin"></div>Detectando transacciones…`);
-    const txs = await classifyStatementWithAI(text);
-    if(!txs.length){
-      throw new Error('No se detectaron transacciones de gasto. Puedes añadirlas a mano.');
+  } catch(e){ /* sin problema, seguimos */ }
+
+  // 2) Intentar actualizar desde internet
+  try {
+    const res = await fetch('https://open.er-api.com/v6/latest/USD');
+    if(res.ok){
+      const data = await res.json();
+      if(data && data.rates && data.rates.DOP && data.rates.DOP > 0){
+        usdRate = data.rates.DOP;     // 1 USD = X DOP
+        usdRateReady = true;
+        // Guardar para la próxima vez (no toca nada más)
+        if(currentUser){
+          db.collection('users').doc(currentUser.uid)
+            .set({ usdRate: usdRate, usdRateAt: new Date().toISOString() }, { merge:true })
+            .catch(()=>{});
+        }
+      }
     }
-    _anImport.txs = txs;
-    renderAnalyzerReview();
-  } catch(err){
-    console.error('Error analizando PDF:', err);
-    showPdfError(err.message || 'Ocurrió un error leyendo el PDF.');
+  } catch(e){
+    console.warn('No se pudo actualizar la tasa de cambio, usando la guardada/por defecto.');
   }
+
+  // 3) Reaplicar conversión si alguna tarjeta ya estaba en modo USD
+  applyCurrencyModes();
 }
 
-// ── Extraer texto del PDF con PDF.js ──────────────────────────────────────
-async function extractPdfText(file){
-  if(!window.pdfjsLib) throw new Error('No se pudo cargar el lector de PDF. Revisa tu conexión.');
-  const buf = await file.arrayBuffer();
-  const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
-  let full = '';
-  for(let p=1; p<=pdf.numPages; p++){
-    const page = await pdf.getPage(p);
-    const content = await page.getTextContent();
-    let lastY = null, line = '';
-    const lines = [];
-    content.items.forEach(it=>{
-      const y = it.transform[5];
-      if(lastY===null || Math.abs(y-lastY) < 3){ line += it.str + ' '; }
-      else { lines.push(line.trim()); line = it.str + ' '; }
-      lastY = y;
-    });
-    if(line.trim()) lines.push(line.trim());
-    full += lines.join('\n') + '\n';
-  }
-  return full;
+// Alterna una tarjeta entre pesos y dólares
+function toggleCurrency(which){
+  _curMode[which] = !_curMode[which];
+  applyCurrencyModes();
 }
 
-// ── Clasificar SIN IA (reglas locales): devuelve [{desc, monto, empresa}] ──
-// Funciona 100% en el navegador / GitHub Pages, sin llamar a ninguna API.
-// 1) Recorre línea por línea el texto del PDF.
-// 2) Detecta líneas que contienen un monto (formato 1,234.56).
-// 3) Descarta líneas de pagos, abonos, intereses, saldos y totales.
-// 4) Normaliza el nombre del comercio para poder AGRUPAR cargos del mismo lugar.
-async function classifyStatementWithAI(statementText){
-  const lines = String(statementText).split('\n').map(l=>l.trim()).filter(Boolean);
-
-  // Palabras que indican que la línea NO es un gasto (se ignoran)
-  const ignorar = [
-    'pago','pagos','abono','abonos','su pago','gracias por su pago','credito','crédito',
-    'reverso','reversa','devolucion','devolución','interes','interés','intereses',
-    'saldo','balance','total','subtotal','minimo','mínimo','fecha de corte','fecha limite',
-    'fecha límite','limite de credito','límite de crédito','disponible','cargo por mora',
-    'estado de cuenta','resumen','periodo','período','tasa','itbis sobre','pagina','página',
-    'numero de cuenta','número de cuenta','tarjeta terminada','fecha transac','descripcion','descripción'
-  ];
-
-  // Reglas de normalización: si la descripción contiene la palabra clave → empresa
-  const reglas = [
-    [/amazon|amzn/i,                 'Amazon'],
-    [/apple|itunes|app store|icloud/i,'Apple'],
-    [/uber/i,                        'Uber'],
-    [/netflix/i,                     'Netflix'],
-    [/spotify/i,                     'Spotify'],
-    [/playstation|psn|sony/i,        'PlayStation'],
-    [/xbox|microsoft/i,             'Microsoft'],
-    [/google|youtube/i,              'Google'],
-    [/nacional|sirena|jumbo|bravo|pola|super|supermercado|pricesmart|plaza lama/i, 'Supermercado'],
-    [/mcdonald|burger|wendy|kfc|pizza|domino|restaurant|cafe|café|starbucks/i, 'Restaurantes'],
-    [/shell|texaco|esso|sunix|gasolin|combustible|estacion|estación/i, 'Gasolina'],
-    [/claro|altice|viva|telefon|teléfon/i, 'Teléfono'],
-    [/edenorte|edesur|edeeste|edee|luz|electricidad/i, 'Luz / Servicios'],
-    [/farmacia|carol|gbc|los hidalgos/i, 'Farmacia'],
-    [/aliexpress|shein|temu|ebay|wish/i, 'Compras online'],
-    [/zara|adidas|nike|tienda|store|shop/i, 'Tienda'],
-    [/uber eats|pedidosya|glovo|delivery/i, 'Delivery'],
-  ];
-
-  function normalizaEmpresa(desc){
-    for(const [re, nombre] of reglas){ if(re.test(desc)) return nombre; }
-    // Si ninguna regla aplica: usar las primeras 1-2 palabras "limpias" del comercio
-    let limpio = desc.replace(/[*#0-9]+/g,' ').replace(/\s+/g,' ').trim();
-    limpio = limpio.replace(/\b(sdq|rd|us|usa|inc|llc|sa|srl|com|www|http\S*)\b/gi,'').trim();
-    const palabras = limpio.split(' ').filter(Boolean).slice(0,2);
-    const cand = palabras.join(' ').trim();
-    if(cand.length >= 3){
-      // Capitalizar primera letra
-      return cand.charAt(0).toUpperCase() + cand.slice(1).toLowerCase();
+// Aplica el modo (DOP/USD) a las 3 tarjetas según _curMode.
+// Lee los montos reales en pesos desde yearTotals() para no depender del texto.
+function applyCurrencyModes(){
+  const totals = (typeof yearTotals === 'function') ? yearTotals() : null;
+  if(!totals) return;
+  const map = {
+    inc: { val: totals.yInc, el:'y-inc', card:'ycard-inc', cur:'cur-inc', signed:false },
+    exp: { val: totals.yExp, el:'y-exp', card:'ycard-exp', cur:'cur-exp', signed:false },
+    cap: { val: totals.yCap, el:'y-cap', card:'ycard-cap', cur:'cur-cap', signed:true  }
+  };
+  Object.keys(map).forEach(k=>{
+    const m = map[k];
+    const valEl  = document.getElementById(m.el);
+    const cardEl = document.getElementById(m.card);
+    const curEl  = document.getElementById(m.cur);
+    if(!valEl || !cardEl || !curEl) return;
+    if(_curMode[k]){
+      // Modo USD
+      const usd = usdRate > 0 ? (m.val / usdRate) : 0;
+      valEl.textContent = (m.signed && usd < 0 ? '-' : (m.signed ? '+' : '')) +
+        'US$' + Math.abs(usd).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+      curEl.textContent = 'USD';
+      cardEl.classList.add('usd-mode');
+    } else {
+      // Modo pesos: restaurar el valor original
+      valEl.textContent = (m.signed ? fmtSigned(m.val) : fmt(m.val));
+      curEl.textContent = 'DOP';
+      cardEl.classList.remove('usd-mode');
     }
-    return 'Otros';
-  }
-
-  // Regex de monto: 1,234.56  /  1234.56  /  234.50  (al menos 2 decimales)
-  const montoRe = /(\d{1,3}(?:,\d{3})*\.\d{2}|\d+\.\d{2})/g;
-
-  const txs = [];
-  for(const line of lines){
-    const lower = line.toLowerCase();
-    if(ignorar.some(w => lower.includes(w))) continue;
-
-    const montos = line.match(montoRe);
-    if(!montos || !montos.length) continue;
-
-    // El monto del cargo suele ser el ÚLTIMO número de la línea
-    const montoStr = montos[montos.length - 1];
-    const monto = parseFloat(montoStr.replace(/,/g,''));
-    if(!monto || monto <= 0) continue;
-
-    // Descripción = la línea sin los montos ni fechas iniciales
-    let desc = line
-      .replace(montoRe, ' ')                       // quita montos
-      .replace(/^\s*\d{1,2}[\/\-\s][a-zA-Z0-9]{1,4}([\/\-\s]\d{2,4})?\s*/,'') // quita fecha al inicio
-      .replace(/\s+/g,' ')
-      .trim();
-    if(desc.length < 2) desc = 'Gasto';
-    if(desc.length > 60) desc = desc.slice(0,60);
-
-    txs.push({ desc, monto, empresa: normalizaEmpresa(desc) });
-  }
-  return txs;
-}
-
-// ── Modal compartido (revisión) ───────────────────────────────────────────
-function openPdfModal(mode){
-  let ov = document.getElementById('pdf-overlay');
-  if(!ov){
-    ov = document.createElement('div');
-    ov.id = 'pdf-overlay';
-    ov.className = 'pdf-overlay';
-    ov.innerHTML = `<div class="pdf-modal">
-      <div class="pdf-modal-head">
-        <div><h3>Estado de cuenta</h3><div class="pdf-modal-sub" id="pdf-sub"></div></div>
-        <button class="pm-close" onclick="closePdfModal()">×</button>
-      </div>
-      <div class="pdf-modal-body" id="pdf-body"></div>
-      <div class="pdf-modal-foot" id="pdf-foot" style="display:none">
-        <div class="pdf-total">Total: <b id="pdf-total-val">$0.00</b></div>
-        <div class="pdf-foot-btns">
-          <button class="pdf-btn" onclick="closePdfModal()">Cancelar</button>
-          <button class="pdf-btn primary" id="pdf-confirm" onclick="confirmAnalyzerImport()">Guardar análisis</button>
-        </div>
-      </div>
-    </div>`;
-    document.body.appendChild(ov);
-    ov.addEventListener('click', e=>{ if(e.target===ov) closePdfModal(); });
-  }
-  const sub = document.getElementById('pdf-sub');
-  if(sub) sub.textContent = 'Revisa los gastos antes de guardar';
-  document.getElementById('pdf-foot').style.display = 'none';
-  ov.classList.add('show');
-}
-function closePdfModal(){
-  const ov = document.getElementById('pdf-overlay');
-  if(ov) ov.classList.remove('show');
-  _anImport = { txs:[], nombre:'' };
-}
-function setPdfStatus(html){
-  const body = document.getElementById('pdf-body');
-  if(body) body.innerHTML = `<div class="pdf-status">${html}</div>`;
-}
-function showPdfError(msg){
-  const body = document.getElementById('pdf-body');
-  if(body) body.innerHTML = `<div class="pdf-err">⚠️ ${esc(msg)}<br><br>Puedes intentar con otro PDF o añadir las transacciones a mano.</div>
-    <button class="pdf-manual" onclick="anStartManual()">+ Añadir transacción manualmente</button>`;
-  document.getElementById('pdf-foot').style.display = 'flex';
-  refreshPdfTotal();
-}
-function anStartManual(){
-  if(!_anImport.txs.length) _anImport.txs = [];
-  _anImport.txs.push({ desc:'Nuevo gasto', monto:0, empresa:'Otros' });
-  renderAnalyzerReview();
-}
-
-// ── Tabla de revisión editable (desc, empresa, monto) ─────────────────────
-function renderAnalyzerReview(){
-  const body = document.getElementById('pdf-body');
-  if(!body) return;
-  const rows = _anImport.txs.map((t,i)=>`
-    <div class="pdf-tx-row" data-i="${i}">
-      <input class="pdf-tx-desc-in" type="text" value="${esc(t.desc)}" onchange="updateAnTx(${i},'desc',this.value)" />
-      <input type="text" value="${esc(t.empresa)}" onchange="updateAnTx(${i},'empresa',this.value)" placeholder="Empresa" />
-      <input class="pdf-tx-amt" type="text" inputmode="decimal" value="${t.monto.toFixed(2)}"
-        oninput="this.value=this.value.replace(/[^0-9.]/g,'')" onchange="updateAnTx(${i},'monto',this.value)" />
-      <button class="pdf-tx-rm" onclick="removeAnTx(${i})" title="Quitar">×</button>
-    </div>`).join('');
-  body.innerHTML = `
-    <div class="pdf-namebox">
-      <label>Nombre de este estado de cuenta</label>
-      <input type="text" id="an-report-name" value="${esc(_anImport.nombre||'')}" placeholder="Ej: Mastercard 5105 — Enero" />
-    </div>
-    <div class="pdf-tx-header"><div>Concepto</div><div>Empresa</div><div style="text-align:right">Monto</div><div></div></div>
-    <div id="pdf-tx-list">${rows}</div>
-    <button class="pdf-manual" onclick="anStartManual()">+ Añadir transacción manualmente</button>
-  `;
-  document.getElementById('pdf-foot').style.display = 'flex';
-  refreshPdfTotal();
-}
-function updateAnTx(i, field, val){
-  if(!_anImport.txs[i]) return;
-  if(field==='monto') _anImport.txs[i].monto = Math.abs(parseFloat(val)) || 0;
-  else _anImport.txs[i][field] = val;
-  refreshPdfTotal();
-}
-function removeAnTx(i){ _anImport.txs.splice(i,1); renderAnalyzerReview(); }
-function refreshPdfTotal(){
-  const total = _anImport.txs.reduce((s,t)=>s+(parseFloat(t.monto)||0),0);
-  const el = document.getElementById('pdf-total-val'); if(el) el.textContent = fmt(total);
-  const btn = document.getElementById('pdf-confirm'); if(btn) btn.disabled = !(_anImport.txs.length && total>0);
-}
-
-// ── Guardar el análisis (a Firebase, clave propia) ────────────────────────
-function confirmAnalyzerImport(){
-  const txs = _anImport.txs.filter(t=>(parseFloat(t.monto)||0) > 0);
-  if(!txs.length){ closePdfModal(); return; }
-  const nameEl = document.getElementById('an-report-name');
-  const nombre = (nameEl && nameEl.value.trim()) || _anImport.nombre || 'Estado de cuenta';
-  const total = txs.reduce((s,t)=>s+(parseFloat(t.monto)||0),0);
-  analizadorReportes.push({
-    id: 'an_' + Date.now(),
-    nombre,
-    fecha: new Date().toLocaleDateString('es-DO',{day:'2-digit',month:'short',year:'numeric'}),
-    total: parseFloat(total.toFixed(2)),
-    txs: txs.map(t=>({ desc:t.desc, monto:parseFloat((parseFloat(t.monto)||0).toFixed(2)), empresa:t.empresa||'Otros' }))
   });
-  closePdfModal();
-  saveAnalyzer();
-  renderAnalyzer();
 }
 
-// ── Eliminar un reporte ───────────────────────────────────────────────────
-function delAnalyzerReport(id){
-  const r = analizadorReportes.find(x=>x.id===id);
-  if(!confirm(`¿Eliminar el análisis "${r?r.nombre:''}"? Esto no afecta tus finanzas.`)) return;
-  analizadorReportes = analizadorReportes.filter(x=>x.id!==id);
-  saveAnalyzer();
-  renderAnalyzer();
-}
-function toggleAnDetail(id){
-  const d = document.getElementById('an-detail-'+id);
-  if(d) d.classList.toggle('show');
-}
-
-// ── Agrupar transacciones por empresa: [{empresa,total,count}] desc ────────
-function groupByCompany(txs){
-  const map = {};
-  txs.forEach(t=>{
-    const k = (t.empresa||'Otros');
-    if(!map[k]) map[k] = { empresa:k, total:0, count:0 };
-    map[k].total += (parseFloat(t.monto)||0);
-    map[k].count += 1;
-  });
-  return Object.values(map).map(o=>({...o, total:parseFloat(o.total.toFixed(2))}))
-    .sort((a,b)=>b.total-a.total);
-}
-
-// ── Render de toda la sección ─────────────────────────────────────────────
-function renderAnalyzer(){
-  const reportsEl = document.getElementById('an-reports');
-  const globalEl  = document.getElementById('an-global');
-  const errEl     = document.getElementById('an-error');
-  if(errEl) errEl.style.display='none';
-  if(!reportsEl || !globalEl) return;
-
-  if(!analizadorReportes.length){
-    globalEl.innerHTML = '';
-    reportsEl.innerHTML = '<div class="empty">Aún no has analizado ningún estado de cuenta. Sube un PDF arriba para empezar.</div>';
-    return;
-  }
-
-  // Resumen global: junta TODAS las empresas de TODOS los reportes
-  const allTxs = [];
-  let granTotal = 0;
-  analizadorReportes.forEach(r=>{ (r.txs||[]).forEach(t=>{ allTxs.push(t); granTotal += (parseFloat(t.monto)||0); }); });
-  const globalGroups = groupByCompany(allTxs);
-  const gMax = globalGroups.length ? Math.max(...globalGroups.map(g=>g.total)) : 0;
-  globalEl.innerHTML = `
-    <div class="an-global">
-      <div class="an-global-title">Resumen de todos los estados de cuenta (${analizadorReportes.length})</div>
-      <div class="an-global-total">${fmt(granTotal)} <span style="font-size:.7rem;color:var(--muted)">total analizado</span></div>
-      ${globalGroups.map(g=>{
-        const pct = gMax>0?Math.round(g.total/gMax*100):0; const show = pct>22;
-        return `<div class="an-bar-row">
-          <div class="an-bar-name" title="${esc(g.empresa)}">${esc(g.empresa)}<span class="an-bar-count">×${g.count}</span></div>
-          <div class="an-bar-track"><div class="an-bar-fill" style="width:${pct}%">${show?fmt(g.total):''}</div></div>
-          <div class="an-bar-amt">${!show?fmt(g.total):''}</div>
-        </div>`;
-      }).join('')}
-    </div>`;
-
-  // Un bloque por cada estado de cuenta (más reciente arriba)
-  reportsEl.innerHTML = analizadorReportes.slice().reverse().map(r=>{
-    const groups = groupByCompany(r.txs||[]);
-    const max = groups.length ? Math.max(...groups.map(g=>g.total)) : 0;
-    const detailRows = (r.txs||[]).slice().sort((a,b)=>b.monto-a.monto).map(t=>`
-      <div class="an-detail-row">
-        <div class="an-detail-desc" title="${esc(t.desc)}">${esc(t.desc)} <span style="color:var(--muted)">· ${esc(t.empresa||'Otros')}</span></div>
-        <div class="an-detail-amt">${fmt(t.monto)}</div>
-      </div>`).join('');
-    return `<div class="an-report">
-      <div class="an-report-head">
-        <div>
-          <div class="an-report-title">📄 ${esc(r.nombre)}</div>
-          <div class="an-report-meta">${esc(r.fecha)} · ${(r.txs||[]).length} transacciones</div>
-          <button class="an-report-del" onclick="delAnalyzerReport('${r.id}')">Eliminar</button>
-        </div>
-        <div class="an-report-total">${fmt(r.total)}</div>
-      </div>
-      ${groups.map(g=>{
-        const pct = max>0?Math.round(g.total/max*100):0; const show = pct>22;
-        return `<div class="an-bar-row">
-          <div class="an-bar-name" title="${esc(g.empresa)}">${esc(g.empresa)}<span class="an-bar-count">×${g.count}</span></div>
-          <div class="an-bar-track"><div class="an-bar-fill" style="width:${pct}%">${show?fmt(g.total):''}</div></div>
-          <div class="an-bar-amt">${!show?fmt(g.total):''}</div>
-        </div>`;
-      }).join('')}
-      <button class="an-report-toggle" onclick="toggleAnDetail('${r.id}')">Ver todas las transacciones ▾</button>
-      <div class="an-detail" id="an-detail-${r.id}">${detailRows}</div>
-    </div>`;
-  }).join('');
+// Envolver renderYear para reaplicar el modo USD después de que pinte los pesos
+if(typeof renderYear === 'function'){
+  const _origRenderYear = renderYear;
+  window.renderYear = function(){
+    const r = _origRenderYear.apply(this, arguments);
+    // Si alguna tarjeta está en USD, reaplicar tras un pequeño delay (deja terminar la animación)
+    if(_curMode.inc || _curMode.exp || _curMode.cap){
+      setTimeout(applyCurrencyModes, 30);
+    }
+    return r;
+  };
 }
 
 async function loadFromFirebase(){
@@ -3790,8 +3387,6 @@ async function loadFromFirebase(){
       if(!tj.totalesPorAnio || typeof tj.totalesPorAnio !== 'object') tj.totalesPorAnio = {};
       if(!tj.aniosMeses || typeof tj.aniosMeses !== 'object') tj.aniosMeses = {};
     });
-    // Cargar los estados de cuenta analizados (clave NUEVA, independiente)
-    analizadorReportes = Array.isArray(d[ANALYZER_KEY]) ? d[ANALYZER_KEY] : [];
   } catch(e){ console.error('Error cargando datos:', e); data = {}; tarjetas = []; }
 }
 
