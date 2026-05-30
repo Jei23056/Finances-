@@ -554,95 +554,83 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   .cc-add-inputs { grid-template-columns:1fr; }
 }
 
-/* ── Importar estado de cuenta PDF (AGREGADO) ─────────────────────────── */
-.pdf-import-btn {
-  width:100%; margin-top:8px; padding:9px;
-  background:rgba(96,165,250,0.10); border:1px solid var(--blue);
-  border-radius:var(--rs); color:var(--blue);
-  font-family:'DM Sans',sans-serif; font-size:12.5px; font-weight:500;
-  cursor:pointer; transition:all .18s;
-  display:flex; align-items:center; justify-content:center; gap:6px;
+/* ══ ANALIZADOR DE ESTADOS DE CUENTA (SECCIÓN APARTE — AGREGADO) ══════════ */
+.an-intro { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:1rem 1.15rem; margin-bottom:1.25rem; }
+.an-intro-title { font-size:13px; color:var(--text); font-weight:500; display:flex; align-items:center; gap:7px; }
+.an-intro-sub { font-size:11px; color:var(--muted); margin-top:4px; line-height:1.5; }
+.an-upload {
+  width:100%; padding:1.4rem 1rem; margin-bottom:1.25rem;
+  background:rgba(96,165,250,0.06); border:1.5px dashed var(--blue);
+  border-radius:var(--r); color:var(--blue);
+  font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500;
+  cursor:pointer; transition:all .18s; text-align:center;
+  display:flex; flex-direction:column; align-items:center; gap:6px;
 }
-.pdf-import-btn:hover { background:rgba(96,165,250,0.2); }
-.pdf-import-btn:active { transform:scale(.98); }
-.pdf-import-btn:disabled { opacity:.55; cursor:default; }
+.an-upload:hover { background:rgba(96,165,250,0.13); }
+.an-upload:active { transform:scale(.99); }
+.an-upload-icon { font-size:1.8rem; }
+.an-upload-hint { font-size:11px; color:var(--muted); font-weight:400; }
+.an-upload:disabled { opacity:.55; cursor:default; }
 
-/* Movimientos agrupados por lote de PDF (salen "pegaditos") */
-.lote-group {
-  border:1px solid rgba(96,165,250,0.35);
-  border-radius:var(--rs);
-  background:rgba(96,165,250,0.04);
-  padding:8px; margin-bottom:5px;
-  animation:si .2s ease;
-}
-.lote-head {
-  display:flex; align-items:center; justify-content:space-between;
-  gap:8px; padding:2px 6px 8px; border-bottom:1px dashed rgba(96,165,250,0.25);
-  margin-bottom:6px;
-}
-.lote-head-l { font-size:11px; color:var(--blue); font-weight:500; display:flex; align-items:center; gap:5px; }
-.lote-head-r { font-family:'DM Serif Display',serif; font-size:1rem; color:var(--red); }
-.lote-group .entry { background:var(--surf); margin-bottom:4px; }
-.lote-group .entry:last-child { margin-bottom:0; }
-.lote-del {
-  background:none;border:none;cursor:pointer;color:var(--muted);
-  font-size:11px;padding:2px 6px;border:1px solid var(--border);border-radius:999px;transition:all .15s;
-}
-.lote-del:hover { color:var(--red); border-color:var(--red); }
+.an-status { text-align:center; padding:2rem 1rem; color:var(--muted2); font-size:13px; }
+.an-spin { width:34px; height:34px; margin:0 auto 14px; border:3px solid var(--border2); border-top-color:var(--blue); border-radius:50%; animation:pdfspin .8s linear infinite; }
+@keyframes pdfspin { to { transform:rotate(360deg); } }
+.an-err { color:var(--red); font-size:12.5px; padding:1rem; text-align:center; line-height:1.5; background:var(--rdim); border:1px solid var(--red); border-radius:var(--rs); margin-bottom:1.25rem; }
+
+/* Tarjeta de cada estado de cuenta guardado */
+.an-report { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:1.1rem; margin-bottom:12px; animation:si .25s ease; }
+.an-report-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:.9rem; padding-bottom:.8rem; border-bottom:1px solid var(--border); }
+.an-report-title { font-family:'DM Serif Display',serif; font-size:1.15rem; }
+.an-report-meta { font-size:11px; color:var(--muted); margin-top:3px; }
+.an-report-total { font-family:'DM Serif Display',serif; font-size:1.5rem; color:var(--red); white-space:nowrap; }
+.an-report-del { background:none; border:1px solid var(--border); border-radius:999px; color:var(--muted); font-size:11px; cursor:pointer; padding:3px 9px; transition:all .15s; margin-top:6px; }
+.an-report-del:hover { color:var(--red); border-color:var(--red); }
+
+/* Barras por empresa/categoría dentro de un reporte */
+.an-bar-row { display:flex; align-items:center; gap:9px; margin-bottom:8px; }
+.an-bar-row:last-child { margin-bottom:0; }
+.an-bar-name { width:130px; font-size:12.5px; color:var(--muted2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-shrink:0; }
+.an-bar-track { flex:1; height:18px; background:var(--surf); border-radius:4px; overflow:hidden; }
+.an-bar-fill { height:100%; border-radius:4px; background:linear-gradient(90deg,var(--blue),#8ec5ff); display:flex; align-items:center; justify-content:flex-end; padding-right:7px; font-size:10px; font-weight:500; color:var(--bg); transition:width .5s cubic-bezier(.4,0,.2,1); min-width:2px; }
+.an-bar-amt { width:92px; text-align:right; font-size:12px; color:var(--text); flex-shrink:0; }
+.an-bar-count { font-size:10px; color:var(--muted); margin-left:4px; }
+
+.an-report-toggle { background:none; border:none; color:var(--blue); font-size:12px; cursor:pointer; margin-top:.9rem; padding:4px 0; }
+.an-detail { margin-top:.7rem; padding-top:.7rem; border-top:1px dashed var(--border); display:none; }
+.an-detail.show { display:block; }
+.an-detail-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:5px 0; border-bottom:1px solid var(--border); font-size:12px; }
+.an-detail-row:last-child { border-bottom:none; }
+.an-detail-desc { color:var(--muted2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.an-detail-amt { color:var(--text); flex-shrink:0; }
+
+/* Resumen global (suma de todos los estados de cuenta del año) */
+.an-global { background:linear-gradient(135deg,var(--card2),var(--card)); border:1px solid var(--border2); border-radius:var(--r); padding:1.15rem; margin-bottom:1.25rem; position:relative; overflow:hidden; }
+.an-global::after { content:''; position:absolute; top:0;left:0;right:0; height:2px; background:linear-gradient(90deg,var(--blue),var(--green)); }
+.an-global-title { font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:.85rem; }
+.an-global-total { font-family:'DM Serif Display',serif; font-size:1.6rem; color:var(--text); margin-bottom:1rem; }
 
 /* Modal de revisión */
-.pdf-overlay {
-  position:fixed; inset:0; background:rgba(0,0,0,0.72);
-  backdrop-filter:blur(3px); z-index:9000;
-  display:none; align-items:center; justify-content:center; padding:1rem;
-}
+.pdf-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.72); backdrop-filter:blur(3px); z-index:9000; display:none; align-items:center; justify-content:center; padding:1rem; }
 .pdf-overlay.show { display:flex; }
-.pdf-modal {
-  background:var(--surf); border:1px solid var(--border2);
-  border-radius:var(--r); width:100%; max-width:560px;
-  max-height:88vh; display:flex; flex-direction:column; overflow:hidden;
-  animation:si .25s ease;
-}
-.pdf-modal-head {
-  padding:1.1rem 1.2rem; border-bottom:1px solid var(--border);
-  display:flex; align-items:center; justify-content:space-between; gap:10px;
-}
+.pdf-modal { background:var(--surf); border:1px solid var(--border2); border-radius:var(--r); width:100%; max-width:560px; max-height:88vh; display:flex; flex-direction:column; overflow:hidden; animation:si .25s ease; }
+.pdf-modal-head { padding:1.1rem 1.2rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .pdf-modal-head h3 { font-family:'DM Serif Display',serif; font-size:1.2rem; font-weight:400; }
 .pdf-modal-head .pm-close { background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1; }
 .pdf-modal-head .pm-close:hover { color:var(--text); }
 .pdf-modal-sub { font-size:11px; color:var(--muted); margin-top:2px; }
 .pdf-modal-body { padding:1rem 1.2rem; overflow-y:auto; flex:1; }
 .pdf-status { text-align:center; padding:2rem 1rem; color:var(--muted2); font-size:13px; }
-.pdf-spin {
-  width:34px; height:34px; margin:0 auto 14px;
-  border:3px solid var(--border2); border-top-color:var(--blue);
-  border-radius:50%; animation:pdfspin .8s linear infinite;
-}
-@keyframes pdfspin { to { transform:rotate(360deg); } }
-.pdf-tx-row {
-  display:grid; grid-template-columns:1fr 120px 90px 26px; gap:8px;
-  align-items:center; padding:7px 0; border-bottom:1px solid var(--border);
-}
+.pdf-spin { width:34px; height:34px; margin:0 auto 14px; border:3px solid var(--border2); border-top-color:var(--blue); border-radius:50%; animation:pdfspin .8s linear infinite; }
+.pdf-tx-row { display:grid; grid-template-columns:1fr 120px 90px 26px; gap:8px; align-items:center; padding:7px 0; border-bottom:1px solid var(--border); }
 .pdf-tx-row:last-child { border-bottom:none; }
-.pdf-tx-desc { font-size:12.5px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.pdf-tx-row select, .pdf-tx-row input {
-  width:100%; padding:5px 7px; background:var(--card); border:1px solid var(--border2);
-  border-radius:var(--rxs); color:var(--text); font-family:'DM Sans',sans-serif; font-size:11.5px; outline:none;
-  appearance:none; -webkit-appearance:none;
-}
-.pdf-tx-row select:focus, .pdf-tx-row input:focus { border-color:var(--gold); }
+.pdf-tx-desc { font-size:12.5px; }
+.pdf-tx-row select, .pdf-tx-row input, .pdf-tx-desc-in { width:100%; padding:5px 7px; background:var(--card); border:1px solid var(--border2); border-radius:var(--rxs); color:var(--text); font-family:'DM Sans',sans-serif; font-size:11.5px; outline:none; appearance:none; -webkit-appearance:none; }
+.pdf-tx-row select:focus, .pdf-tx-row input:focus, .pdf-tx-desc-in:focus { border-color:var(--gold); }
 .pdf-tx-amt { text-align:right; }
 .pdf-tx-rm { background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;line-height:1; }
 .pdf-tx-rm:hover { color:var(--red); }
-.pdf-tx-header {
-  display:grid; grid-template-columns:1fr 120px 90px 26px; gap:8px;
-  font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted);
-  padding-bottom:6px; margin-bottom:2px; border-bottom:1px solid var(--border2);
-}
-.pdf-modal-foot {
-  padding:1rem 1.2rem; border-top:1px solid var(--border);
-  display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
-}
+.pdf-tx-header { display:grid; grid-template-columns:1fr 120px 90px 26px; gap:8px; font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); padding-bottom:6px; margin-bottom:2px; border-bottom:1px solid var(--border2); }
+.pdf-modal-foot { padding:1rem 1.2rem; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
 .pdf-total { font-size:13px; color:var(--muted2); }
 .pdf-total b { font-family:'DM Serif Display',serif; font-size:1.25rem; color:var(--red); font-weight:400; margin-left:6px; }
 .pdf-foot-btns { display:flex; gap:8px; }
@@ -652,26 +640,18 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 .pdf-btn.primary:hover { background:rgba(232,185,106,.22); }
 .pdf-btn:disabled { opacity:.5; cursor:default; }
 .pdf-err { color:var(--red); font-size:12.5px; padding:1rem; text-align:center; line-height:1.5; }
-.pdf-manual {
-  margin-top:10px; padding:9px; width:100%;
-  background:var(--card); border:1px dashed var(--border2); border-radius:var(--rs);
-  color:var(--muted2); font-size:12px; cursor:pointer;
-}
+.pdf-manual { margin-top:10px; padding:9px; width:100%; background:var(--card); border:1px dashed var(--border2); border-radius:var(--rs); color:var(--muted2); font-size:12px; cursor:pointer; }
 .pdf-manual:hover { color:var(--text); border-color:var(--text); }
-.pdf-addrow { margin-top:8px; }
+.pdf-namebox { margin-bottom:12px; }
+.pdf-namebox label { font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:5px; }
+.pdf-namebox input { width:100%; padding:8px 10px; background:var(--card); border:1px solid var(--border2); border-radius:var(--rs); color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; outline:none; }
+.pdf-namebox input:focus { border-color:var(--gold); }
 @media(max-width:600px){
   .pdf-tx-row, .pdf-tx-header { grid-template-columns:1fr 96px 72px 22px; gap:5px; }
   .pdf-tx-desc { font-size:11px; }
+  .an-bar-name { width:96px; }
+  .an-bar-amt { width:78px; }
 }
-
-/* Desglose por subcategoría dentro de la tarjeta */
-.cc-subcats { margin-top:6px; padding-top:8px; border-top:1px dashed var(--border); }
-.cc-subcat-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:12px; }
-.cc-subcat-row:last-child { margin-bottom:0; }
-.cc-subcat-name { width:140px; color:var(--muted2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-shrink:0; }
-.cc-subcat-bar { flex:1; height:13px; background:var(--surf); border-radius:3px; overflow:hidden; }
-.cc-subcat-fill { height:100%; border-radius:3px; background:var(--blue); }
-.cc-subcat-amt { width:90px; text-align:right; color:var(--text); flex-shrink:0; }
 
 </style>
 </head>
@@ -844,6 +824,24 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   <div class="cards-grid" id="cards-grid"></div>
 </div>
 
+<div id="panel-analyzer" style="display:none">
+  <div class="an-intro">
+    <div class="an-intro-title">📄 Analizador de estados de cuenta</div>
+    <div class="an-intro-sub">Sube el PDF de tu estado de cuenta. La IA lo lee, junta los gastos de la misma empresa y te muestra en qué gastaste más. Esta sección es solo para analizar: <b>no afecta</b> tu Gastado, tu balance ni el año completo.</div>
+  </div>
+
+  <input type="file" id="an-file" accept="application/pdf" style="display:none" onchange="onAnalyzerPdf(this)" />
+  <button class="an-upload" id="an-upload-btn" onclick="document.getElementById('an-file').value='';document.getElementById('an-file').click()">
+    <span class="an-upload-icon">⬆️</span>
+    Subir estado de cuenta (PDF)
+    <span class="an-upload-hint">PDF con texto · se analiza con IA</span>
+  </button>
+
+  <div id="an-error" style="display:none"></div>
+  <div id="an-global"></div>
+  <div id="an-reports"></div>
+</div>
+
 </div>
 </div>
 <div id="save-indicator">Guardado ✓</div>
@@ -864,6 +862,7 @@ const LOGROS_KEY   = `logros_${CURRENT_YEAR}`;
 const LS_LOGROS    = `ach_unlocked_${CURRENT_YEAR}`;
 const TARJETAS_KEY = `tarjetas_${CURRENT_YEAR}`;   // ← clave vieja (por año), solo para migrar
 const TARJETAS_KEY_V2 = 'tarjetas_v2';             // ← clave nueva: tarjetas persistentes entre años
+const ANALYZER_KEY = `analizador_${CURRENT_YEAR}`; // ← clave NUEVA: estados de cuenta analizados (NO toca finanzas)
 
 // Actualizar UI con año actual
 document.title = `Full Year ${CURRENT_YEAR}`;
@@ -911,6 +910,8 @@ const INCOME_CATS = [
 let data = {};
 // ► Lista de tarjetas de crédito del año actual
 let tarjetas = [];
+// ► Reportes del analizador de estados de cuenta (NUEVO, independiente de finanzas)
+let analizadorReportes = [];
 // ► Cache del historial para la pestaña "Desde 2026"
 let historialFinanzasCache = {};
 
@@ -1122,11 +1123,11 @@ function renderMonth(mi){
   const incData = Object.entries(incMap).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
 
   const recentHTML = md.entries.length
-    ? renderEntriesGrouped(md.entries.slice().reverse().slice(0,8), mi)
+    ? md.entries.slice().reverse().slice(0,8).map(e=>entryHTML(e,mi)).join('')
     : '<div class="empty">Sin movimientos este mes</div>';
 
   const allHTML = md.entries.length
-    ? renderEntriesGrouped(md.entries.slice().reverse(), mi)
+    ? md.entries.slice().reverse().map(e=>entryHTML(e,mi)).join('')
     : '<div class="empty">Sin movimientos este mes</div>';
 
   const sc = md.startCapital ?? 0;
@@ -1189,8 +1190,6 @@ function renderMonth(mi){
             <option value="">Selecciona tarjeta…</option>
             ${tarjetas.filter(t=>t.cerrada!==true).map(t=>`<option value="${esc(t.nombre)}">${esc(t.nombre)}</option>`).join('')}
           </select>
-          <input type="file" id="pdf-file-${mi}" accept="application/pdf" style="display:none" onchange="onPdfChosen(${mi}, this)" />
-          <button type="button" class="pdf-import-btn" onclick="triggerPdfImport(${mi})">📄 Subir estado de cuenta (PDF)</button>
         </div>
       </div>
       <button class="btn-add" onclick="addEntry(${mi})">Agregar movimiento</button>
@@ -1850,19 +1849,6 @@ function renderCards(){
     const years = cardYears(tj);
     const selYear = (tj._viewYear && years.includes(tj._viewYear)) ? tj._viewYear : CURRENT_YEAR;
     const mesesSel = cardSpentByMonth(tj, selYear).filter(m=>m.gastado>0);
-    // Desglose por categoría real (campo `subcat`), solo disponible para el año actual
-    const subcats = selYear===CURRENT_YEAR ? cardSubcatBreakdown(tj.nombre, selYear) : [];
-    const subMax = subcats.length ? Math.max(...subcats.map(s=>s.total)) : 0;
-    const subcatHTML = subcats.length ? `
-        <div class="cc-subcats">
-          <div class="cc-stat-lbl" style="margin-bottom:8px">En qué se gastó (por categoría)</div>
-          ${subcats.map(s=>`
-            <div class="cc-subcat-row">
-              <div class="cc-subcat-name" title="${esc(s.cat)}">${esc(s.cat)}</div>
-              <div class="cc-subcat-bar"><div class="cc-subcat-fill" style="width:${subMax>0?Math.round(s.total/subMax*100):0}%"></div></div>
-              <div class="cc-subcat-amt">${fmt(s.total)}</div>
-            </div>`).join('')}
-        </div>` : '';
     return `<div class="credit-card ${cerrada?'cc-closed':''}">
       <div class="cc-head">
         <div>
@@ -1914,7 +1900,6 @@ function renderCards(){
               </div>`;
             }).join('')
           : `<div style="font-size:12px;color:var(--muted);padding:6px 2px">Sin gastos registrados en ${selYear}.</div>`}
-        ${subcatHTML}
       </div>
     </div>`;
   }).join('');
@@ -2542,6 +2527,13 @@ function buildSkeleton(){
   sinceBtn.onclick = ()=>switchToSince();
   tabsEl.appendChild(sinceBtn);
 
+  const analyzerBtn = document.createElement('button');
+  analyzerBtn.id = 'mtab-analyzer';
+  analyzerBtn.className = 'mtab';
+  analyzerBtn.textContent = '📄 Estados de cuenta';
+  analyzerBtn.onclick = ()=>switchToAnalyzer();
+  tabsEl.appendChild(analyzerBtn);
+
   // Aplicar el estado colapsado/expandido a las pildoras de meses
   applyMonthsCollapsed();
 }
@@ -2855,6 +2847,37 @@ window.switchToAnnual = function(){
   applyMonthTabColors();
   renderInsights();
 };
+
+// ══ ANALIZADOR: navegación de pestaña (AGREGADO) ════════════════════════
+// Envolvemos las funciones de cambio de pestaña existentes para que también
+// oculten el panel del analizador y apaguen su pestaña. No modifican su lógica.
+function _hideAnalyzerPanel(){
+  const p = document.getElementById('panel-analyzer'); if(p) p.style.display='none';
+  const t = document.getElementById('mtab-analyzer'); if(t) t.className='mtab';
+}
+['switchMonth','switchToAnnual','switchToCards','switchToSince'].forEach(name=>{
+  const orig = window[name];
+  if(typeof orig === 'function'){
+    window[name] = function(){
+      const r = orig.apply(this, arguments);
+      _hideAnalyzerPanel();
+      return r;
+    };
+  }
+});
+
+function switchToAnalyzer(){
+  annualActive = false;
+  document.querySelectorAll('.month-panel').forEach(p=>{ p.className = 'month-panel'; });
+  ['annual','cards','since'].forEach(k=>{
+    const pe = document.getElementById('panel-'+k); if(pe) pe.style.display='none';
+    const te = document.getElementById('mtab-'+k); if(te) te.className='mtab';
+  });
+  document.querySelectorAll('.mtab').forEach((t,i)=>{ if(i<12) t.className = 'mtab' + (hasData(i)?' has-data':''); });
+  const at = document.getElementById('mtab-analyzer'); if(at) at.className='mtab active';
+  const ap = document.getElementById('panel-analyzer'); if(ap) ap.style.display='block';
+  renderAnalyzer();
+}
 
 function toggleSaveMenu(e){
   if(e) e.stopPropagation();
@@ -3394,47 +3417,32 @@ async function autoArchivePastYears(){
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// IMPORTAR ESTADO DE CUENTA PDF → GASTOS DE TARJETA  (TODO AGREGADO)
+// ANALIZADOR DE ESTADOS DE CUENTA  (SECCIÓN APARTE — TODO AGREGADO)
 // ──────────────────────────────────────────────────────────────────────────
-// Flujo:
-//   1) Usuario elige categoría "Crédito" + tarjeta, y pulsa "Subir PDF".
-//   2) PDF.js extrae el texto del estado de cuenta.
-//   3) La IA (Claude) devuelve una lista de transacciones {desc, monto, categoria}.
-//   4) Modal de revisión: el usuario confirma/ajusta categoría y monto.
-//   5) Al confirmar, cada transacción se guarda como un movimiento normal:
-//        { type:'expense', cat:'Crédito', tarjeta:<nombre>, subcat:<categoría real>,
-//          loteId, loteFecha, desc, amount, date }
-//      → Cuenta en el "Gastado" de la tarjeta porque cat==='Crédito' (lógica intacta).
-//      → El detalle por categoría se lee del campo NUEVO `subcat`.
-//      → Salen agrupados en Movimientos gracias a `loteId`.
-// NADA de la lógica existente se modifica; solo se añaden campos nuevos.
+// • Sección 100% independiente. NO toca data, tarjetas, ni ningún total.
+// • Guarda en Firebase bajo la clave `analizador_${año}` (merge), separada.
+// • Cada reporte = un PDF analizado: { id, nombre, fecha, total, txs:[{desc,monto,empresa}] }
+// • Agrupa los gastos por "empresa" (comercio normalizado) y muestra en qué gastaste más.
 // ══════════════════════════════════════════════════════════════════════════
 
-// Estado temporal del import en curso
-let _pdfImport = { mi:null, tarjeta:null, txs:[] };
+let _anImport = { txs:[], nombre:'' };
 
-// Categorías de gasto disponibles para clasificar (derivadas de EXPENSE_CATS)
-function pdfCategoryList(){
-  // Excluimos 'Crédito' como subcategoría porque no aporta detalle
-  return EXPENSE_CATS.filter(c=>c.v!=='Crédito').map(c=>c.v);
+// Guardar reportes del analizador en Firebase (clave propia, no toca lo demás)
+function saveAnalyzer(){
+  if(!currentUser) return;
+  const ind = document.getElementById('save-indicator');
+  db.collection('users').doc(currentUser.uid)
+    .set({ [ANALYZER_KEY]: analizadorReportes }, { merge: true })
+    .then(()=>{ if(ind){ ind.classList.add('show'); setTimeout(()=>ind.classList.remove('show'),1500); } })
+    .catch(e=>console.error('Error guardando analizador:', e));
 }
 
-function triggerPdfImport(mi){
-  const tjEl = document.getElementById(`tarjeta-${mi}`);
-  if(!tjEl || !tjEl.value){
-    alert('Primero elige con cuál tarjeta vas a registrar el estado de cuenta.');
-    if(tjEl) tjEl.focus();
-    return;
-  }
-  _pdfImport = { mi, tarjeta: tjEl.value, txs:[] };
-  const fileEl = document.getElementById(`pdf-file-${mi}`);
-  if(fileEl){ fileEl.value=''; fileEl.click(); }
-}
-
-async function onPdfChosen(mi, inputEl){
+// ── Subir y procesar un PDF en el analizador ──────────────────────────────
+async function onAnalyzerPdf(inputEl){
   const file = inputEl.files && inputEl.files[0];
   if(!file) return;
-  openPdfModal();
+  _anImport = { txs:[], nombre: file.name.replace(/\.pdf$/i,'') };
+  openPdfModal('analyzer');
   setPdfStatus(`<div class="pdf-spin"></div>Leyendo el PDF…`);
   try {
     const text = await extractPdfText(file);
@@ -3444,12 +3452,12 @@ async function onPdfChosen(mi, inputEl){
     setPdfStatus(`<div class="pdf-spin"></div>Analizando transacciones con IA…`);
     const txs = await classifyStatementWithAI(text);
     if(!txs.length){
-      throw new Error('La IA no encontró transacciones en este estado de cuenta.');
+      throw new Error('La IA no encontró transacciones de gasto en este estado de cuenta.');
     }
-    _pdfImport.txs = txs;
-    renderPdfReview();
+    _anImport.txs = txs;
+    renderAnalyzerReview();
   } catch(err){
-    console.error('Error importando PDF:', err);
+    console.error('Error analizando PDF:', err);
     showPdfError(err.message || 'Ocurrió un error leyendo el PDF.');
   }
 }
@@ -3463,17 +3471,12 @@ async function extractPdfText(file){
   for(let p=1; p<=pdf.numPages; p++){
     const page = await pdf.getPage(p);
     const content = await page.getTextContent();
-    // Reconstruir líneas aproximadas usando la posición Y
     let lastY = null, line = '';
     const lines = [];
     content.items.forEach(it=>{
       const y = it.transform[5];
-      if(lastY===null || Math.abs(y-lastY) < 3){
-        line += it.str + ' ';
-      } else {
-        lines.push(line.trim());
-        line = it.str + ' ';
-      }
+      if(lastY===null || Math.abs(y-lastY) < 3){ line += it.str + ' '; }
+      else { lines.push(line.trim()); line = it.str + ' '; }
       lastY = y;
     });
     if(line.trim()) lines.push(line.trim());
@@ -3482,19 +3485,19 @@ async function extractPdfText(file){
   return full;
 }
 
-// ── Clasificar el estado de cuenta con la IA (Claude) ─────────────────────
+// ── Clasificar con IA: devuelve [{desc, monto, empresa}] ──────────────────
+// "empresa" = nombre normalizado del comercio para poder AGRUPAR (ej: todas
+// las compras de "Supermercado Nacional" bajo "Nacional").
 async function classifyStatementWithAI(statementText){
-  const cats = pdfCategoryList();
-  // Recortamos por seguridad si es enorme
   const txt = statementText.length > 14000 ? statementText.slice(0,14000) : statementText;
   const sys = `Eres un asistente que extrae transacciones de gasto de un estado de cuenta de tarjeta de crédito.
-Devuelve SOLO un arreglo JSON válido, sin texto adicional, sin markdown, sin explicaciones.
-Cada elemento: {"desc": string, "monto": number, "categoria": string}.
+Devuelve SOLO un arreglo JSON válido, sin texto adicional, sin markdown.
+Cada elemento: {"desc": string, "monto": number, "empresa": string}.
 Reglas:
-- "desc": nombre corto y legible del comercio o concepto.
-- "monto": número positivo en la moneda del estado (sin símbolos, punto decimal).
-- Incluye SOLO cargos/compras (gastos). IGNORA: pagos a la tarjeta, abonos, créditos, reversos, intereses ya pagados, balances, totales y saldos.
-- "categoria": elige EXACTAMENTE una de esta lista: ${JSON.stringify(cats)}. Si ninguna encaja claramente usa "Otros gastos".
+- "desc": el texto del cargo tal como aparece (comercio + detalle si lo hay), corto y legible.
+- "monto": número positivo, sin símbolos de moneda, punto como separador decimal.
+- "empresa": nombre CORTO y NORMALIZADO del comercio, para agrupar cargos del mismo lugar. Ej: "AMAZON MKTPLACE US*1A2B3" y "Amazon.com" → "Amazon". "APPLE.COM/BILL" → "Apple". "SUPERMERCADO NACIONAL SDQ" → "Nacional".
+- Incluye SOLO cargos/compras (gastos). IGNORA: pagos a la tarjeta, abonos, créditos, reversos, intereses, balances, totales y saldos.
 Si no hay transacciones devuelve [].`;
   const user = `Estado de cuenta:\n"""\n${txt}\n"""\nDevuelve el arreglo JSON de transacciones de gasto.`;
 
@@ -3503,37 +3506,31 @@ Si no hay transacciones devuelve [].`;
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
+      max_tokens: 1500,
       system: sys,
       messages: [{ role: "user", content: user }]
     })
   });
-  if(!response.ok){
-    throw new Error('La IA no respondió correctamente (código '+response.status+').');
-  }
-  const data = await response.json();
-  let raw = (data.content || []).map(b=> b.type==='text' ? b.text : '').join('\n');
+  if(!response.ok) throw new Error('La IA no respondió correctamente (código '+response.status+').');
+  const data2 = await response.json();
+  let raw = (data2.content || []).map(b=> b.type==='text' ? b.text : '').join('\n');
   raw = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
-  // Extraer el primer arreglo JSON presente
-  const start = raw.indexOf('[');
-  const end = raw.lastIndexOf(']');
+  const start = raw.indexOf('['), end = raw.lastIndexOf(']');
   if(start!==-1 && end!==-1) raw = raw.slice(start, end+1);
   let arr;
-  try { arr = JSON.parse(raw); }
-  catch(e){ throw new Error('No se pudo interpretar la respuesta de la IA.'); }
+  try { arr = JSON.parse(raw); } catch(e){ throw new Error('No se pudo interpretar la respuesta de la IA.'); }
   if(!Array.isArray(arr)) return [];
-  const valid = new Set(cats);
   return arr
     .map(t=>({
       desc: String(t.desc || '').trim() || 'Gasto',
       monto: Math.abs(parseFloat(t.monto)) || 0,
-      categoria: valid.has(t.categoria) ? t.categoria : 'Otros gastos'
+      empresa: String(t.empresa || '').trim() || 'Otros'
     }))
     .filter(t=>t.monto > 0);
 }
 
-// ── Modal: abrir / cerrar / estados ───────────────────────────────────────
-function openPdfModal(){
+// ── Modal compartido (revisión) ───────────────────────────────────────────
+function openPdfModal(mode){
   let ov = document.getElementById('pdf-overlay');
   if(!ov){
     ov = document.createElement('div');
@@ -3541,10 +3538,7 @@ function openPdfModal(){
     ov.className = 'pdf-overlay';
     ov.innerHTML = `<div class="pdf-modal">
       <div class="pdf-modal-head">
-        <div>
-          <h3>Estado de cuenta</h3>
-          <div class="pdf-modal-sub" id="pdf-sub"></div>
-        </div>
+        <div><h3>Estado de cuenta</h3><div class="pdf-modal-sub" id="pdf-sub"></div></div>
         <button class="pm-close" onclick="closePdfModal()">×</button>
       </div>
       <div class="pdf-modal-body" id="pdf-body"></div>
@@ -3552,7 +3546,7 @@ function openPdfModal(){
         <div class="pdf-total">Total: <b id="pdf-total-val">$0.00</b></div>
         <div class="pdf-foot-btns">
           <button class="pdf-btn" onclick="closePdfModal()">Cancelar</button>
-          <button class="pdf-btn primary" id="pdf-confirm" onclick="confirmPdfImport()">Agregar gastos</button>
+          <button class="pdf-btn primary" id="pdf-confirm" onclick="confirmAnalyzerImport()">Guardar análisis</button>
         </div>
       </div>
     </div>`;
@@ -3560,14 +3554,14 @@ function openPdfModal(){
     ov.addEventListener('click', e=>{ if(e.target===ov) closePdfModal(); });
   }
   const sub = document.getElementById('pdf-sub');
-  if(sub) sub.textContent = `Tarjeta: ${_pdfImport.tarjeta} · ${MONTHS[_pdfImport.mi]||''}`;
+  if(sub) sub.textContent = 'Revisa los gastos antes de guardar';
   document.getElementById('pdf-foot').style.display = 'none';
   ov.classList.add('show');
 }
 function closePdfModal(){
   const ov = document.getElementById('pdf-overlay');
   if(ov) ov.classList.remove('show');
-  _pdfImport = { mi:null, tarjeta:null, txs:[] };
+  _anImport = { txs:[], nombre:'' };
 }
 function setPdfStatus(html){
   const body = document.getElementById('pdf-body');
@@ -3575,153 +3569,163 @@ function setPdfStatus(html){
 }
 function showPdfError(msg){
   const body = document.getElementById('pdf-body');
-  if(body) body.innerHTML = `<div class="pdf-err">⚠️ ${esc(msg)}<br><br>Puedes intentar con otro PDF o registrar los gastos manualmente.</div>`;
-  document.getElementById('pdf-foot').style.display = 'none';
+  if(body) body.innerHTML = `<div class="pdf-err">⚠️ ${esc(msg)}<br><br>Puedes intentar con otro PDF o añadir las transacciones a mano.</div>
+    <button class="pdf-manual" onclick="anStartManual()">+ Añadir transacción manualmente</button>`;
+  document.getElementById('pdf-foot').style.display = 'flex';
+  refreshPdfTotal();
+}
+function anStartManual(){
+  if(!_anImport.txs.length) _anImport.txs = [];
+  _anImport.txs.push({ desc:'Nuevo gasto', monto:0, empresa:'Otros' });
+  renderAnalyzerReview();
 }
 
-// ── Modal: tabla de revisión editable ─────────────────────────────────────
-function renderPdfReview(){
+// ── Tabla de revisión editable (desc, empresa, monto) ─────────────────────
+function renderAnalyzerReview(){
   const body = document.getElementById('pdf-body');
   if(!body) return;
-  const cats = pdfCategoryList();
-  const rows = _pdfImport.txs.map((t,i)=>`
+  const rows = _anImport.txs.map((t,i)=>`
     <div class="pdf-tx-row" data-i="${i}">
-      <div class="pdf-tx-desc" title="${esc(t.desc)}">${esc(t.desc)}</div>
-      <select onchange="updatePdfTx(${i},'categoria',this.value)">
-        ${cats.map(c=>`<option value="${esc(c)}" ${c===t.categoria?'selected':''}>${esc(c)}</option>`).join('')}
-      </select>
+      <input class="pdf-tx-desc-in" type="text" value="${esc(t.desc)}" onchange="updateAnTx(${i},'desc',this.value)" />
+      <input type="text" value="${esc(t.empresa)}" onchange="updateAnTx(${i},'empresa',this.value)" placeholder="Empresa" />
       <input class="pdf-tx-amt" type="text" inputmode="decimal" value="${t.monto.toFixed(2)}"
-        oninput="this.value=this.value.replace(/[^0-9.]/g,'')"
-        onchange="updatePdfTx(${i},'monto',this.value)" />
-      <button class="pdf-tx-rm" onclick="removePdfTx(${i})" title="Quitar">×</button>
+        oninput="this.value=this.value.replace(/[^0-9.]/g,'')" onchange="updateAnTx(${i},'monto',this.value)" />
+      <button class="pdf-tx-rm" onclick="removeAnTx(${i})" title="Quitar">×</button>
     </div>`).join('');
   body.innerHTML = `
-    <div class="pdf-tx-header"><div>Comercio / concepto</div><div>Categoría</div><div style="text-align:right">Monto</div><div></div></div>
+    <div class="pdf-namebox">
+      <label>Nombre de este estado de cuenta</label>
+      <input type="text" id="an-report-name" value="${esc(_anImport.nombre||'')}" placeholder="Ej: Mastercard 5105 — Enero" />
+    </div>
+    <div class="pdf-tx-header"><div>Concepto</div><div>Empresa</div><div style="text-align:right">Monto</div><div></div></div>
     <div id="pdf-tx-list">${rows}</div>
-    <button class="pdf-manual" onclick="addPdfTxRow()">+ Añadir transacción manualmente</button>
+    <button class="pdf-manual" onclick="anStartManual()">+ Añadir transacción manualmente</button>
   `;
   document.getElementById('pdf-foot').style.display = 'flex';
   refreshPdfTotal();
 }
-function updatePdfTx(i, field, val){
-  if(!_pdfImport.txs[i]) return;
-  if(field==='monto'){ _pdfImport.txs[i].monto = Math.abs(parseFloat(val)) || 0; }
-  else { _pdfImport.txs[i][field] = val; }
+function updateAnTx(i, field, val){
+  if(!_anImport.txs[i]) return;
+  if(field==='monto') _anImport.txs[i].monto = Math.abs(parseFloat(val)) || 0;
+  else _anImport.txs[i][field] = val;
   refreshPdfTotal();
 }
-function removePdfTx(i){
-  _pdfImport.txs.splice(i,1);
-  renderPdfReview();
-}
-function addPdfTxRow(){
-  _pdfImport.txs.push({ desc:'Nuevo gasto', monto:0, categoria:'Otros gastos' });
-  renderPdfReview();
-}
+function removeAnTx(i){ _anImport.txs.splice(i,1); renderAnalyzerReview(); }
 function refreshPdfTotal(){
-  const total = _pdfImport.txs.reduce((s,t)=>s+(parseFloat(t.monto)||0),0);
-  const el = document.getElementById('pdf-total-val');
-  if(el) el.textContent = fmt(total);
-  const btn = document.getElementById('pdf-confirm');
-  if(btn) btn.disabled = !(_pdfImport.txs.length && total>0);
+  const total = _anImport.txs.reduce((s,t)=>s+(parseFloat(t.monto)||0),0);
+  const el = document.getElementById('pdf-total-val'); if(el) el.textContent = fmt(total);
+  const btn = document.getElementById('pdf-confirm'); if(btn) btn.disabled = !(_anImport.txs.length && total>0);
 }
 
-// ── Confirmar: guardar todos los gastos como un lote ──────────────────────
-function confirmPdfImport(){
-  const mi = _pdfImport.mi;
-  const tarjeta = _pdfImport.tarjeta;
-  const txs = _pdfImport.txs.filter(t=>(parseFloat(t.monto)||0) > 0);
-  if(mi===null || !tarjeta || !txs.length){ closePdfModal(); return; }
-
-  const md = getMonth(mi);
-  const loteId = 'lote_' + Date.now();
-  const loteFecha = todayStr();
-  const baseId = Date.now();
-  txs.forEach((t,k)=>{
-    md.entries.push({
-      id: baseId + k,
-      type: 'expense',
-      amount: parseFloat((parseFloat(t.monto)||0).toFixed(2)),
-      cat: 'Crédito',          // ← cuenta en el Gastado de la tarjeta (lógica intacta)
-      desc: t.desc,
-      date: loteFecha,
-      tarjeta: tarjeta,        // ← asociación a la tarjeta
-      subcat: t.categoria,     // ← campo NUEVO: categoría real para el desglose
-      loteId: loteId,          // ← campo NUEVO: agrupación visual
-      loteFecha: loteFecha
-    });
+// ── Guardar el análisis (a Firebase, clave propia) ────────────────────────
+function confirmAnalyzerImport(){
+  const txs = _anImport.txs.filter(t=>(parseFloat(t.monto)||0) > 0);
+  if(!txs.length){ closePdfModal(); return; }
+  const nameEl = document.getElementById('an-report-name');
+  const nombre = (nameEl && nameEl.value.trim()) || _anImport.nombre || 'Estado de cuenta';
+  const total = txs.reduce((s,t)=>s+(parseFloat(t.monto)||0),0);
+  analizadorReportes.push({
+    id: 'an_' + Date.now(),
+    nombre,
+    fecha: new Date().toLocaleDateString('es-DO',{day:'2-digit',month:'short',year:'numeric'}),
+    total: parseFloat(total.toFixed(2)),
+    txs: txs.map(t=>({ desc:t.desc, monto:parseFloat((parseFloat(t.monto)||0).toFixed(2)), empresa:t.empresa||'Otros' }))
   });
-
   closePdfModal();
-  save();
-  propagateCapitals();
-  renderAll();
+  saveAnalyzer();
+  renderAnalyzer();
 }
 
-// ── Render de movimientos con agrupación por lote (solo presentación) ─────
-// Recibe una lista YA en el orden de visualización (normalmente reverse).
-function renderEntriesGrouped(list, mi){
-  const out = [];
-  let i = 0;
-  while(i < list.length){
-    const e = list[i];
-    if(e.loteId){
-      // Agrupar transacciones contiguas del mismo lote
-      const group = [e];
-      let j = i + 1;
-      while(j < list.length && list[j].loteId === e.loteId){
-        group.push(list[j]); j++;
-      }
-      const total = group.reduce((s,g)=>s+g.amount,0);
-      const tjName = e.tarjeta ? esc(e.tarjeta) : 'Tarjeta';
-      out.push(`<div class="lote-group">
-        <div class="lote-head">
-          <div class="lote-head-l">📄 ${tjName} · estado de cuenta <span style="color:var(--muted)">(${group.length})</span></div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <span class="lote-head-r">−${fmt(total)}</span>
-            <button class="lote-del" onclick="delLote(${mi},'${e.loteId}')" title="Eliminar todo el estado de cuenta">Quitar lote</button>
-          </div>
-        </div>
-        ${group.map(g=>entryHTML(g,mi)).join('')}
-      </div>`);
-      i = j;
-    } else {
-      out.push(entryHTML(e, mi));
-      i++;
-    }
-  }
-  return out.join('');
+// ── Eliminar un reporte ───────────────────────────────────────────────────
+function delAnalyzerReport(id){
+  const r = analizadorReportes.find(x=>x.id===id);
+  if(!confirm(`¿Eliminar el análisis "${r?r.nombre:''}"? Esto no afecta tus finanzas.`)) return;
+  analizadorReportes = analizadorReportes.filter(x=>x.id!==id);
+  saveAnalyzer();
+  renderAnalyzer();
+}
+function toggleAnDetail(id){
+  const d = document.getElementById('an-detail-'+id);
+  if(d) d.classList.toggle('show');
 }
 
-// ── Borrar un lote completo de movimientos ────────────────────────────────
-function delLote(mi, loteId){
-  const md = getMonth(mi);
-  const count = md.entries.filter(e=>e.loteId===loteId).length;
-  if(!confirm(`¿Eliminar las ${count} transacciones de este estado de cuenta?`)) return;
-  md.entries = md.entries.filter(e=>e.loteId!==loteId);
-  save();
-  propagateCapitals();
-  renderAll();
-}
-
-// ── Desglose por subcategoría de una tarjeta (lee el campo `subcat`) ───────
-// Devuelve [{cat, total}] ordenado desc, para el año dado (solo año actual en vivo).
-function cardSubcatBreakdown(nombre, year){
-  const yr = year || CURRENT_YEAR;
+// ── Agrupar transacciones por empresa: [{empresa,total,count}] desc ────────
+function groupByCompany(txs){
   const map = {};
-  if(yr === CURRENT_YEAR){
-    Object.keys(data).forEach(mi=>{
-      const md = data[mi];
-      if(md && md.entries){
-        md.entries.forEach(e=>{
-          if(e.type==='expense' && e.cat==='Crédito' && e.tarjeta===nombre && e.subcat){
-            map[e.subcat] = (map[e.subcat]||0) + e.amount;
-          }
-        });
-      }
-    });
-  }
-  return Object.entries(map).map(([cat,total])=>({cat, total:parseFloat(total.toFixed(2))}))
+  txs.forEach(t=>{
+    const k = (t.empresa||'Otros');
+    if(!map[k]) map[k] = { empresa:k, total:0, count:0 };
+    map[k].total += (parseFloat(t.monto)||0);
+    map[k].count += 1;
+  });
+  return Object.values(map).map(o=>({...o, total:parseFloat(o.total.toFixed(2))}))
     .sort((a,b)=>b.total-a.total);
+}
+
+// ── Render de toda la sección ─────────────────────────────────────────────
+function renderAnalyzer(){
+  const reportsEl = document.getElementById('an-reports');
+  const globalEl  = document.getElementById('an-global');
+  const errEl     = document.getElementById('an-error');
+  if(errEl) errEl.style.display='none';
+  if(!reportsEl || !globalEl) return;
+
+  if(!analizadorReportes.length){
+    globalEl.innerHTML = '';
+    reportsEl.innerHTML = '<div class="empty">Aún no has analizado ningún estado de cuenta. Sube un PDF arriba para empezar.</div>';
+    return;
+  }
+
+  // Resumen global: junta TODAS las empresas de TODOS los reportes
+  const allTxs = [];
+  let granTotal = 0;
+  analizadorReportes.forEach(r=>{ (r.txs||[]).forEach(t=>{ allTxs.push(t); granTotal += (parseFloat(t.monto)||0); }); });
+  const globalGroups = groupByCompany(allTxs);
+  const gMax = globalGroups.length ? Math.max(...globalGroups.map(g=>g.total)) : 0;
+  globalEl.innerHTML = `
+    <div class="an-global">
+      <div class="an-global-title">Resumen de todos los estados de cuenta (${analizadorReportes.length})</div>
+      <div class="an-global-total">${fmt(granTotal)} <span style="font-size:.7rem;color:var(--muted)">total analizado</span></div>
+      ${globalGroups.map(g=>{
+        const pct = gMax>0?Math.round(g.total/gMax*100):0; const show = pct>22;
+        return `<div class="an-bar-row">
+          <div class="an-bar-name" title="${esc(g.empresa)}">${esc(g.empresa)}<span class="an-bar-count">×${g.count}</span></div>
+          <div class="an-bar-track"><div class="an-bar-fill" style="width:${pct}%">${show?fmt(g.total):''}</div></div>
+          <div class="an-bar-amt">${!show?fmt(g.total):''}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  // Un bloque por cada estado de cuenta (más reciente arriba)
+  reportsEl.innerHTML = analizadorReportes.slice().reverse().map(r=>{
+    const groups = groupByCompany(r.txs||[]);
+    const max = groups.length ? Math.max(...groups.map(g=>g.total)) : 0;
+    const detailRows = (r.txs||[]).slice().sort((a,b)=>b.monto-a.monto).map(t=>`
+      <div class="an-detail-row">
+        <div class="an-detail-desc" title="${esc(t.desc)}">${esc(t.desc)} <span style="color:var(--muted)">· ${esc(t.empresa||'Otros')}</span></div>
+        <div class="an-detail-amt">${fmt(t.monto)}</div>
+      </div>`).join('');
+    return `<div class="an-report">
+      <div class="an-report-head">
+        <div>
+          <div class="an-report-title">📄 ${esc(r.nombre)}</div>
+          <div class="an-report-meta">${esc(r.fecha)} · ${(r.txs||[]).length} transacciones</div>
+          <button class="an-report-del" onclick="delAnalyzerReport('${r.id}')">Eliminar</button>
+        </div>
+        <div class="an-report-total">${fmt(r.total)}</div>
+      </div>
+      ${groups.map(g=>{
+        const pct = max>0?Math.round(g.total/max*100):0; const show = pct>22;
+        return `<div class="an-bar-row">
+          <div class="an-bar-name" title="${esc(g.empresa)}">${esc(g.empresa)}<span class="an-bar-count">×${g.count}</span></div>
+          <div class="an-bar-track"><div class="an-bar-fill" style="width:${pct}%">${show?fmt(g.total):''}</div></div>
+          <div class="an-bar-amt">${!show?fmt(g.total):''}</div>
+        </div>`;
+      }).join('')}
+      <button class="an-report-toggle" onclick="toggleAnDetail('${r.id}')">Ver todas las transacciones ▾</button>
+      <div class="an-detail" id="an-detail-${r.id}">${detailRows}</div>
+    </div>`;
+  }).join('');
 }
 
 async function loadFromFirebase(){
@@ -3746,6 +3750,8 @@ async function loadFromFirebase(){
       if(!tj.totalesPorAnio || typeof tj.totalesPorAnio !== 'object') tj.totalesPorAnio = {};
       if(!tj.aniosMeses || typeof tj.aniosMeses !== 'object') tj.aniosMeses = {};
     });
+    // Cargar los estados de cuenta analizados (clave NUEVA, independiente)
+    analizadorReportes = Array.isArray(d[ANALYZER_KEY]) ? d[ANALYZER_KEY] : [];
   } catch(e){ console.error('Error cargando datos:', e); data = {}; tarjetas = []; }
 }
 
