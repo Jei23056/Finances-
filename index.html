@@ -40,13 +40,14 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 .ycard.sav::after  { background:var(--blue); }
 .ycard-lbl { font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
 .ycard-val { font-family:'DM Serif Display',serif; font-size:1.5rem; font-weight:400; cursor:default; }
-.ycard.clickable { cursor:pointer; padding-top:2.1rem; }
+.ycard.clickable { cursor:pointer; }
 .ycard.clickable:active { transform:scale(.985); }
+.ycard.clickable .ycard-lbl { font-size:11px; font-weight:600; color:var(--muted2); margin-bottom:5px; }
 .ycard.usd-mode::after { opacity:.55; }
 .ycard-cur {
-  position:absolute; top:9px; left:1.1rem; z-index:3;
+  display:inline-block; margin-bottom:7px;
   font-size:8px; letter-spacing:.04em; font-weight:600;
-  padding:1px 6px; border-radius:999px;
+  padding:2px 7px; border-radius:999px;
   background:var(--surf); border:1px solid var(--border2); color:var(--muted2);
   transition:all .18s; line-height:1.4;
 }
@@ -624,10 +625,10 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 </header>
 
 <div class="year-bar">
-  <div class="ycard inc clickable" id="ycard-inc" onclick="toggleCurrency('inc')"><span class="ycard-cur" id="cur-inc">DOP</span><div class="ycard-lbl">Total ganado</div><div class="ycard-val" id="y-inc">$0.00</div></div>
-  <div class="ycard exp clickable" id="ycard-exp" onclick="toggleCurrency('exp')"><span class="ycard-cur" id="cur-exp">DOP</span><div class="ycard-lbl">Total gastado</div><div class="ycard-val" id="y-exp">$0.00</div></div>
+  <div class="ycard inc clickable" id="ycard-inc" onclick="toggleCurrency('inc')"><div class="ycard-lbl">Total ganado</div><span class="ycard-cur" id="cur-inc">DOP</span><div class="ycard-val" id="y-inc">$0.00</div></div>
+  <div class="ycard exp clickable" id="ycard-exp" onclick="toggleCurrency('exp')"><div class="ycard-lbl">Total gastado</div><span class="ycard-cur" id="cur-exp">DOP</span><div class="ycard-val" id="y-exp">$0.00</div></div>
   <div class="ycard net"><div class="ycard-lbl">% Ahorrado</div><div class="ycard-val" id="y-net">—</div><div class="ycard-hint" id="y-net-hint">mes actual</div></div>
-  <div class="ycard sav clickable" id="ycard-cap" onclick="toggleCurrency('cap')"><span class="ycard-cur" id="cur-cap">DOP</span><div class="ycard-lbl">Capital actual</div><div class="ycard-val" id="y-cap">$0.00</div></div>
+  <div class="ycard sav clickable" id="ycard-cap" onclick="toggleCurrency('cap')"><div class="ycard-lbl">Capital actual</div><span class="ycard-cur" id="cur-cap">DOP</span><div class="ycard-val" id="y-cap">$0.00</div></div>
 </div>
 
 <div class="insights-bar" id="insights-bar"></div>
