@@ -1912,26 +1912,26 @@ function refreshDebitoSelects(){
 // Gastado/Ingresado INFORMATIVO de cada cuenta (NO afecta el saldo real).
 // Regla pedida por el usuario:
 //  • Qik → todo en 0 (no tiene nada).
-//  • Banreservas Ahorro → Ingresado fijo 6000 (gastado 0).
+//  • Banreservas Ahorro → Gastado fijo 6000.
 //  • Banreservas Corriente → recibe el RESTO de gastos e ingresos, y todo el saldo real.
 function aplicarRolesInfoDebito(){
   let cambió = false;
   tarjetasDebito.forEach(tj=>{
-    if(tj.infoRoleSet3 === true) return; // ya configurada con la regla corregida (v3)
+    if(tj.infoRoleSet4 === true) return; // ya configurada con la regla corregida (v4)
     const n = (tj.nombre||'').toLowerCase();
     if(n.includes('qik')){
       // Qik: nada de nada
       delete tj.infoGastadoFijo; delete tj.infoIngresadoFijo;
       tj.infoCorriente = false; tj.infoVaciar = true;
-      tj.infoRoleSet3 = true; cambió = true;
+      tj.infoRoleSet4 = true; cambió = true;
     } else if(n.includes('corriente')){
       tj.infoCorriente = true; delete tj.infoGastadoFijo; delete tj.infoIngresadoFijo;
-      tj.infoVaciar = false; tj.infoRoleSet3 = true; cambió = true;
+      tj.infoVaciar = false; tj.infoRoleSet4 = true; cambió = true;
     } else if(n.includes('ahorro')){
-      // Ahorro: ingresó 6000 (no gastó nada)
-      delete tj.infoGastadoFijo; tj.infoIngresadoFijo = 6000;
+      // Ahorro: gastado 6000
+      tj.infoGastadoFijo = 6000; delete tj.infoIngresadoFijo;
       tj.infoCorriente = false; tj.infoVaciar = false;
-      tj.infoRoleSet3 = true; cambió = true;
+      tj.infoRoleSet4 = true; cambió = true;
     }
   });
   if(cambió) saveDebito();
