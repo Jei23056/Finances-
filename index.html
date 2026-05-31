@@ -483,6 +483,28 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 
 /* ── Sección Tarjetas de Crédito ──────────────────────────────────────── */
 .cards-grid { display:flex; flex-direction:column; gap:12px; margin-bottom:1.5rem; }
+
+/* ── Tarjetas de Débito (AGREGADO) ─────────────────────────────────────── */
+.cc-card {
+  background:linear-gradient(135deg, var(--card2), var(--card));
+  border:1px solid var(--border2); border-radius:var(--r);
+  padding:1.15rem; position:relative; overflow:hidden;
+}
+.cc-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:1rem; }
+.cc-card-title { font-family:'DM Serif Display',serif; font-size:1.15rem; }
+.cc-card-sub { font-size:11px; color:var(--muted); margin-top:2px; letter-spacing:.04em; }
+.cc-close-x { background:none;border:1px solid var(--border);border-radius:999px;color:var(--muted);font-size:15px;line-height:1;cursor:pointer;width:24px;height:24px;transition:all .15s; }
+.cc-close-x:hover { color:var(--red); border-color:var(--red); }
+.cc-edit-btn { background:none;border:1px solid var(--border);border-radius:999px;color:var(--muted2);font-size:11px;line-height:1;cursor:pointer;padding:4px 7px;transition:all .15s; }
+.cc-edit-btn:hover { color:var(--text); border-color:var(--text); }
+.cc-editable { cursor:pointer; transition:color .15s; }
+.cc-editable:hover { color:var(--gold); }
+.debito-total {
+  margin-top:6px; padding:.9rem 1.1rem; text-align:right;
+  font-size:13px; color:var(--muted2);
+  background:var(--card); border:1px solid var(--border2); border-radius:var(--r);
+}
+.debito-total b { font-family:'DM Serif Display',serif; font-size:1.4rem; color:var(--green); font-weight:400; margin-left:8px; }
 .credit-card {
   background:linear-gradient(135deg, var(--card2), var(--card));
   border:1px solid var(--border2); border-radius:var(--r);
@@ -739,6 +761,35 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   </div>
 
   <div class="cards-grid" id="cards-grid"></div>
+
+  <!-- ══ TARJETAS DE DÉBITO (AGREGADO) ══ -->
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin:2.5rem 0 1.5rem">
+    <div style="font-size:13px;color:var(--text);font-weight:500">💳 Cuentas / Tarjetas de Débito</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:2px">Agrega tus cuentas con el dinero que tienes en cada una. Al gastar o ganar eliges de cuál sale o entra, y el saldo se actualiza solo. La suma es tu dinero real.</div>
+  </div>
+
+  <div class="cc-add-form">
+    <div class="sec-lbl" style="margin-bottom:.85rem">Agregar cuenta de débito</div>
+    <div class="cc-add-inputs">
+      <div>
+        <label>Nombre de la cuenta</label>
+        <input type="text" id="db-nombre" placeholder="Ej: Banreservas Débito" onkeydown="if(event.key==='Enter')addDebito()" />
+      </div>
+      <div>
+        <label>Dinero que tienes</label>
+        <input type="text" id="db-monto" placeholder="0.00" inputmode="decimal"
+          oninput="this.value=this.value.replace(/[^0-9.]/g,'')" onkeydown="if(event.key==='Enter')addDebito()" />
+      </div>
+      <div>
+        <label>Últimos 4 dígitos</label>
+        <input type="text" id="db-digitos" placeholder="7547" inputmode="numeric" maxlength="4"
+          oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')addDebito()" />
+      </div>
+    </div>
+    <button class="btn-add" onclick="addDebito()">Agregar cuenta</button>
+  </div>
+
+  <div class="cards-grid" id="debito-cards"></div>
 </div>
 
 </div>
@@ -761,6 +812,7 @@ const LOGROS_KEY   = `logros_${CURRENT_YEAR}`;
 const LS_LOGROS    = `ach_unlocked_${CURRENT_YEAR}`;
 const TARJETAS_KEY = `tarjetas_${CURRENT_YEAR}`;   // ← clave vieja (por año), solo para migrar
 const TARJETAS_KEY_V2 = 'tarjetas_v2';             // ← clave nueva: tarjetas persistentes entre años
+const DEBITO_KEY = 'tarjetas_debito_v1';           // ← clave NUEVA: tarjetas de débito (independiente)
 
 // Actualizar UI con año actual
 document.title = `Full Year ${CURRENT_YEAR}`;
@@ -808,6 +860,8 @@ const INCOME_CATS = [
 let data = {};
 // ► Lista de tarjetas de crédito del año actual
 let tarjetas = [];
+// ► Lista de tarjetas de DÉBITO (NUEVO, independiente del crédito)
+let tarjetasDebito = [];
 // ► Cache del historial para la pestaña "Desde 2026"
 let historialFinanzasCache = {};
 
@@ -1087,6 +1141,13 @@ function renderMonth(mi){
             ${tarjetas.filter(t=>t.cerrada!==true).map(t=>`<option value="${esc(t.nombre)}">${esc(t.nombre)}</option>`).join('')}
           </select>
         </div>
+        <div class="fdesc" id="debito-wrap-${mi}" style="display:none">
+          <label>¿De cuál cuenta/tarjeta de débito?</label>
+          <select id="debito-${mi}" class="tarjeta-select">
+            <option value="">Selecciona cuenta…</option>
+            ${tarjetasDebito.map(t=>`<option value="${esc(t.id)}">${esc(t.nombre)}</option>`).join('')}
+          </select>
+        </div>
       </div>
       <button class="btn-add" onclick="addEntry(${mi})">Agregar movimiento</button>
     </div>
@@ -1159,6 +1220,7 @@ function setType(mi, type){
   }
   const tw = document.getElementById(`tarjeta-wrap-${mi}`);
   if(tw) tw.style.display = 'none';
+  updateDebitoWrap(mi);
 }
 function setTypeVisual(mi, type){
   const be = document.getElementById(`tbtn-exp-${mi}`);
@@ -1269,6 +1331,17 @@ function addEntry(mi){
   if(type==='expense' && cat==='Crédito'){
     const tjEl = document.getElementById(`tarjeta-${mi}`);
     if(tjEl && tjEl.value) entry.tarjeta = tjEl.value;
+  }
+  // Tarjeta de DÉBITO (NUEVO): obligatoria si hay cuentas creadas y no es gasto de Crédito
+  const esCredito = (type==='expense' && cat==='Crédito');
+  if(tarjetasDebito.length && !esCredito){
+    const dbEl = document.getElementById(`debito-${mi}`);
+    if(!dbEl || !dbEl.value){
+      if(dbEl) dbEl.focus();
+      alert('Elige de cuál cuenta/tarjeta de débito salió o entró el dinero.');
+      return;
+    }
+    entry.debito = dbEl.value;   // guarda el id de la tarjeta de débito
   }
   md.entries.push(entry);
 
@@ -1626,6 +1699,182 @@ function saveTarjetas(){
     .catch(e=>console.error('Error guardando tarjetas:', e));
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+// TARJETAS DE DÉBITO  (TODO AGREGADO — independiente del crédito)
+// • Cada tarjeta: { id, nombre, digitos, montoInicial }
+// • Saldo actual = montoInicial − gastos asignados + ingresos asignados
+//   (movimientos de cualquier mes/año cuyo e.debito === id de la tarjeta).
+// • La suma de saldos = "tu dinero real" (se muestra arriba sin tocar el cálculo viejo).
+// ══════════════════════════════════════════════════════════════════════════
+function saveDebito(){
+  if(!currentUser) return;
+  const ind = document.getElementById('save-indicator');
+  db.collection('users').doc(currentUser.uid).set({ [DEBITO_KEY]: tarjetasDebito }, { merge: true })
+    .then(()=>{ if(ind){ ind.classList.add('show'); setTimeout(()=>ind.classList.remove('show'),1500); } })
+    .catch(e=>console.error('Error guardando débito:', e));
+}
+
+// Gastos e ingresos asignados a una tarjeta de débito (todos los meses cargados)
+function debitoMovimientos(id){
+  let gastos = 0, ingresos = 0;
+  Object.keys(data).forEach(mi=>{
+    const md = data[mi];
+    if(md && md.entries){
+      md.entries.forEach(e=>{
+        if(e.debito === id){
+          if(e.type==='expense') gastos += e.amount;
+          else if(e.type==='income') ingresos += e.amount;
+        }
+      });
+    }
+  });
+  return { gastos:parseFloat(gastos.toFixed(2)), ingresos:parseFloat(ingresos.toFixed(2)) };
+}
+
+// Saldo actual de una tarjeta de débito
+function debitoSaldo(tj){
+  const mov = debitoMovimientos(tj.id);
+  return parseFloat(((tj.montoInicial||0) - mov.gastos + mov.ingresos).toFixed(2));
+}
+
+// Suma de todos los saldos = capital real en débito
+function debitoCapitalTotal(){
+  return parseFloat(tarjetasDebito.reduce((s,t)=>s+debitoSaldo(t),0).toFixed(2));
+}
+
+// Agregar una tarjeta de débito
+function addDebito(){
+  const nombreEl = document.getElementById('db-nombre');
+  const montoEl  = document.getElementById('db-monto');
+  const digEl    = document.getElementById('db-digitos');
+  if(!nombreEl) return;
+  const nombre = nombreEl.value.trim();
+  const monto  = parseFloat((montoEl?.value||'').replace(/,/g,'')) || 0;
+  const digitos= (digEl?.value||'').replace(/[^0-9]/g,'').slice(0,4);
+  if(!nombre){ nombreEl.focus(); alert('Escribe un nombre para la cuenta/tarjeta.'); return; }
+  tarjetasDebito.push({
+    id: 'db_' + Date.now(),
+    nombre,
+    digitos,
+    montoInicial: parseFloat(monto.toFixed(2))
+  });
+  if(nombreEl) nombreEl.value='';
+  if(montoEl) montoEl.value='';
+  if(digEl) digEl.value='';
+  saveDebito();
+  renderAll();
+}
+
+// Editar el monto inicial (el "dinero que tienes") de una tarjeta de débito
+function editDebitoMonto(id){
+  const tj = tarjetasDebito.find(t=>t.id===id);
+  if(!tj) return;
+  const val = prompt(`Dinero en "${tj.nombre}" (monto base actual: ${tj.montoInicial||0}):`, tj.montoInicial||0);
+  if(val===null) return;
+  const n = parseFloat(String(val).replace(/,/g,''));
+  if(isNaN(n)) return;
+  tj.montoInicial = parseFloat(n.toFixed(2));
+  saveDebito();
+  renderAll();
+}
+
+// Editar el nombre
+function editDebitoNombre(id){
+  const tj = tarjetasDebito.find(t=>t.id===id);
+  if(!tj) return;
+  const val = prompt('Nombre de la cuenta/tarjeta:', tj.nombre);
+  if(val===null) return;
+  const n = val.trim();
+  if(!n) return;
+  tj.nombre = n;
+  saveDebito();
+  renderAll();
+}
+
+// Eliminar una tarjeta de débito
+function delDebito(id){
+  const tj = tarjetasDebito.find(t=>t.id===id);
+  if(!tj) return;
+  const mov = debitoMovimientos(id);
+  const tieneMovs = (mov.gastos>0 || mov.ingresos>0);
+  const msg = tieneMovs
+    ? `¿Eliminar "${tj.nombre}"? Tiene movimientos asignados; esos movimientos NO se borran, solo dejarán de estar ligados a esta cuenta.`
+    : `¿Eliminar "${tj.nombre}"?`;
+  if(!confirm(msg)) return;
+  tarjetasDebito = tarjetasDebito.filter(t=>t.id!==id);
+  saveDebito();
+  renderAll();
+}
+
+// Refrescar los selectores de débito del formulario (al abrir/cambiar)
+function refreshDebitoSelects(){
+  document.querySelectorAll('select[id^="debito-"]').forEach(sel=>{
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Selecciona cuenta…</option>' +
+      tarjetasDebito.map(t=>`<option value="${esc(t.id)}">${esc(t.nombre)}</option>`).join('');
+    if(tarjetasDebito.some(t=>t.id===cur)) sel.value = cur;
+  });
+}
+
+// Render de la sección de tarjetas de débito (dentro de la pestaña Tarjetas)
+function renderDebito(){
+  const wrap = document.getElementById('debito-cards');
+  if(!wrap) return;
+  if(!tarjetasDebito.length){
+    wrap.innerHTML = '<div class="empty">Aún no has agregado cuentas o tarjetas de débito.</div>';
+    return;
+  }
+  const totalCap = debitoCapitalTotal();
+  wrap.innerHTML = tarjetasDebito.map(tj=>{
+    const mov = debitoMovimientos(tj.id);
+    const saldo = debitoSaldo(tj);
+    const saldoColor = saldo < 0 ? 'var(--red)' : 'var(--green)';
+    const dig = tj.digitos ? `•••• ${esc(tj.digitos)}` : '—';
+    return `<div class="cc-card">
+      <div class="cc-card-head">
+        <div>
+          <div class="cc-card-title">💳 ${esc(tj.nombre)}</div>
+          <div class="cc-card-sub">${dig}</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="cc-edit-btn" onclick="editDebitoNombre('${tj.id}')" title="Editar nombre">✏️</button>
+          <button class="cc-close-x" onclick="delDebito('${tj.id}')" title="Eliminar">×</button>
+        </div>
+      </div>
+      <div class="cc-stats">
+        <div class="cc-stat">
+          <div class="cc-stat-lbl">Dinero base</div>
+          <div class="cc-stat-val cc-editable" onclick="editDebitoMonto('${tj.id}')" title="Toca para editar">${fmt(tj.montoInicial||0)} ✏️</div>
+        </div>
+        <div class="cc-stat">
+          <div class="cc-stat-lbl">Gastado</div>
+          <div class="cc-stat-val" style="color:var(--red)">${fmt(mov.gastos)}</div>
+        </div>
+        <div class="cc-stat">
+          <div class="cc-stat-lbl">Ingresado</div>
+          <div class="cc-stat-val" style="color:var(--green)">${fmt(mov.ingresos)}</div>
+        </div>
+        <div class="cc-stat">
+          <div class="cc-stat-lbl">Saldo actual</div>
+          <div class="cc-stat-val" style="color:${saldoColor}">${fmt(saldo)}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('') +
+  `<div class="debito-total">Capital total en débito: <b>${fmt(totalCap)}</b></div>`;
+}
+
+// Si hay tarjetas de débito, el "Capital Actual" de arriba = suma de saldos de débito.
+// No toca renderYear: solo reescribe el texto mostrado después de que pinte.
+function updateCapitalDebito(){
+  if(!tarjetasDebito.length) return;     // sin débito, se respeta el cálculo original
+  const el = document.getElementById('y-cap');
+  if(!el) return;
+  if(_curMode && _curMode.cap) return;   // si la tarjeta está en modo USD, no interferir
+  const cap = debitoCapitalTotal();
+  el.textContent = fmtSigned(cap);
+}
+
 // Acepta el nombre de la tarjeta O el objeto tarjeta completo.
 function _resolveCard(arg){
   if(arg && typeof arg === 'object') return arg;
@@ -1721,6 +1970,8 @@ function switchToCards(){
   if(cardsTab) cardsTab.className = 'mtab active';
   document.getElementById('panel-cards').style.display = 'block';
   renderCards();
+  renderDebito();
+  refreshDebitoSelects();
   applyMonthsCollapsed();
 }
 
@@ -2101,6 +2352,20 @@ function onCatChange(mi){
   if(!cat || !wrap) return;
   const type = monthTypes[mi] || 'expense';
   wrap.style.display = (type==='expense' && cat.value==='Crédito') ? 'block' : 'none';
+  updateDebitoWrap(mi);
+}
+
+// Muestra el selector de tarjeta de DÉBITO cuando aplica (NUEVO).
+// Regla: si hay tarjetas de débito creadas, pedirla en ingresos y en gastos
+// que NO sean de categoría "Crédito" (porque esos salen de la tarjeta de crédito).
+function updateDebitoWrap(mi){
+  const dw = document.getElementById(`debito-wrap-${mi}`);
+  if(!dw) return;
+  if(!tarjetasDebito.length){ dw.style.display = 'none'; return; }
+  const type = monthTypes[mi] || 'expense';
+  const cat = (document.getElementById(`cat-${mi}`)||{}).value || '';
+  const esCredito = (type==='expense' && cat==='Crédito');
+  dw.style.display = esCredito ? 'none' : 'block';
 }
 
 function hasData(mi){
@@ -2432,6 +2697,8 @@ function renderAll(){
   MONTHS.forEach((_,mi)=> renderMonth(mi));
   renderYear();
   if(annualActive) renderAnnual();
+  renderDebito();
+  updateCapitalDebito();
   document.querySelectorAll('.mtab').forEach((t,i)=>{
     if(i < 12) t.classList.toggle('has-data', hasData(i));
   });
@@ -3351,10 +3618,12 @@ function toggleCurrency(which){
 function applyCurrencyModes(){
   const totals = (typeof yearTotals === 'function') ? yearTotals() : null;
   if(!totals) return;
+  // Si hay tarjetas de débito, el capital real es la suma de sus saldos
+  const capVal = (tarjetasDebito && tarjetasDebito.length) ? debitoCapitalTotal() : totals.yCap;
   const map = {
     inc: { val: totals.yInc, el:'y-inc', card:'ycard-inc', cur:'cur-inc', signed:false },
     exp: { val: totals.yExp, el:'y-exp', card:'ycard-exp', cur:'cur-exp', signed:false },
-    cap: { val: totals.yCap, el:'y-cap', card:'ycard-cap', cur:'cur-cap', signed:true  }
+    cap: { val: capVal, el:'y-cap', card:'ycard-cap', cur:'cur-cap', signed:true  }
   };
   Object.keys(map).forEach(k=>{
     const m = map[k];
@@ -3413,7 +3682,9 @@ async function loadFromFirebase(){
       if(!tj.totalesPorAnio || typeof tj.totalesPorAnio !== 'object') tj.totalesPorAnio = {};
       if(!tj.aniosMeses || typeof tj.aniosMeses !== 'object') tj.aniosMeses = {};
     });
-  } catch(e){ console.error('Error cargando datos:', e); data = {}; tarjetas = []; }
+    // Cargar tarjetas de DÉBITO (clave nueva, independiente)
+    tarjetasDebito = Array.isArray(d[DEBITO_KEY]) ? d[DEBITO_KEY] : [];
+  } catch(e){ console.error('Error cargando datos:', e); data = {}; tarjetas = []; tarjetasDebito = []; }
 }
 
 function save(){
