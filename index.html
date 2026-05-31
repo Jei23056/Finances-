@@ -1960,9 +1960,55 @@ function refreshDebitoSelects(){
 }
 
 // Render de la sección de tarjetas de débito (dentro de la pestaña Tarjetas)
+// Gastado/Ingresado INFORMATIVO de cada cuenta (NO afecta el saldo real).
+// Regla pedida por el usuario:
+//  • Tarjetas con infoGastadoFijo → muestran ese monto fijo (Qik=6000, Ahorro=2000).
+//  • La cuenta "corriente" (infoCorriente:true) → gastado = TotalGastado − fijos,
+//    e ingresado = TotalGanado (todos los ingresos).
+//  • Las demás → ingresado 0.
+// Asigna los roles informativos por nombre (solo si la tarjeta no tiene rol aún).
+// Qik → gastado fijo 6000 ; Banreservas Ahorro → gastado fijo 2000 ;
+// Banreservas Corriente (o la que tenga "corriente") → recibe el resto e ingresos.
+function aplicarRolesInfoDebito(){
+  let cambió = false;
+  tarjetasDebito.forEach(tj=>{
+    if(tj.infoRoleSet2 === true) return; // ya configurada con la regla corregida
+    const n = (tj.nombre||'').toLowerCase();
+    if(n.includes('qik')){
+      // Qik: sin gastos (no se ha gastado nada de ella)
+      delete tj.infoGastadoFijo; tj.infoCorriente = false; tj.infoRoleSet2 = true; cambió = true;
+    } else if(n.includes('corriente')){
+      tj.infoCorriente = true; delete tj.infoGastadoFijo; tj.infoRoleSet2 = true; cambió = true;
+    } else if(n.includes('ahorro')){
+      tj.infoGastadoFijo = 2000; tj.infoCorriente = false; tj.infoRoleSet2 = true; cambió = true;
+    }
+  });
+  if(cambió) saveDebito();
+}
+
+function debitoInfo(tj){
+  const tot = (typeof yearTotals === 'function') ? yearTotals() : {yInc:0,yExp:0};
+  const totalGastos   = tot.yExp || 0;
+  const totalIngresos = tot.yInc || 0;
+  // Suma de los gastos fijos de otras tarjetas
+  const sumaFijos = tarjetasDebito.reduce((s,t)=> s + (t.infoGastadoFijo||0), 0);
+  let gastado = 0, ingresado = 0;
+  if(typeof tj.infoGastadoFijo === 'number'){
+    gastado = tj.infoGastadoFijo;
+  }
+  if(tj.infoCorriente === true){
+    gastado   = parseFloat((totalGastos - sumaFijos).toFixed(2));
+    if(gastado < 0) gastado = 0;
+    ingresado = parseFloat(totalIngresos.toFixed(2));
+  }
+  return { gastos:gastado, ingresos:ingresado };
+}
+
 function renderDebito(){
   const wrap = document.getElementById('debito-cards');
   if(!wrap) return;
+  // Asignar roles informativos por nombre (una vez), si no están definidos
+  aplicarRolesInfoDebito();
   if(!tarjetasDebito.length){
     wrap.innerHTML = '<div class="empty">Aún no has agregado cuentas. Crea una y recibirá todo tu capital actual.</div>';
     const tw = document.getElementById('debito-transfer-box');
@@ -1971,7 +2017,7 @@ function renderDebito(){
   }
   const totalCap = debitoCapitalTotal();
   wrap.innerHTML = tarjetasDebito.map(tj=>{
-    const mov = debitoMovimientos(tj.id);
+    const info = debitoInfo(tj);
     const saldo = debitoSaldo(tj);
     const saldoColor = saldo < 0 ? 'var(--red)' : 'var(--green)';
     const dig = tj.digitos ? `•••• ${esc(tj.digitos)}` : '—';
@@ -1993,11 +2039,11 @@ function renderDebito(){
       <div class="cc-stats">
         <div class="cc-stat">
           <div class="cc-stat-lbl">Gastado</div>
-          <div class="cc-stat-val" style="color:var(--red)">${fmt(mov.gastos)}</div>
+          <div class="cc-stat-val" style="color:var(--red)">${fmt(info.gastos)}</div>
         </div>
         <div class="cc-stat">
           <div class="cc-stat-lbl">Ingresado</div>
-          <div class="cc-stat-val" style="color:var(--green)">${fmt(mov.ingresos)}</div>
+          <div class="cc-stat-val" style="color:var(--green)">${fmt(info.ingresos)}</div>
         </div>
         <div class="cc-stat" style="grid-column:span 2">
           <div class="cc-stat-lbl">Saldo actual</div>
@@ -3591,6 +3637,8 @@ auth.onAuthStateChanged(async user => {
     await autoArchivePastYears();
     // ► PASO 3: Cargar los datos del año actual
     await loadFromFirebase();
+    // ► PASO 3.4: Arrastrar capital del año anterior como inicio de enero (una vez/año)
+    await arrastrarCapitalDeAnioAnterior();
     // ► PASO 3.5: Crear tarjeta inicial y asignar gastos de Crédito (una vez)
     await setupInitialCardIfNeeded();
     // ► PASO 3.6: Cerrar año anterior de tarjetas si cambió el año
@@ -3662,6 +3710,74 @@ async function migrateLegacyDataIfNeeded(){
 // archiva esos años al historial automáticamente.
 // NO sobrescribe si ya está guardado en el historial (revisa primero).
 // ══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════
+// ARRASTRE DE CAPITAL ENTRE AÑOS (AGREGADO)
+// El capital final del 31 de diciembre del año anterior se pone como capital
+// de inicio de enero del año actual. Así tu dinero NO se reinicia en enero.
+// Protegido con bandera `_capitalArrastrado_YYYY` para hacerse UNA sola vez por año.
+// Respeta si el usuario ya puso un inicio manual (no lo sobrescribe).
+// ══════════════════════════════════════════════════════════════════════════
+async function arrastrarCapitalDeAnioAnterior(){
+  if(!currentUser) return;
+  try {
+    const ref = db.collection('users').doc(currentUser.uid);
+    const doc = await ref.get();
+    if(!doc.exists) return;
+    const d = doc.data() || {};
+
+    const flag = `_capitalArrastrado_${CURRENT_YEAR}`;
+    if(d[flag] === true) return;  // ya se hizo este año
+
+    // Buscar el año anterior con datos (en finanzas_YYYY o en historial)
+    const prevYear = CURRENT_YEAR - 1;
+    let prevData = d[`finanzas_${prevYear}`] || null;
+
+    // Si no está en el doc principal, buscar en el historial archivado
+    if(!prevData){
+      try {
+        const histDoc = await ref.collection('historial').doc(String(prevYear)).get();
+        if(histDoc.exists){
+          const hd = histDoc.data() || {};
+          prevData = hd.finanzas || null;
+        }
+      } catch(e){ /* sin historial, nada que arrastrar */ }
+    }
+    if(!prevData || typeof prevData !== 'object') return;
+
+    // Calcular el capital final del año anterior:
+    // inicio de su enero + suma de (ingresos − gastos) de todos sus meses
+    let cap = (prevData[0] && typeof prevData[0].startCapital === 'number') ? prevData[0].startCapital : 0;
+    for(let mi=0; mi<12; mi++){
+      const md = prevData[mi];
+      if(md && Array.isArray(md.entries)){
+        md.entries.forEach(e=>{
+          if(e.type==='income')  cap += e.amount;
+          else if(e.type==='expense') cap -= e.amount;
+        });
+      }
+    }
+    cap = parseFloat(cap.toFixed(2));
+
+    // Aplicar como inicio de enero del año actual, SOLO si enero no tiene inicio puesto
+    const cur = d[FINANZAS_KEY] || {};
+    const eneroActual = cur[0] || {};
+    const eneroSinInicio = !(typeof eneroActual.startCapital === 'number' && eneroActual.startCapital !== 0);
+
+    if(eneroSinInicio && cap !== 0){
+      if(!cur[0]) cur[0] = { entries: [], startCapital: 0 };
+      cur[0].startCapital = cap;
+      cur[0]._autoCapital = false;  // marcado como fijado (no se recalcula)
+      await ref.set({ [FINANZAS_KEY]: cur, [flag]: true }, { merge: true });
+      console.log(`Capital arrastrado de ${prevYear}: ${cap} → inicio de enero ${CURRENT_YEAR}`);
+    } else {
+      // Aun así marcar la bandera para no reintentar cada vez
+      await ref.set({ [flag]: true }, { merge: true });
+    }
+  } catch(e){
+    console.error('Error arrastrando capital de año anterior:', e);
+  }
+}
+
 async function autoArchivePastYears(){
   if(!currentUser) return;
   try {
