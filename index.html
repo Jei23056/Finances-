@@ -1349,13 +1349,13 @@ function addEntry(mi){
     const tjEl = document.getElementById(`tarjeta-${mi}`);
     if(tjEl && tjEl.value) entry.tarjeta = tjEl.value;
   }
-  // Tarjeta de DÉBITO (NUEVO): obligatoria si hay cuentas creadas y no es gasto de Crédito
-  const esCredito = (type==='expense' && cat==='Crédito');
-  if(tarjetasDebito.length && !esCredito){
+  // Tarjeta de DÉBITO: obligatoria siempre que haya cuentas creadas.
+  // En gastos de Crédito = de cuál cuenta pagas la tarjeta (sale tu dinero real).
+  if(tarjetasDebito.length){
     const dbEl = document.getElementById(`debito-${mi}`);
     if(!dbEl || !dbEl.value){
       if(dbEl) dbEl.focus();
-      alert('Elige de cuál cuenta/tarjeta de débito salió o entró el dinero.');
+      alert('Elige de cuál cuenta/tarjeta de débito sale o entra el dinero.');
       return;
     }
     entry.debito = dbEl.value;   // guarda el id de la tarjeta de débito
@@ -1961,9 +1961,18 @@ function vaciarCuentasMarcadas(){
 }
 
 function debitoInfo(tj){
-  const tot = (typeof yearTotals === 'function') ? yearTotals() : {yInc:0,yExp:0};
-  const totalGastos   = tot.yExp || 0;
-  const totalIngresos = tot.yInc || 0;
+  // Usar los totales ACUMULADOS (año actual + historial), no solo el año en curso.
+  // Así las cuentas no se reinician en enero (como un banco real).
+  let totalGastos = 0, totalIngresos = 0;
+  if(typeof totalesDesde === 'function'){
+    const acc = totalesDesde();
+    totalGastos   = acc.totalExp || 0;
+    totalIngresos = acc.totalInc || 0;
+  } else {
+    const tot = (typeof yearTotals === 'function') ? yearTotals() : {yInc:0,yExp:0};
+    totalGastos   = tot.yExp || 0;
+    totalIngresos = tot.yInc || 0;
+  }
   // Suma de montos fijos del resto de tarjetas
   const sumaGastoFijo    = tarjetasDebito.reduce((s,t)=> s + (t.infoGastadoFijo||0), 0);
   const sumaIngresoFijo  = tarjetasDebito.reduce((s,t)=> s + (t.infoIngresadoFijo||0), 0);
@@ -2544,17 +2553,14 @@ function onCatChange(mi){
   updateDebitoWrap(mi);
 }
 
-// Muestra el selector de tarjeta de DÉBITO cuando aplica (NUEVO).
-// Regla: si hay tarjetas de débito creadas, pedirla en ingresos y en gastos
-// que NO sean de categoría "Crédito" (porque esos salen de la tarjeta de crédito).
+// Muestra el selector de tarjeta de DÉBITO cuando aplica.
+// Se muestra siempre que haya cuentas de débito: en ingresos, en gastos normales,
+// y también en gastos de Crédito (para elegir de cuál débito se paga la tarjeta).
 function updateDebitoWrap(mi){
   const dw = document.getElementById(`debito-wrap-${mi}`);
   if(!dw) return;
   if(!tarjetasDebito.length){ dw.style.display = 'none'; return; }
-  const type = monthTypes[mi] || 'expense';
-  const cat = (document.getElementById(`cat-${mi}`)||{}).value || '';
-  const esCredito = (type==='expense' && cat==='Crédito');
-  dw.style.display = esCredito ? 'none' : 'block';
+  dw.style.display = 'block';
 }
 
 function hasData(mi){
@@ -3610,6 +3616,8 @@ auth.onAuthStateChanged(async user => {
     await loadFromFirebase();
     // ► PASO 3.4: Arrastrar capital del año anterior como inicio de enero (una vez/año)
     await arrastrarCapitalDeAnioAnterior();
+    // ► PASO 3.45: Cargar historial (para que las cuentas de débito acumulen todos los años)
+    await loadHistorialParaSince();
     // ► PASO 3.5: Crear tarjeta inicial y asignar gastos de Crédito (una vez)
     await setupInitialCardIfNeeded();
     // ► PASO 3.6: Cerrar año anterior de tarjetas si cambió el año
