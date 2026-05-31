@@ -505,6 +505,7 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   background:var(--card); border:1px solid var(--border2); border-radius:var(--r);
 }
 .debito-total b { font-family:'DM Serif Display',serif; font-size:1.4rem; color:var(--green); font-weight:400; margin-left:8px; }
+.db-principal-tag { font-size:9px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--gold); background:var(--gldim); border:1px solid var(--gold); border-radius:999px; padding:2px 7px; margin-left:6px; vertical-align:middle; }
 .credit-card {
   background:linear-gradient(135deg, var(--card2), var(--card));
   border:1px solid var(--border2); border-radius:var(--r);
@@ -765,20 +766,15 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   <!-- ══ TARJETAS DE DÉBITO (AGREGADO) ══ -->
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin:2.5rem 0 1.5rem">
     <div style="font-size:13px;color:var(--text);font-weight:500">💳 Cuentas / Tarjetas de Débito</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:2px">Agrega tus cuentas con el dinero que tienes en cada una. Al gastar o ganar eliges de cuál sale o entra, y el saldo se actualiza solo. La suma es tu dinero real.</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:2px">Estas cuentas reparten tu capital, no inventan dinero. La primera recibe todo tu capital; luego transfieres entre cuentas. La suma siempre será igual a tu Capital Actual.</div>
   </div>
 
   <div class="cc-add-form">
     <div class="sec-lbl" style="margin-bottom:.85rem">Agregar cuenta de débito</div>
-    <div class="cc-add-inputs">
+    <div class="cc-add-inputs" style="grid-template-columns:2fr 1fr">
       <div>
         <label>Nombre de la cuenta</label>
-        <input type="text" id="db-nombre" placeholder="Ej: Banreservas Débito" onkeydown="if(event.key==='Enter')addDebito()" />
-      </div>
-      <div>
-        <label>Dinero que tienes</label>
-        <input type="text" id="db-monto" placeholder="0.00" inputmode="decimal"
-          oninput="this.value=this.value.replace(/[^0-9.]/g,'')" onkeydown="if(event.key==='Enter')addDebito()" />
+        <input type="text" id="db-nombre" placeholder="Ej: Banreservas Ahorro" onkeydown="if(event.key==='Enter')addDebito()" />
       </div>
       <div>
         <label>Últimos 4 dígitos</label>
@@ -786,7 +782,28 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
           oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')addDebito()" />
       </div>
     </div>
+    <div style="font-size:11px;color:var(--muted);margin:2px 0 12px">La primera cuenta recibe todo tu capital actual. Las demás empiezan en $0 y les pasas dinero con transferencias.</div>
     <button class="btn-add" onclick="addDebito()">Agregar cuenta</button>
+  </div>
+
+  <div class="cc-add-form" id="debito-transfer-box" style="display:none;margin-top:12px">
+    <div class="sec-lbl" style="margin-bottom:.85rem">🔄 Transferir entre cuentas</div>
+    <div class="cc-add-inputs" style="grid-template-columns:1fr 1fr 1fr">
+      <div>
+        <label>De</label>
+        <select id="db-transfer-from"><option value="">Cuenta…</option></select>
+      </div>
+      <div>
+        <label>A</label>
+        <select id="db-transfer-to"><option value="">Cuenta…</option></select>
+      </div>
+      <div>
+        <label>Monto</label>
+        <input type="text" id="db-transfer-amt" placeholder="0.00" inputmode="decimal"
+          oninput="this.value=this.value.replace(/[^0-9.]/g,'')" onkeydown="if(event.key==='Enter')transferDebito()" />
+      </div>
+    </div>
+    <button class="btn-add" onclick="transferDebito()">Transferir</button>
   </div>
 
   <div class="cards-grid" id="debito-cards"></div>
@@ -1700,11 +1717,17 @@ function saveTarjetas(){
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// TARJETAS DE DÉBITO  (TODO AGREGADO — independiente del crédito)
-// • Cada tarjeta: { id, nombre, digitos, montoInicial }
-// • Saldo actual = montoInicial − gastos asignados + ingresos asignados
-//   (movimientos de cualquier mes/año cuyo e.debito === id de la tarjeta).
-// • La suma de saldos = "tu dinero real" (se muestra arriba sin tocar el cálculo viejo).
+// TARJETAS DE DÉBITO  (TODO AGREGADO — modelo "cajones del capital")
+// • Las tarjetas NO inventan dinero: reparten tu Capital real (intocable).
+// • Una tarjeta es la PRINCIPAL (la primera creada): contiene "el resto" del
+//   capital que no está repartido en otras. Así la suma SIEMPRE = tu Capital.
+// • Tarjeta: { id, nombre, digitos, principal:bool, asignado:number }
+//     - `asignado`: dinero movido hacia/desde esta tarjeta (por transferencias).
+//       Positivo si recibió, negativo si envió. La principal no usa `asignado`.
+// • Saldo principal   = CapitalReal − suma(asignado de las demás) − gastosNetos
+//   Saldo secundaria  = asignado − gastos + ingresos asignados a ella
+//   (Para no descuadrar, los gastos/ingresos con débito se restan/suman al saldo
+//    de esa tarjeta y la principal absorbe el efecto neto sobre el capital.)
 // ══════════════════════════════════════════════════════════════════════════
 function saveDebito(){
   if(!currentUser) return;
@@ -1712,6 +1735,12 @@ function saveDebito(){
   db.collection('users').doc(currentUser.uid).set({ [DEBITO_KEY]: tarjetasDebito }, { merge: true })
     .then(()=>{ if(ind){ ind.classList.add('show'); setTimeout(()=>ind.classList.remove('show'),1500); } })
     .catch(e=>console.error('Error guardando débito:', e));
+}
+
+// El Capital real (mismo número que muestra "Capital Actual" arriba)
+function capitalReal(){
+  const t = (typeof yearTotals === 'function') ? yearTotals() : null;
+  return t ? t.yCap : 0;
 }
 
 // Gastos e ingresos asignados a una tarjeta de débito (todos los meses cargados)
@@ -1731,51 +1760,87 @@ function debitoMovimientos(id){
   return { gastos:parseFloat(gastos.toFixed(2)), ingresos:parseFloat(ingresos.toFixed(2)) };
 }
 
-// Saldo actual de una tarjeta de débito
-function debitoSaldo(tj){
+// Saldo de una tarjeta SECUNDARIA = lo transferido (asignado) + ingresos − gastos
+function debitoSaldoSecundaria(tj){
   const mov = debitoMovimientos(tj.id);
-  return parseFloat(((tj.montoInicial||0) - mov.gastos + mov.ingresos).toFixed(2));
+  return parseFloat(((tj.asignado||0) + mov.ingresos - mov.gastos).toFixed(2));
 }
 
-// Suma de todos los saldos = capital real en débito
+// Saldo de la tarjeta PRINCIPAL = Capital real − suma de saldos de las demás
+function debitoSaldoPrincipal(){
+  const secundarias = tarjetasDebito.filter(t=>!t.principal);
+  const sumaOtras = secundarias.reduce((s,t)=>s+debitoSaldoSecundaria(t),0);
+  return parseFloat((capitalReal() - sumaOtras).toFixed(2));
+}
+
+// Saldo de cualquier tarjeta
+function debitoSaldo(tj){
+  return tj.principal ? debitoSaldoPrincipal() : debitoSaldoSecundaria(tj);
+}
+
+// La suma de todas las tarjetas SIEMPRE es el capital real (por construcción)
 function debitoCapitalTotal(){
   return parseFloat(tarjetasDebito.reduce((s,t)=>s+debitoSaldo(t),0).toFixed(2));
 }
 
-// Agregar una tarjeta de débito
+// Agregar una tarjeta de débito (SIN monto: el dinero se reparte por transferencias)
 function addDebito(){
   const nombreEl = document.getElementById('db-nombre');
-  const montoEl  = document.getElementById('db-monto');
   const digEl    = document.getElementById('db-digitos');
   if(!nombreEl) return;
   const nombre = nombreEl.value.trim();
-  const monto  = parseFloat((montoEl?.value||'').replace(/,/g,'')) || 0;
   const digitos= (digEl?.value||'').replace(/[^0-9]/g,'').slice(0,4);
   if(!nombre){ nombreEl.focus(); alert('Escribe un nombre para la cuenta/tarjeta.'); return; }
+  const esPrimera = tarjetasDebito.length === 0;  // la primera es la PRINCIPAL y absorbe el capital
   tarjetasDebito.push({
     id: 'db_' + Date.now(),
     nombre,
     digitos,
-    montoInicial: parseFloat(monto.toFixed(2))
+    principal: esPrimera,
+    asignado: 0
   });
   if(nombreEl) nombreEl.value='';
-  if(montoEl) montoEl.value='';
   if(digEl) digEl.value='';
   saveDebito();
   renderAll();
 }
 
-// Editar el monto inicial (el "dinero que tienes") de una tarjeta de débito
-function editDebitoMonto(id){
-  const tj = tarjetasDebito.find(t=>t.id===id);
-  if(!tj) return;
-  const val = prompt(`Dinero en "${tj.nombre}" (monto base actual: ${tj.montoInicial||0}):`, tj.montoInicial||0);
-  if(val===null) return;
-  const n = parseFloat(String(val).replace(/,/g,''));
-  if(isNaN(n)) return;
-  tj.montoInicial = parseFloat(n.toFixed(2));
+// Transferir dinero entre dos tarjetas (no crea ni destruye dinero)
+function transferDebito(){
+  if(tarjetasDebito.length < 2){
+    alert('Necesitas al menos 2 cuentas para transferir.');
+    return;
+  }
+  const fromEl = document.getElementById('db-transfer-from');
+  const toEl   = document.getElementById('db-transfer-to');
+  const amtEl  = document.getElementById('db-transfer-amt');
+  if(!fromEl || !toEl || !amtEl) return;
+  const fromId = fromEl.value, toId = toEl.value;
+  const monto  = parseFloat((amtEl.value||'').replace(/,/g,'')) || 0;
+  if(!fromId || !toId){ alert('Elige las dos cuentas.'); return; }
+  if(fromId === toId){ alert('Elige dos cuentas distintas.'); return; }
+  if(monto <= 0){ amtEl.focus(); alert('Escribe un monto válido.'); return; }
+
+  const from = tarjetasDebito.find(t=>t.id===fromId);
+  const to   = tarjetasDebito.find(t=>t.id===toId);
+  if(!from || !to) return;
+
+  // Verificar que la cuenta de origen tenga saldo suficiente
+  const saldoFrom = debitoSaldo(from);
+  if(monto > saldoFrom){
+    if(!confirm(`"${from.nombre}" solo tiene ${fmt(saldoFrom)}. ¿Transferir de todas formas y dejarla en negativo?`)) return;
+  }
+
+  // Mover dinero: ajustar `asignado` de cada lado.
+  // Si una es la principal, no tiene `asignado` propio (su saldo se calcula como el resto),
+  // así que solo movemos el `asignado` de las secundarias y la principal se ajusta sola.
+  if(!from.principal) from.asignado = parseFloat(((from.asignado||0) - monto).toFixed(2));
+  if(!to.principal)   to.asignado   = parseFloat(((to.asignado||0)   + monto).toFixed(2));
+
+  amtEl.value = '';
   saveDebito();
   renderAll();
+  alert(`Transferido ${fmt(monto)} de "${from.nombre}" a "${to.nombre}".`);
 }
 
 // Editar el nombre
@@ -1795,13 +1860,43 @@ function editDebitoNombre(id){
 function delDebito(id){
   const tj = tarjetasDebito.find(t=>t.id===id);
   if(!tj) return;
-  const mov = debitoMovimientos(id);
-  const tieneMovs = (mov.gastos>0 || mov.ingresos>0);
-  const msg = tieneMovs
-    ? `¿Eliminar "${tj.nombre}"? Tiene movimientos asignados; esos movimientos NO se borran, solo dejarán de estar ligados a esta cuenta.`
+  if(tj.principal && tarjetasDebito.length > 1){
+    alert('No puedes eliminar la cuenta principal mientras tengas otras. Elimina primero las demás o cambia la principal.');
+    return;
+  }
+  const saldo = debitoSaldo(tj);
+  const msg = (!tj.principal && Math.abs(saldo) > 0.01)
+    ? `"${tj.nombre}" tiene ${fmt(saldo)}. Si la eliminas, ese dinero volverá a la cuenta principal. ¿Continuar?`
     : `¿Eliminar "${tj.nombre}"?`;
   if(!confirm(msg)) return;
+  // Al eliminar una secundaria, su saldo vuelve solo a la principal (porque la
+  // principal = capital − suma de las demás). No hay que mover nada manualmente.
   tarjetasDebito = tarjetasDebito.filter(t=>t.id!==id);
+  // Si quedó alguna y ninguna es principal, marcar la primera como principal
+  if(tarjetasDebito.length && !tarjetasDebito.some(t=>t.principal)){
+    tarjetasDebito[0].principal = true;
+    tarjetasDebito[0].asignado = 0;
+  }
+  saveDebito();
+  renderAll();
+}
+
+// Hacer principal a otra tarjeta (intercambia el rol)
+function setDebitoPrincipal(id){
+  const tj = tarjetasDebito.find(t=>t.id===id);
+  if(!tj || tj.principal) return;
+  if(!confirm(`¿Hacer de "${tj.nombre}" tu cuenta principal? El resto del capital quedará en ella.`)) return;
+  // La nueva principal "absorbe el resto": fijamos su asignado para conservar su saldo actual
+  const saldoActual = debitoSaldoSecundaria(tj);
+  const antiguaPrincipal = tarjetasDebito.find(t=>t.principal);
+  if(antiguaPrincipal){
+    // La antigua principal pasa a secundaria con un asignado igual a su saldo actual
+    const saldoAntigua = debitoSaldoPrincipal();
+    antiguaPrincipal.principal = false;
+    antiguaPrincipal.asignado = parseFloat(saldoAntigua.toFixed(2));
+  }
+  tj.principal = true;
+  tj.asignado = 0;
   saveDebito();
   renderAll();
 }
@@ -1809,8 +1904,18 @@ function delDebito(id){
 // Refrescar los selectores de débito del formulario (al abrir/cambiar)
 function refreshDebitoSelects(){
   document.querySelectorAll('select[id^="debito-"]').forEach(sel=>{
+    if(sel.id.indexOf('db-transfer')!==-1) return; // los de transferencia se manejan aparte
     const cur = sel.value;
     sel.innerHTML = '<option value="">Selecciona cuenta…</option>' +
+      tarjetasDebito.map(t=>`<option value="${esc(t.id)}">${esc(t.nombre)}</option>`).join('');
+    if(tarjetasDebito.some(t=>t.id===cur)) sel.value = cur;
+  });
+  // Selectores de transferencia
+  ['db-transfer-from','db-transfer-to'].forEach(selId=>{
+    const sel = document.getElementById(selId);
+    if(!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Cuenta…</option>' +
       tarjetasDebito.map(t=>`<option value="${esc(t.id)}">${esc(t.nombre)}</option>`).join('');
     if(tarjetasDebito.some(t=>t.id===cur)) sel.value = cur;
   });
@@ -1821,7 +1926,9 @@ function renderDebito(){
   const wrap = document.getElementById('debito-cards');
   if(!wrap) return;
   if(!tarjetasDebito.length){
-    wrap.innerHTML = '<div class="empty">Aún no has agregado cuentas o tarjetas de débito.</div>';
+    wrap.innerHTML = '<div class="empty">Aún no has agregado cuentas. Crea una y recibirá todo tu capital actual.</div>';
+    const tw = document.getElementById('debito-transfer-box');
+    if(tw) tw.style.display = 'none';
     return;
   }
   const totalCap = debitoCapitalTotal();
@@ -1830,22 +1937,22 @@ function renderDebito(){
     const saldo = debitoSaldo(tj);
     const saldoColor = saldo < 0 ? 'var(--red)' : 'var(--green)';
     const dig = tj.digitos ? `•••• ${esc(tj.digitos)}` : '—';
+    const tag = tj.principal ? '<span class="db-principal-tag">Principal</span>' : '';
+    const hacerPrincipal = tj.principal ? '' :
+      `<button class="cc-edit-btn" onclick="setDebitoPrincipal('${tj.id}')" title="Hacer principal">★</button>`;
     return `<div class="cc-card">
       <div class="cc-card-head">
         <div>
-          <div class="cc-card-title">💳 ${esc(tj.nombre)}</div>
+          <div class="cc-card-title">💳 ${esc(tj.nombre)} ${tag}</div>
           <div class="cc-card-sub">${dig}</div>
         </div>
         <div style="display:flex;gap:6px;align-items:center">
+          ${hacerPrincipal}
           <button class="cc-edit-btn" onclick="editDebitoNombre('${tj.id}')" title="Editar nombre">✏️</button>
           <button class="cc-close-x" onclick="delDebito('${tj.id}')" title="Eliminar">×</button>
         </div>
       </div>
       <div class="cc-stats">
-        <div class="cc-stat">
-          <div class="cc-stat-lbl">Dinero base</div>
-          <div class="cc-stat-val cc-editable" onclick="editDebitoMonto('${tj.id}')" title="Toca para editar">${fmt(tj.montoInicial||0)} ✏️</div>
-        </div>
         <div class="cc-stat">
           <div class="cc-stat-lbl">Gastado</div>
           <div class="cc-stat-val" style="color:var(--red)">${fmt(mov.gastos)}</div>
@@ -1854,25 +1961,27 @@ function renderDebito(){
           <div class="cc-stat-lbl">Ingresado</div>
           <div class="cc-stat-val" style="color:var(--green)">${fmt(mov.ingresos)}</div>
         </div>
-        <div class="cc-stat">
+        <div class="cc-stat" style="grid-column:span 2">
           <div class="cc-stat-lbl">Saldo actual</div>
           <div class="cc-stat-val" style="color:${saldoColor}">${fmt(saldo)}</div>
         </div>
       </div>
     </div>`;
   }).join('') +
-  `<div class="debito-total">Capital total en débito: <b>${fmt(totalCap)}</b></div>`;
+  `<div class="debito-total">Capital total (suma de cuentas): <b>${fmt(totalCap)}</b></div>`;
+
+  // Mostrar el cuadro de transferencias si hay 2+ cuentas
+  const tw = document.getElementById('debito-transfer-box');
+  if(tw) tw.style.display = (tarjetasDebito.length >= 2) ? 'block' : 'none';
+  refreshDebitoSelects();
 }
 
-// Si hay tarjetas de débito, el "Capital Actual" de arriba = suma de saldos de débito.
-// No toca renderYear: solo reescribe el texto mostrado después de que pinte.
+// Si hay tarjetas de débito, el "Capital Actual" de arriba lo dejamos igual
+// (es el mismo número, porque la suma de cuentas == capital real por diseño).
 function updateCapitalDebito(){
-  if(!tarjetasDebito.length) return;     // sin débito, se respeta el cálculo original
-  const el = document.getElementById('y-cap');
-  if(!el) return;
-  if(_curMode && _curMode.cap) return;   // si la tarjeta está en modo USD, no interferir
-  const cap = debitoCapitalTotal();
-  el.textContent = fmtSigned(cap);
+  // No hace falta sobreescribir: la suma de cuentas SIEMPRE es el capital real.
+  // Se mantiene la función por compatibilidad con renderAll.
+  return;
 }
 
 // Acepta el nombre de la tarjeta O el objeto tarjeta completo.
