@@ -1358,6 +1358,15 @@ function addEntry(mi){
       alert('Elige de cuál cuenta/tarjeta de débito sale o entra el dinero.');
       return;
     }
+    // Si es un GASTO, verificar que la cuenta tenga saldo suficiente
+    if(type==='expense'){
+      const cuenta = tarjetasDebito.find(t=>t.id===dbEl.value);
+      const saldoDisp = cuenta ? debitoSaldo(cuenta) : 0;
+      if(amount > saldoDisp){
+        alert(`"${cuenta ? cuenta.nombre : 'Esa cuenta'}" no tiene saldo suficiente.\nSaldo disponible: ${fmt(saldoDisp)}\nQuieres gastar: ${fmt(amount)}`);
+        return;
+      }
+    }
     entry.debito = dbEl.value;   // guarda el id de la tarjeta de débito
   }
   md.entries.push(entry);
