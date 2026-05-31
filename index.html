@@ -1917,21 +1917,21 @@ function refreshDebitoSelects(){
 function aplicarRolesInfoDebito(){
   let cambió = false;
   tarjetasDebito.forEach(tj=>{
-    if(tj.infoRoleSet4 === true) return; // ya configurada con la regla corregida (v4)
+    if(tj.infoRoleSet5 === true) return; // ya configurada con la regla corregida (v5)
     const n = (tj.nombre||'').toLowerCase();
     if(n.includes('qik')){
       // Qik: nada de nada
       delete tj.infoGastadoFijo; delete tj.infoIngresadoFijo;
       tj.infoCorriente = false; tj.infoVaciar = true;
-      tj.infoRoleSet4 = true; cambió = true;
+      tj.infoRoleSet5 = true; cambió = true;
     } else if(n.includes('corriente')){
       tj.infoCorriente = true; delete tj.infoGastadoFijo; delete tj.infoIngresadoFijo;
-      tj.infoVaciar = false; tj.infoRoleSet4 = true; cambió = true;
+      tj.infoVaciar = false; tj.infoRoleSet5 = true; cambió = true;
     } else if(n.includes('ahorro')){
-      // Ahorro: gastado 6000
-      tj.infoGastadoFijo = 6000; delete tj.infoIngresadoFijo;
+      // Ahorro: gastado 6000 e ingresado 6000
+      tj.infoGastadoFijo = 6000; tj.infoIngresadoFijo = 6000;
       tj.infoCorriente = false; tj.infoVaciar = false;
-      tj.infoRoleSet4 = true; cambió = true;
+      tj.infoRoleSet5 = true; cambió = true;
     }
   });
   if(cambió) saveDebito();
