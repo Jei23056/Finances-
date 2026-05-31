@@ -29,7 +29,7 @@
 html { font-size: 16px; overflow-x:hidden; }
 body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; padding:1.5rem 1rem 5rem; overflow-x:hidden; }
 .shell { max-width:860px; margin:0 auto; }
-header { display:flex; align-items:flex-end; justify-content:space-between; padding-bottom:1.25rem; border-bottom:1px solid var(--border); margin-bottom:2rem; }
+header { display:flex; align-items:flex-start; justify-content:space-between; padding-bottom:1.25rem; border-bottom:1px solid var(--border); margin-bottom:2rem; }
 header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:400; letter-spacing:-0.5px; }
 .year-bar { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:2rem; }
 .ycard { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:1rem 1.1rem; position:relative; overflow:hidden; }
@@ -52,11 +52,12 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   transition:all .18s; line-height:1.4;
 }
 .ycard.usd-mode .ycard-cur { background:var(--gldim); border-color:var(--gold); color:var(--gold); }
+.header-left { display:flex; flex-direction:column; align-items:flex-start; gap:7px; }
 .rate-badge {
   font-size:10px; color:var(--muted2); font-weight:500;
-  padding:3px 9px; border-radius:999px;
+  padding:3px 10px; border-radius:999px;
   background:var(--card); border:1px solid var(--border);
-  white-space:nowrap; letter-spacing:.01em;
+  white-space:nowrap; letter-spacing:.01em; align-self:flex-start;
 }
 .rate-badge b { color:var(--gold); font-weight:600; }
 .ycard-hint { font-size:10px; color:var(--muted); margin-top:3px; }
@@ -616,9 +617,11 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 <div class="shell">
 
 <header>
-  <h1>Mis Finanzas</h1>
-  <div class="user-badge">
+  <div class="header-left">
+    <h1>Mis Finanzas</h1>
     <span id="rate-badge" class="rate-badge" style="display:none" title="Tasa de cambio actual"></span>
+  </div>
+  <div class="user-badge">
     <span id="user-name"></span>
     <button class="btn-signout" onclick="signOut()">Salir</button>
   </div>
