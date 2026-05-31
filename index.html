@@ -804,6 +804,10 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
       </div>
     </div>
     <button class="btn-add" onclick="transferDebito()">Transferir</button>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--border)">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Reparto rápido (una vez): pon parte de tu capital en cada cuenta según un porcentaje. Útil para repartir lo que ya tienes acumulado.</div>
+      <button class="pdf-btn" style="width:100%" onclick="repartoRapido()">⚖️ Reparto 30% ahorro / 70% corriente</button>
+    </div>
   </div>
 
   <div class="cards-grid" id="debito-cards"></div>
@@ -1843,6 +1847,40 @@ function transferDebito(){
   alert(`Transferido ${fmt(monto)} de "${from.nombre}" a "${to.nombre}".`);
 }
 
+// Reparto rápido (una sola vez): pone 30% del capital total en la cuenta PRINCIPAL
+// (ahorro) y 70% en la primera cuenta secundaria (corriente). Ajusta los `asignado`
+// para que los saldos queden exactamente en esa proporción. No crea ni destruye dinero.
+function repartoRapido(){
+  if(tarjetasDebito.length < 2){
+    alert('Necesitas la cuenta principal (ahorro) y al menos otra cuenta (corriente) para repartir.');
+    return;
+  }
+  const principal = tarjetasDebito.find(t=>t.principal);
+  const secundarias = tarjetasDebito.filter(t=>!t.principal);
+  if(!principal || !secundarias.length){ alert('Falta la cuenta principal o la secundaria.'); return; }
+  const total = debitoCapitalTotal();
+  const otra = secundarias[0]; // la primera secundaria = corriente
+
+  if(!confirm(`Repartir tu capital de ${fmt(total)}:\n• 30% (${fmt(total*0.30)}) en "${principal.nombre}"\n• 70% (${fmt(total*0.70)}) en "${otra.nombre}"\n\n¿Continuar?`)) return;
+
+  // El saldo de una secundaria = asignado + ingresos − gastos.
+  // Queremos saldo de "otra" = 70% del total. Despejamos asignado.
+  const mov = debitoMovimientos(otra.id);
+  const objetivoOtra = parseFloat((total * 0.70).toFixed(2));
+  otra.asignado = parseFloat((objetivoOtra - mov.ingresos + mov.gastos).toFixed(2));
+
+  // Si hubiera más de una secundaria, las demás se ponen en 0 (todo va a ahorro/corriente)
+  secundarias.slice(1).forEach(t=>{
+    const m = debitoMovimientos(t.id);
+    t.asignado = parseFloat((0 - m.ingresos + m.gastos).toFixed(2));
+  });
+
+  // La principal (ahorro) absorbe el resto automáticamente (= 30%).
+  saveDebito();
+  renderAll();
+  alert(`Listo. Tu capital quedó repartido 30% en "${principal.nombre}" y 70% en "${otra.nombre}".`);
+}
+
 // Editar el nombre
 function editDebitoNombre(id){
   const tj = tarjetasDebito.find(t=>t.id===id);
@@ -2112,6 +2150,7 @@ function renderCards(){
           <div class="cc-sub">${tj.desde ? 'Desde '+esc(tj.desde) : 'Tarjeta de crédito'}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
+          <button class="cc-edit-btn" onclick="editCreditCardName(${idx})" title="Editar nombre">✏️</button>
           <button class="cc-keep ${cerrada?'on':''}" onclick="toggleCardClosed(${idx})"
             title="${cerrada?'Tarjeta cerrada: ya no aparece al registrar gastos. Su historial se conserva.':'Cerrar: marca esta tarjeta como que ya no la usas. Su historial se conserva para siempre.'}">
             ${cerrada?'🔒 Cerrada':'🔓 Cerrar'}
@@ -2234,6 +2273,30 @@ function delCard(idx){
   tarjetas.splice(idx,1);
   saveTarjetas();
   renderCards();
+  refreshCardSelects();
+}
+
+// Editar el nombre de una tarjeta de crédito.
+// Reasigna los movimientos vinculados (e.tarjeta) para no perder el "Gastado".
+function editCreditCardName(idx){
+  const tj = tarjetas[idx];
+  if(!tj) return;
+  const viejo = tj.nombre;
+  const val = prompt('Nombre de la tarjeta:', viejo);
+  if(val===null) return;
+  const nuevo = val.trim();
+  if(!nuevo || nuevo===viejo) return;
+  // Actualizar movimientos de todos los meses que apuntaban al nombre viejo
+  Object.keys(data).forEach(mi=>{
+    const md = data[mi];
+    if(md && md.entries){
+      md.entries.forEach(e=>{ if(e.tarjeta===viejo) e.tarjeta = nuevo; });
+    }
+  });
+  tj.nombre = nuevo;
+  save();             // guardar movimientos reasignados
+  saveTarjetas();     // guardar el nuevo nombre
+  renderAll();
   refreshCardSelects();
 }
 
