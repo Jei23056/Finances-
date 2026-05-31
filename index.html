@@ -804,10 +804,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
       </div>
     </div>
     <button class="btn-add" onclick="transferDebito()">Transferir</button>
-    <div style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--border)">
-      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Reparto rápido (una vez): pon parte de tu capital en cada cuenta según un porcentaje. Útil para repartir lo que ya tienes acumulado.</div>
-      <button class="pdf-btn" style="width:100%" onclick="repartoRapido()">⚖️ Reparto 30% ahorro / 70% corriente</button>
-    </div>
   </div>
 
   <div class="cards-grid" id="debito-cards"></div>
@@ -1770,16 +1766,25 @@ function debitoSaldoSecundaria(tj){
   return parseFloat(((tj.asignado||0) + mov.ingresos - mov.gastos).toFixed(2));
 }
 
-// Saldo de la tarjeta PRINCIPAL = Capital real − suma de saldos de las demás
-function debitoSaldoPrincipal(){
-  const secundarias = tarjetasDebito.filter(t=>!t.principal);
-  const sumaOtras = secundarias.reduce((s,t)=>s+debitoSaldoSecundaria(t),0);
+// La cuenta que absorbe el resto del capital es la CORRIENTE (infoCorriente:true).
+// Su saldo = Capital real − suma de saldos de las demás cuentas.
+// Así el dinero no asignado siempre queda en Corriente y la suma cuadra.
+function _cuentaResto(){
+  return tarjetasDebito.find(t=>t.infoCorriente===true) || tarjetasDebito[0] || null;
+}
+function debitoSaldoResto(){
+  const resto = _cuentaResto();
+  if(!resto) return 0;
+  const otras = tarjetasDebito.filter(t=>t.id!==resto.id);
+  const sumaOtras = otras.reduce((s,t)=>s+debitoSaldoSecundaria(t),0);
   return parseFloat((capitalReal() - sumaOtras).toFixed(2));
 }
 
-// Saldo de cualquier tarjeta
+// Saldo de cualquier tarjeta: la "resto" (corriente) absorbe; las demás son normales
 function debitoSaldo(tj){
-  return tj.principal ? debitoSaldoPrincipal() : debitoSaldoSecundaria(tj);
+  const resto = _cuentaResto();
+  if(resto && tj.id === resto.id) return debitoSaldoResto();
+  return debitoSaldoSecundaria(tj);
 }
 
 // La suma de todas las tarjetas SIEMPRE es el capital real (por construcción)
@@ -1795,12 +1800,12 @@ function addDebito(){
   const nombre = nombreEl.value.trim();
   const digitos= (digEl?.value||'').replace(/[^0-9]/g,'').slice(0,4);
   if(!nombre){ nombreEl.focus(); alert('Escribe un nombre para la cuenta/tarjeta.'); return; }
-  const esPrimera = tarjetasDebito.length === 0;  // la primera es la PRINCIPAL y absorbe el capital
+  const esPrimera = tarjetasDebito.length === 0;  // la primera solo aparece primero en el selector
   tarjetasDebito.push({
     id: 'db_' + Date.now(),
     nombre,
     digitos,
-    principal: esPrimera,
+    principal: esPrimera,   // marca sin efecto sobre el dinero, solo orden
     asignado: 0
   });
   if(nombreEl) nombreEl.value='';
@@ -1836,49 +1841,18 @@ function transferDebito(){
   }
 
   // Mover dinero: ajustar `asignado` de cada lado.
-  // Si una es la principal, no tiene `asignado` propio (su saldo se calcula como el resto),
-  // así que solo movemos el `asignado` de las secundarias y la principal se ajusta sola.
-  if(!from.principal) from.asignado = parseFloat(((from.asignado||0) - monto).toFixed(2));
-  if(!to.principal)   to.asignado   = parseFloat(((to.asignado||0)   + monto).toFixed(2));
+  // La cuenta "resto" (corriente) no tiene asignado propio: su saldo es el resto del
+  // capital, así que se ajusta sola. Solo movemos el asignado de las demás.
+  const resto = _cuentaResto();
+  const fromEsResto = resto && from.id === resto.id;
+  const toEsResto   = resto && to.id === resto.id;
+  if(!fromEsResto) from.asignado = parseFloat(((from.asignado||0) - monto).toFixed(2));
+  if(!toEsResto)   to.asignado   = parseFloat(((to.asignado||0)   + monto).toFixed(2));
 
   amtEl.value = '';
   saveDebito();
   renderAll();
   alert(`Transferido ${fmt(monto)} de "${from.nombre}" a "${to.nombre}".`);
-}
-
-// Reparto rápido (una sola vez): pone 30% del capital total en la cuenta PRINCIPAL
-// (ahorro) y 70% en la primera cuenta secundaria (corriente). Ajusta los `asignado`
-// para que los saldos queden exactamente en esa proporción. No crea ni destruye dinero.
-function repartoRapido(){
-  if(tarjetasDebito.length < 2){
-    alert('Necesitas la cuenta principal (ahorro) y al menos otra cuenta (corriente) para repartir.');
-    return;
-  }
-  const principal = tarjetasDebito.find(t=>t.principal);
-  const secundarias = tarjetasDebito.filter(t=>!t.principal);
-  if(!principal || !secundarias.length){ alert('Falta la cuenta principal o la secundaria.'); return; }
-  const total = debitoCapitalTotal();
-  const otra = secundarias[0]; // la primera secundaria = corriente
-
-  if(!confirm(`Repartir tu capital de ${fmt(total)}:\n• 30% (${fmt(total*0.30)}) en "${principal.nombre}"\n• 70% (${fmt(total*0.70)}) en "${otra.nombre}"\n\n¿Continuar?`)) return;
-
-  // El saldo de una secundaria = asignado + ingresos − gastos.
-  // Queremos saldo de "otra" = 70% del total. Despejamos asignado.
-  const mov = debitoMovimientos(otra.id);
-  const objetivoOtra = parseFloat((total * 0.70).toFixed(2));
-  otra.asignado = parseFloat((objetivoOtra - mov.ingresos + mov.gastos).toFixed(2));
-
-  // Si hubiera más de una secundaria, las demás se ponen en 0 (todo va a ahorro/corriente)
-  secundarias.slice(1).forEach(t=>{
-    const m = debitoMovimientos(t.id);
-    t.asignado = parseFloat((0 - m.ingresos + m.gastos).toFixed(2));
-  });
-
-  // La principal (ahorro) absorbe el resto automáticamente (= 30%).
-  saveDebito();
-  renderAll();
-  alert(`Listo. Tu capital quedó repartido 30% en "${principal.nombre}" y 70% en "${otra.nombre}".`);
 }
 
 // Editar el nombre
@@ -1894,47 +1868,23 @@ function editDebitoNombre(id){
   renderAll();
 }
 
-// Eliminar una tarjeta de débito
+// Eliminar una tarjeta de débito.
+// Su saldo (lo que tuviera asignado) vuelve a la cuenta "resto" (corriente).
 function delDebito(id){
   const tj = tarjetasDebito.find(t=>t.id===id);
   if(!tj) return;
-  if(tj.principal && tarjetasDebito.length > 1){
-    alert('No puedes eliminar la cuenta principal mientras tengas otras. Elimina primero las demás o cambia la principal.');
-    return;
-  }
+  const resto = _cuentaResto();
   const saldo = debitoSaldo(tj);
-  const msg = (!tj.principal && Math.abs(saldo) > 0.01)
-    ? `"${tj.nombre}" tiene ${fmt(saldo)}. Si la eliminas, ese dinero volverá a la cuenta principal. ¿Continuar?`
+  const esResto = resto && tj.id === resto.id;
+  const msg = (!esResto && Math.abs(saldo) > 0.01)
+    ? `"${tj.nombre}" tiene ${fmt(saldo)}. Si la eliminas, ese dinero pasará a "${resto?resto.nombre:'otra cuenta'}". ¿Continuar?`
     : `¿Eliminar "${tj.nombre}"?`;
   if(!confirm(msg)) return;
-  // Al eliminar una secundaria, su saldo vuelve solo a la principal (porque la
-  // principal = capital − suma de las demás). No hay que mover nada manualmente.
   tarjetasDebito = tarjetasDebito.filter(t=>t.id!==id);
-  // Si quedó alguna y ninguna es principal, marcar la primera como principal
+  // Reasignar la marca de "primera" (orden) si hizo falta
   if(tarjetasDebito.length && !tarjetasDebito.some(t=>t.principal)){
     tarjetasDebito[0].principal = true;
-    tarjetasDebito[0].asignado = 0;
   }
-  saveDebito();
-  renderAll();
-}
-
-// Hacer principal a otra tarjeta (intercambia el rol)
-function setDebitoPrincipal(id){
-  const tj = tarjetasDebito.find(t=>t.id===id);
-  if(!tj || tj.principal) return;
-  if(!confirm(`¿Hacer de "${tj.nombre}" tu cuenta principal? El resto del capital quedará en ella.`)) return;
-  // La nueva principal "absorbe el resto": fijamos su asignado para conservar su saldo actual
-  const saldoActual = debitoSaldoSecundaria(tj);
-  const antiguaPrincipal = tarjetasDebito.find(t=>t.principal);
-  if(antiguaPrincipal){
-    // La antigua principal pasa a secundaria con un asignado igual a su saldo actual
-    const saldoAntigua = debitoSaldoPrincipal();
-    antiguaPrincipal.principal = false;
-    antiguaPrincipal.asignado = parseFloat(saldoAntigua.toFixed(2));
-  }
-  tj.principal = true;
-  tj.asignado = 0;
   saveDebito();
   renderAll();
 }
@@ -1959,28 +1909,52 @@ function refreshDebitoSelects(){
   });
 }
 
-// Render de la sección de tarjetas de débito (dentro de la pestaña Tarjetas)
 // Gastado/Ingresado INFORMATIVO de cada cuenta (NO afecta el saldo real).
 // Regla pedida por el usuario:
-//  • Tarjetas con infoGastadoFijo → muestran ese monto fijo (Qik=6000, Ahorro=2000).
-//  • La cuenta "corriente" (infoCorriente:true) → gastado = TotalGastado − fijos,
-//    e ingresado = TotalGanado (todos los ingresos).
-//  • Las demás → ingresado 0.
-// Asigna los roles informativos por nombre (solo si la tarjeta no tiene rol aún).
-// Qik → gastado fijo 6000 ; Banreservas Ahorro → gastado fijo 2000 ;
-// Banreservas Corriente (o la que tenga "corriente") → recibe el resto e ingresos.
+//  • Qik → todo en 0 (no tiene nada).
+//  • Banreservas Ahorro → Ingresado fijo 6000 (gastado 0).
+//  • Banreservas Corriente → recibe el RESTO de gastos e ingresos, y todo el saldo real.
 function aplicarRolesInfoDebito(){
   let cambió = false;
   tarjetasDebito.forEach(tj=>{
-    if(tj.infoRoleSet2 === true) return; // ya configurada con la regla corregida
+    if(tj.infoRoleSet3 === true) return; // ya configurada con la regla corregida (v3)
     const n = (tj.nombre||'').toLowerCase();
     if(n.includes('qik')){
-      // Qik: sin gastos (no se ha gastado nada de ella)
-      delete tj.infoGastadoFijo; tj.infoCorriente = false; tj.infoRoleSet2 = true; cambió = true;
+      // Qik: nada de nada
+      delete tj.infoGastadoFijo; delete tj.infoIngresadoFijo;
+      tj.infoCorriente = false; tj.infoVaciar = true;
+      tj.infoRoleSet3 = true; cambió = true;
     } else if(n.includes('corriente')){
-      tj.infoCorriente = true; delete tj.infoGastadoFijo; tj.infoRoleSet2 = true; cambió = true;
+      tj.infoCorriente = true; delete tj.infoGastadoFijo; delete tj.infoIngresadoFijo;
+      tj.infoVaciar = false; tj.infoRoleSet3 = true; cambió = true;
     } else if(n.includes('ahorro')){
-      tj.infoGastadoFijo = 2000; tj.infoCorriente = false; tj.infoRoleSet2 = true; cambió = true;
+      // Ahorro: ingresó 6000 (no gastó nada)
+      delete tj.infoGastadoFijo; tj.infoIngresadoFijo = 6000;
+      tj.infoCorriente = false; tj.infoVaciar = false;
+      tj.infoRoleSet3 = true; cambió = true;
+    }
+  });
+  if(cambió) saveDebito();
+  // Vaciar el saldo de las cuentas marcadas con infoVaciar (mover su dinero a Corriente)
+  vaciarCuentasMarcadas();
+}
+
+// Mueve a la cuenta "resto" (corriente) el saldo de cualquier cuenta marcada
+// infoVaciar, dejándola en $0. Se hace una sola vez (se quita la marca al terminar).
+function vaciarCuentasMarcadas(){
+  const resto = _cuentaResto();
+  if(!resto) return;
+  let cambió = false;
+  tarjetasDebito.forEach(tj=>{
+    if(tj.infoVaciar === true && tj.id !== resto.id){
+      const saldo = debitoSaldo(tj);
+      if(Math.abs(saldo) > 0.001){
+        // Restar el saldo de esta cuenta; la cuenta resto lo absorbe sola (no toca su asignado)
+        tj.asignado = parseFloat(((tj.asignado||0) - saldo).toFixed(2));
+        cambió = true;
+      }
+      tj.infoVaciar = false; // ya vaciada, no repetir
+      cambió = true;
     }
   });
   if(cambió) saveDebito();
@@ -1990,16 +1964,17 @@ function debitoInfo(tj){
   const tot = (typeof yearTotals === 'function') ? yearTotals() : {yInc:0,yExp:0};
   const totalGastos   = tot.yExp || 0;
   const totalIngresos = tot.yInc || 0;
-  // Suma de los gastos fijos de otras tarjetas
-  const sumaFijos = tarjetasDebito.reduce((s,t)=> s + (t.infoGastadoFijo||0), 0);
+  // Suma de montos fijos del resto de tarjetas
+  const sumaGastoFijo    = tarjetasDebito.reduce((s,t)=> s + (t.infoGastadoFijo||0), 0);
+  const sumaIngresoFijo  = tarjetasDebito.reduce((s,t)=> s + (t.infoIngresadoFijo||0), 0);
   let gastado = 0, ingresado = 0;
-  if(typeof tj.infoGastadoFijo === 'number'){
-    gastado = tj.infoGastadoFijo;
-  }
+  if(typeof tj.infoGastadoFijo === 'number')   gastado   = tj.infoGastadoFijo;
+  if(typeof tj.infoIngresadoFijo === 'number') ingresado = tj.infoIngresadoFijo;
   if(tj.infoCorriente === true){
-    gastado   = parseFloat((totalGastos - sumaFijos).toFixed(2));
+    gastado   = parseFloat((totalGastos - sumaGastoFijo).toFixed(2));
+    ingresado = parseFloat((totalIngresos - sumaIngresoFijo).toFixed(2));
     if(gastado < 0) gastado = 0;
-    ingresado = parseFloat(totalIngresos.toFixed(2));
+    if(ingresado < 0) ingresado = 0;
   }
   return { gastos:gastado, ingresos:ingresado };
 }
@@ -2021,17 +1996,13 @@ function renderDebito(){
     const saldo = debitoSaldo(tj);
     const saldoColor = saldo < 0 ? 'var(--red)' : 'var(--green)';
     const dig = tj.digitos ? `•••• ${esc(tj.digitos)}` : '—';
-    const tag = tj.principal ? '<span class="db-principal-tag">Principal</span>' : '';
-    const hacerPrincipal = tj.principal ? '' :
-      `<button class="cc-edit-btn" onclick="setDebitoPrincipal('${tj.id}')" title="Hacer principal">★</button>`;
     return `<div class="cc-card">
       <div class="cc-card-head">
         <div>
-          <div class="cc-card-title">💳 ${esc(tj.nombre)} ${tag}</div>
+          <div class="cc-card-title">💳 ${esc(tj.nombre)}</div>
           <div class="cc-card-sub">${dig}</div>
         </div>
         <div style="display:flex;gap:6px;align-items:center">
-          ${hacerPrincipal}
           <button class="cc-edit-btn" onclick="editDebitoNombre('${tj.id}')" title="Editar nombre">✏️</button>
           <button class="cc-close-x" onclick="delDebito('${tj.id}')" title="Eliminar">×</button>
         </div>
