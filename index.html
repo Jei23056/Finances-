@@ -809,6 +809,26 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   <div class="cards-grid" id="debito-cards"></div>
 </div>
 
+<div id="panel-trabajos" style="display:none">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1.5rem">
+    <div style="font-size:13px;color:var(--text);font-weight:500">💼 Trabajos</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:2px">Agrega tus trabajos (solo el nombre). Cuando registres un ingreso de categoría "Nómina / Salario" podrás elegir de qué trabajo es, y aquí se suma todo lo que has ganado en cada uno.</div>
+  </div>
+
+  <div class="cc-add-form">
+    <div class="sec-lbl" style="margin-bottom:.85rem">Agregar trabajo</div>
+    <div class="cc-add-inputs" style="grid-template-columns:1fr">
+      <div>
+        <label>Nombre del trabajo</label>
+        <input type="text" id="tr-new-name" placeholder="Ej: Supermercado Nacional" onkeydown="if(event.key==='Enter')addTrabajo()" />
+      </div>
+    </div>
+    <button class="btn-add" onclick="addTrabajo()">Agregar trabajo</button>
+  </div>
+
+  <div class="cards-grid" id="trabajos-grid"></div>
+</div>
+
 </div>
 </div>
 <div id="save-indicator">Guardado ✓</div>
@@ -830,6 +850,7 @@ const LS_LOGROS    = `ach_unlocked_${CURRENT_YEAR}`;
 const TARJETAS_KEY = `tarjetas_${CURRENT_YEAR}`;   // ← clave vieja (por año), solo para migrar
 const TARJETAS_KEY_V2 = 'tarjetas_v2';             // ← clave nueva: tarjetas persistentes entre años
 const DEBITO_KEY = 'tarjetas_debito_v1';           // ← clave NUEVA: tarjetas de débito (independiente)
+const TRABAJOS_KEY = 'trabajos_v1';                // ← clave NUEVA: lista de trabajos (para Nómina / Salario)
 
 // Actualizar UI con año actual
 document.title = `Full Year ${CURRENT_YEAR}`;
@@ -879,6 +900,8 @@ let data = {};
 let tarjetas = [];
 // ► Lista de tarjetas de DÉBITO (NUEVO, independiente del crédito)
 let tarjetasDebito = [];
+// ► Lista de TRABAJOS (NUEVO, para categoría Nómina / Salario)
+let trabajos = [];
 // ► Cache del historial para la pestaña "Desde 2026"
 let historialFinanzasCache = {};
 
@@ -1158,6 +1181,13 @@ function renderMonth(mi){
             ${tarjetas.filter(t=>t.cerrada!==true).map(t=>`<option value="${esc(t.nombre)}">${esc(t.nombre)}</option>`).join('')}
           </select>
         </div>
+        <div class="fdesc" id="trabajo-wrap-${mi}" style="display:none">
+          <label>¿De qué trabajo?</label>
+          <select id="trabajo-${mi}" class="trabajo-select">
+            <option value="">Selecciona trabajo…</option>
+            ${trabajos.map(t=>`<option value="${esc(t.nombre)}">${esc(t.nombre)}</option>`).join('')}
+          </select>
+        </div>
         <div class="fdesc" id="debito-wrap-${mi}" style="display:none">
           <label>¿De cuál cuenta/tarjeta de débito?</label>
           <select id="debito-${mi}" class="tarjeta-select">
@@ -1237,6 +1267,8 @@ function setType(mi, type){
   }
   const tw = document.getElementById(`tarjeta-wrap-${mi}`);
   if(tw) tw.style.display = 'none';
+  const trw = document.getElementById(`trabajo-wrap-${mi}`);
+  if(trw) trw.style.display = 'none';
   updateDebitoWrap(mi);
 }
 function setTypeVisual(mi, type){
@@ -1349,6 +1381,11 @@ function addEntry(mi){
     const tjEl = document.getElementById(`tarjeta-${mi}`);
     if(tjEl && tjEl.value) entry.tarjeta = tjEl.value;
   }
+  // Si es un ingreso de "Nómina / Salario", guardar de qué trabajo es
+  if(type==='income' && cat==='Nómina / Salario'){
+    const trEl = document.getElementById(`trabajo-${mi}`);
+    if(trEl && trEl.value) entry.trabajo = trEl.value;
+  }
   // Tarjeta de DÉBITO: obligatoria siempre que haya cuentas creadas.
   // En gastos de Crédito = de cuál cuenta pagas la tarjeta (sale tu dinero real).
   if(tarjetasDebito.length){
@@ -1427,6 +1464,8 @@ function switchMonth(mi){
   const _ts = document.getElementById('mtab-since'); if(_ts) _ts.className='mtab';
   const _pc = document.getElementById('panel-cards'); if(_pc) _pc.style.display='none';
   const _tc = document.getElementById('mtab-cards'); if(_tc) _tc.className='mtab';
+  const _ptr = document.getElementById('panel-trabajos'); if(_ptr) _ptr.style.display='none';
+  const _ttr = document.getElementById('mtab-trabajos'); if(_ttr) _ttr.className='mtab';
   document.getElementById('panel-annual').style.display = 'none';
   document.getElementById('mtab-annual').className = 'mtab';
   const presentMonth = new Date().getMonth();
@@ -1451,6 +1490,8 @@ function switchToAnnual(){
   const _ts = document.getElementById('mtab-since'); if(_ts) _ts.className='mtab';
   const _pc = document.getElementById('panel-cards'); if(_pc) _pc.style.display='none';
   const _tc = document.getElementById('mtab-cards'); if(_tc) _tc.className='mtab';
+  const _ptr = document.getElementById('panel-trabajos'); if(_ptr) _ptr.style.display='none';
+  const _ttr = document.getElementById('mtab-trabajos'); if(_ttr) _ttr.className='mtab';
   document.querySelectorAll('.month-panel').forEach(p=>{ p.className = 'month-panel'; });
   const presentMonth = new Date().getMonth();
   document.querySelectorAll('.mtab').forEach((t,i)=>{
@@ -1696,6 +1737,8 @@ async function switchToSince(){
 
   const _pc = document.getElementById('panel-cards'); if(_pc) _pc.style.display='none';
   const _tc = document.getElementById('mtab-cards'); if(_tc) _tc.className='mtab';
+  const _ptr = document.getElementById('panel-trabajos'); if(_ptr) _ptr.style.display='none';
+  const _ttr = document.getElementById('mtab-trabajos'); if(_ttr) _ttr.className='mtab';
 
   const sinceTab = document.getElementById('mtab-since');
   if(sinceTab) sinceTab.className = 'mtab active';
@@ -1744,6 +1787,36 @@ function saveDebito(){
   db.collection('users').doc(currentUser.uid).set({ [DEBITO_KEY]: tarjetasDebito }, { merge: true })
     .then(()=>{ if(ind){ ind.classList.add('show'); setTimeout(()=>ind.classList.remove('show'),1500); } })
     .catch(e=>console.error('Error guardando débito:', e));
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// TRABAJOS  (NUEVO — para categoría "Nómina / Salario")
+// • Un trabajo solo tiene nombre: { id, nombre }
+// • Al registrar un ingreso de "Nómina / Salario" se elige el trabajo y se
+//   guarda en entry.trabajo. El total del trabajo es la suma de esos ingresos.
+// ══════════════════════════════════════════════════════════════════════════
+function saveTrabajos(){
+  if(!currentUser) return;
+  const ind = document.getElementById('save-indicator');
+  db.collection('users').doc(currentUser.uid).set({ [TRABAJOS_KEY]: trabajos }, { merge: true })
+    .then(()=>{ if(ind){ ind.classList.add('show'); setTimeout(()=>ind.classList.remove('show'),1500); } })
+    .catch(e=>console.error('Error guardando trabajos:', e));
+}
+
+// Suma de todos los ingresos de "Nómina / Salario" asociados a este trabajo
+function trabajoTotal(nombre){
+  let total = 0;
+  Object.keys(data).forEach(mi=>{
+    const md = data[mi];
+    if(md && md.entries){
+      md.entries.forEach(e=>{
+        if(e.type==='income' && e.cat==='Nómina / Salario' && e.trabajo===nombre){
+          total += e.amount;
+        }
+      });
+    }
+  });
+  return total;
 }
 
 // El Capital real (mismo número que muestra "Capital Actual" arriba)
@@ -2147,6 +2220,8 @@ function switchToCards(){
   document.getElementById('panel-annual').style.display = 'none';
   const _ps = document.getElementById('panel-since'); if(_ps) _ps.style.display='none';
   const _ts = document.getElementById('mtab-since'); if(_ts) _ts.className='mtab';
+  const _ptr = document.getElementById('panel-trabajos'); if(_ptr) _ptr.style.display='none';
+  const _ttr = document.getElementById('mtab-trabajos'); if(_ttr) _ttr.className='mtab';
 
   const cardsTab = document.getElementById('mtab-cards');
   if(cardsTab) cardsTab.className = 'mtab active';
@@ -2155,6 +2230,98 @@ function switchToCards(){
   renderDebito();
   refreshDebitoSelects();
   applyMonthsCollapsed();
+}
+
+// ── PANEL TRABAJO ───────────────────────────────────────────────────────────
+function switchToTrabajos(){
+  annualActive = false;
+  document.querySelectorAll('.month-panel').forEach(p=>{ p.className = 'month-panel'; });
+  const presentMonth = new Date().getMonth();
+  document.querySelectorAll('.mtab').forEach((t,i)=>{
+    if(i < 12){
+      let cls = 'mtab' + (hasData(i)?' has-data':'');
+      if(i === presentMonth) cls += ' present-month';
+      else cls += ' hideable';
+      t.className = cls;
+    }
+  });
+  const annTab = document.getElementById('mtab-annual');
+  if(annTab) annTab.className = 'mtab';
+  document.getElementById('panel-annual').style.display = 'none';
+  const _ps = document.getElementById('panel-since'); if(_ps) _ps.style.display='none';
+  const _ts = document.getElementById('mtab-since'); if(_ts) _ts.className='mtab';
+  const _pc = document.getElementById('panel-cards'); if(_pc) _pc.style.display='none';
+  const _tc = document.getElementById('mtab-cards'); if(_tc) _tc.className='mtab';
+
+  const trabajosTab = document.getElementById('mtab-trabajos');
+  if(trabajosTab) trabajosTab.className = 'mtab active';
+  document.getElementById('panel-trabajos').style.display = 'block';
+  renderTrabajos();
+  applyMonthsCollapsed();
+}
+
+function renderTrabajos(){
+  const grid = document.getElementById('trabajos-grid');
+  if(!grid) return;
+  if(!trabajos.length){
+    grid.innerHTML = '<div class="empty">Aún no has agregado ningún trabajo. Usa el formulario de arriba para agregar uno.</div>';
+    return;
+  }
+  grid.innerHTML = trabajos.map((tr,idx)=>{
+    const total = trabajoTotal(tr.nombre);
+    return `<div class="credit-card">
+      <div class="cc-head">
+        <div>
+          <div class="cc-name">💼 ${esc(tr.nombre)}</div>
+          <div class="cc-sub">Total ganado</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="cc-del" onclick="delTrabajo(${idx})" title="Eliminar trabajo">×</button>
+        </div>
+      </div>
+      <div class="cc-stats">
+        <div class="cc-stat">
+          <div class="cc-stat-lbl">Total</div>
+          <div class="cc-stat-val" style="color:var(--green)">${fmt(total)}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function addTrabajo(){
+  const nameEl = document.getElementById('tr-new-name');
+  const nombre = nameEl.value.trim();
+  if(!nombre){ nameEl.focus(); return; }
+  if(trabajos.some(t=>t.nombre.toLowerCase()===nombre.toLowerCase())){
+    alert('Ya existe un trabajo con ese nombre.');
+    return;
+  }
+  trabajos.push({ id: Date.now(), nombre });
+  nameEl.value = '';
+  saveTrabajos();
+  renderTrabajos();
+  refreshTrabajoSelects();
+}
+
+function delTrabajo(idx){
+  const tr = trabajos[idx];
+  if(!tr) return;
+  if(!confirm(`¿Eliminar el trabajo "${tr.nombre}"?\n\nLos ingresos ya registrados no se borran, solo dejan de estar asociados a este trabajo.`)) return;
+  trabajos.splice(idx,1);
+  saveTrabajos();
+  renderTrabajos();
+  refreshTrabajoSelects();
+}
+
+// Refresca los selectores de trabajo en los formularios de cada mes
+function refreshTrabajoSelects(){
+  document.querySelectorAll('.trabajo-select').forEach(sel=>{
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Selecciona trabajo…</option>' +
+      trabajos.map(t=>`<option value="${esc(t.nombre)}">${esc(t.nombre)}</option>`).join('');
+    if(trabajos.some(t=>t.nombre===cur)) sel.value = cur;
+  });
 }
 
 function renderCards(){
@@ -2559,6 +2726,8 @@ function onCatChange(mi){
   if(!cat || !wrap) return;
   const type = monthTypes[mi] || 'expense';
   wrap.style.display = (type==='expense' && cat.value==='Crédito') ? 'block' : 'none';
+  const trWrap = document.getElementById(`trabajo-wrap-${mi}`);
+  if(trWrap) trWrap.style.display = (type==='income' && cat.value==='Nómina / Salario') ? 'block' : 'none';
   updateDebitoWrap(mi);
 }
 
@@ -2870,6 +3039,13 @@ function buildSkeleton(){
     div.className = 'month-panel' + (mi===activeMonth?' active':'');
     panelsEl.appendChild(div);
   });
+
+  const trabajosBtn = document.createElement('button');
+  trabajosBtn.id = 'mtab-trabajos';
+  trabajosBtn.className = 'mtab';
+  trabajosBtn.textContent = '💼 Trabajo';
+  trabajosBtn.onclick = ()=>switchToTrabajos();
+  tabsEl.appendChild(trabajosBtn);
 
   const annualBtn = document.createElement('button');
   annualBtn.id = 'mtab-annual';
@@ -3960,7 +4136,9 @@ async function loadFromFirebase(){
     });
     // Cargar tarjetas de DÉBITO (clave nueva, independiente)
     tarjetasDebito = Array.isArray(d[DEBITO_KEY]) ? d[DEBITO_KEY] : [];
-  } catch(e){ console.error('Error cargando datos:', e); data = {}; tarjetas = []; tarjetasDebito = []; }
+    // Cargar TRABAJOS (clave nueva, independiente)
+    trabajos = Array.isArray(d[TRABAJOS_KEY]) ? d[TRABAJOS_KEY] : [];
+  } catch(e){ console.error('Error cargando datos:', e); data = {}; tarjetas = []; tarjetasDebito = []; trabajos = []; }
 }
 
 function save(){
