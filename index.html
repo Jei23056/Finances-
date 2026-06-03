@@ -401,6 +401,31 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   border-radius:999px; padding:4px 12px; opacity:0; transition:opacity .3s; }
 #save-indicator.show { opacity:1; }
 
+#undo-toast {
+  position:fixed; bottom:1.25rem; left:50%; transform:translateX(-50%) translateY(20px);
+  display:flex; align-items:center; gap:14px;
+  background:var(--card2); border:1px solid var(--border2);
+  border-radius:999px; padding:10px 12px 10px 18px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.4);
+  z-index:9000; opacity:0; pointer-events:none;
+  transition:opacity .25s, transform .25s;
+  max-width:calc(100vw - 2rem);
+}
+#undo-toast.show { opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto; }
+#undo-toast .undo-msg { font-size:13px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#undo-toast .undo-btn {
+  flex-shrink:0; padding:6px 16px; background:var(--gldim); border:1px solid var(--gold);
+  border-radius:999px; color:var(--gold); font-family:'DM Sans',sans-serif;
+  font-size:13px; font-weight:600; cursor:pointer; transition:all .15s;
+}
+#undo-toast .undo-btn:hover { background:rgba(232,185,106,.2); }
+#undo-toast .undo-btn:active { transform:scale(.96); }
+#undo-toast .undo-x {
+  flex-shrink:0; background:none; border:none; cursor:pointer; color:var(--muted);
+  font-size:18px; line-height:1; padding:2px 6px; transition:color .15s;
+}
+#undo-toast .undo-x:hover { color:var(--text); }
+
 #splash-screen {
   position:fixed; inset:0; z-index:9999;
   background:var(--bg);
@@ -837,6 +862,11 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 </div>
 </div>
 <div id="save-indicator">Guardado ✓</div>
+<div id="undo-toast">
+  <span class="undo-msg" id="undo-msg">Eliminado</span>
+  <button class="undo-btn" onclick="ejecutarDeshacer()">↩ Deshacer</button>
+  <button class="undo-x" onclick="ocultarUndoToast()" title="Cerrar">×</button>
+</div>
 
 <div style="text-align:center;padding:2rem 0 1rem;font-size:11px;color:var(--muted);letter-spacing:.06em">
   Design by <span style="color:var(--muted2)">Jeiron</span> &amp; <span style="color:var(--muted2)">Claude</span> ✦ <span id="footer-year"></span>
@@ -1422,10 +1452,23 @@ function addEntry(mi){
 
 function delEntry(mi, id){
   const md = getMonth(mi);
+  const borrada = md.entries.find(e=>e.id===id);
+  const posicion = md.entries.findIndex(e=>e.id===id);
   md.entries = md.entries.filter(e=>e.id!==id);
   save();
   propagateCapitals();
   renderAll();
+  if(borrada){
+    const etiqueta = borrada.desc ? `"${borrada.desc}"` : 'movimiento';
+    registrarUndo(`Eliminado ${etiqueta} (${fmt(borrada.amount)})`, ()=>{
+      const md2 = getMonth(mi);
+      const pos = (posicion>=0 && posicion<=md2.entries.length) ? posicion : md2.entries.length;
+      md2.entries.splice(pos, 0, borrada);
+      save();
+      propagateCapitals();
+      renderAll();
+    });
+  }
 }
 
 function editStart(mi){
@@ -1485,6 +1528,8 @@ function switchMonth(mi){
   document.querySelectorAll('.month-panel').forEach((p,i)=>{
     p.className = 'month-panel' + (i===mi?' active':'');
   });
+  // Si entras al mes presente, colapsa el carrusel (queda solo Junio, seleccionado)
+  if(mi === presentMonth){ _monthsExpanded = false; }
   renderYear();
   applyMonthsCollapsed();
 }
@@ -2074,6 +2119,9 @@ function delDebito(id){
     ? `"${tj.nombre}" tiene ${fmt(saldo)}. Si la eliminas, ese dinero pasará a "${resto?resto.nombre:'otra cuenta'}". ¿Continuar?`
     : `¿Eliminar "${tj.nombre}"?`;
   if(!confirm(msg)) return;
+  const nombreBorrada = tj.nombre;
+  // Copia profunda del estado anterior para poder restaurarlo tal cual
+  const snapshot = JSON.parse(JSON.stringify(tarjetasDebito));
   tarjetasDebito = tarjetasDebito.filter(t=>t.id!==id);
   // Reasignar la marca de "primera" (orden) si hizo falta
   if(tarjetasDebito.length && !tarjetasDebito.some(t=>t.principal)){
@@ -2081,6 +2129,11 @@ function delDebito(id){
   }
   saveDebito();
   renderAll();
+  registrarUndo(`Cuenta "${nombreBorrada}" eliminada`, ()=>{
+    tarjetasDebito = snapshot;
+    saveDebito();
+    renderAll();
+  });
 }
 
 // Refrescar los selectores de débito del formulario (al abrir/cambiar)
@@ -2416,14 +2469,62 @@ function addTrabajo(){
   refreshTrabajoSelects();
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+// SISTEMA DE DESHACER  (NUEVO)
+// Guarda una acción para revertir. Tras eliminar algo aparece un toast con
+// "↩ Deshacer". Si lo pulsas, se restaura lo borrado. El toast se va solo
+// después de unos segundos.
+// ══════════════════════════════════════════════════════════════════════════
+let _undoAccion = null;   // función que revierte la última acción
+let _undoTimer = null;    // timer para auto-ocultar el toast
+
+// Registra una acción para poder deshacerla y muestra el toast.
+// mensaje: texto a mostrar. restaurar: función que revierte el cambio.
+function registrarUndo(mensaje, restaurar){
+  _undoAccion = restaurar;
+  const toast = document.getElementById('undo-toast');
+  const msgEl = document.getElementById('undo-msg');
+  if(msgEl) msgEl.textContent = mensaje;
+  if(toast) toast.classList.add('show');
+  if(_undoTimer) clearTimeout(_undoTimer);
+  // El toast se queda 7 segundos; tiempo de sobra para reaccionar
+  _undoTimer = setTimeout(()=>{ ocultarUndoToast(); }, 7000);
+}
+
+function ocultarUndoToast(){
+  const toast = document.getElementById('undo-toast');
+  if(toast) toast.classList.remove('show');
+  if(_undoTimer){ clearTimeout(_undoTimer); _undoTimer = null; }
+  _undoAccion = null;
+}
+
+function ejecutarDeshacer(){
+  if(typeof _undoAccion === 'function'){
+    const fn = _undoAccion;
+    _undoAccion = null;
+    if(_undoTimer){ clearTimeout(_undoTimer); _undoTimer = null; }
+    const toast = document.getElementById('undo-toast');
+    if(toast) toast.classList.remove('show');
+    fn();   // revierte
+  }
+}
+
 function delTrabajo(idx){
   const tr = trabajos[idx];
   if(!tr) return;
   if(!confirm(`¿Eliminar el trabajo "${tr.nombre}"?\n\nLos ingresos ya registrados no se borran, solo dejan de estar asociados a este trabajo.`)) return;
+  const borrado = trabajos[idx];
+  const posicion = idx;
   trabajos.splice(idx,1);
   saveTrabajos();
   renderTrabajos();
   refreshTrabajoSelects();
+  registrarUndo(`Trabajo "${borrado.nombre}" eliminado`, ()=>{
+    trabajos.splice(posicion, 0, borrado);
+    saveTrabajos();
+    renderTrabajos();
+    refreshTrabajoSelects();
+  });
 }
 
 // Refresca los selectores de trabajo en los formularios de cada mes
@@ -2584,10 +2685,18 @@ function delCard(idx){
   const tj = tarjetas[idx];
   if(!tj) return;
   if(!confirm(`¿Eliminar la tarjeta "${tj.nombre}"?\n\nLos movimientos ya registrados no se borran, solo dejan de estar asociados a esta tarjeta.`)) return;
+  const borrada = tarjetas[idx];
+  const posicion = idx;
   tarjetas.splice(idx,1);
   saveTarjetas();
   renderCards();
   refreshCardSelects();
+  registrarUndo(`Tarjeta "${borrada.nombre}" eliminada`, ()=>{
+    tarjetas.splice(posicion, 0, borrada);
+    saveTarjetas();
+    renderCards();
+    refreshCardSelects();
+  });
 }
 
 // Editar el nombre de una tarjeta de crédito.
@@ -3130,14 +3239,23 @@ function buildSkeleton(){
     btn.textContent = (mi === presentMonth) ? (name + ' ▾') : name;
     btn.onclick = ()=>{
       if(mi === presentMonth){
-        // Si ya estás viendo el mes presente Y el carrusel, hacer toggle (abrir/cerrar)
-        // Si NO estás en el mes presente (otro mes, año completo, tarjetas, etc.), entrar a él
-        const inPresent = (activeMonth === presentMonth) && !annualActive
-          && document.getElementById('panel-cards').style.display !== 'block'
-          && document.getElementById('panel-since').style.display !== 'block';
+        // ¿Ya estás viendo el panel del mes presente? (no en Año completo, Tarjetas,
+        // Desde, Trabajo ni en otro mes)
+        const _pc = document.getElementById('panel-cards');
+        const _ps = document.getElementById('panel-since');
+        const _ptr = document.getElementById('panel-trabajos');
+        const enOtroPanel = annualActive
+          || (_pc && _pc.style.display === 'block')
+          || (_ps && _ps.style.display === 'block')
+          || (_ptr && _ptr.style.display === 'block');
+        const panelPresente = document.getElementById('panel-' + presentMonth);
+        const viendoPanelPresente = panelPresente && panelPresente.classList.contains('active');
+        const inPresent = (activeMonth === presentMonth) && !enOtroPanel && viendoPanelPresente;
         if(inPresent){
+          // Ya estás viendo Junio → solo abrir/cerrar el carrusel de meses
           togglePresentMonth();
         } else {
+          // No estás viendo Junio (estabas en otro panel u otro mes) → entrar a Junio
           switchMonth(mi);
         }
       } else {
