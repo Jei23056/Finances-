@@ -455,7 +455,7 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
   border-color: var(--border2);
 }
 .ycard::after { height:1px; opacity:.5; }
-.ycard-val { font-size:1.7rem; letter-spacing:-0.5px; }
+.ycard-val { letter-spacing:-0.5px; }
 .ycard.net .ycard-val {
   background: var(--gold-grad);
   -webkit-background-clip: text; background-clip: text;
@@ -484,7 +484,7 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
   border-color: var(--hairline);
 }
 .mcard { padding:1.1rem 1.2rem; transition:border-color .2s, box-shadow .2s; }
-.mcard-val { font-size:1.35rem; letter-spacing:-0.3px; }
+.mcard-val { letter-spacing:-0.3px; }
 .form-wrap { padding:1.5rem; }
 .cat-block { padding:1.3rem; }
 
@@ -518,7 +518,7 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 .entries { gap:7px; margin-bottom:2rem; }
 .entry { padding:13px 17px; transition:transform .2s, border-color .2s, box-shadow .2s; }
 .entry:hover { transform:translateX(3px); box-shadow:var(--shadow-md); border-color:var(--border2); }
-.eamt { font-size:1.05rem; }
+
 
 /* CREDIT CARD — brillo dorado como tarjeta física */
 .cats-grid { gap:14px; margin-bottom:2rem; }
@@ -940,6 +940,11 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
   <div id="annual-trabajos-wrap" style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:1.5rem;display:none">
     <div class="sec-lbl" style="margin-bottom:1rem">💼 Ganado por trabajo (acumulado)</div>
     <div id="annual-trabajos-bars"></div>
+  </div>
+
+  <div id="annual-debito-wrap" style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:1.5rem;display:none">
+    <div class="sec-lbl" style="margin-bottom:1rem">🏦 Cuentas de débito · saldos actuales</div>
+    <div id="annual-debito-bars"></div>
   </div>
 
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:1.5rem">
@@ -1916,6 +1921,42 @@ function renderAnnual(){
       trWrap.style.display = 'block';
     } else {
       trWrap.style.display = 'none';
+    }
+  }
+
+  // ── Sección Cuentas de débito (saldos actuales) ──
+  const dbWrap = document.getElementById('annual-debito-wrap');
+  const dbBars = document.getElementById('annual-debito-bars');
+  if(dbWrap && dbBars){
+    if(tarjetasDebito && tarjetasDebito.length){
+      const resto = _cuentaResto();
+      const filas = tarjetasDebito.map(tj=>({
+        nombre: tj.nombre,
+        digitos: tj.digitos || '',
+        saldo: debitoSaldo(tj),
+        esResto: resto && tj.id === resto.id
+      }));
+      const totalDb = debitoCapitalTotal();
+      const maxAbs = Math.max(...filas.map(f=>Math.abs(f.saldo)), 1);
+      dbBars.innerHTML = filas.map(f=>{
+        const pct = Math.max(2, Math.round(Math.abs(f.saldo)/maxAbs*100));
+        const col = f.saldo < 0 ? 'var(--red)' : 'var(--blue)';
+        return `<div style="margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:13px;color:var(--text)">🏦 ${esc(f.nombre)}${f.digitos?` <span style="color:var(--muted);font-size:11px">•••• ${esc(f.digitos)}</span>`:''}${f.esResto?` <span style="color:var(--muted);font-size:10px">· principal</span>`:''}</span>
+            <span style="font-family:'DM Serif Display',serif;font-size:1rem;color:${col}">${fmtSigned(f.saldo)}</span>
+          </div>
+          <div style="height:10px;background:var(--surf);border-radius:3px;overflow:hidden">
+            <div style="width:${pct}%;height:100%;background:${col};border-radius:3px"></div>
+          </div>
+        </div>`;
+      }).join('') + `<div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;margin-top:4px;border-top:1px solid var(--border)">
+          <span style="font-size:12px;color:var(--muted2)">Total en cuentas</span>
+          <span style="font-family:'DM Serif Display',serif;font-size:1.05rem;color:var(--green)">${fmtSigned(totalDb)}</span>
+        </div>`;
+      dbWrap.style.display = 'block';
+    } else {
+      dbWrap.style.display = 'none';
     }
   }
 
