@@ -4172,6 +4172,21 @@ function exportPDFPro(historicalData, historicalYear, historicalCards){
     * { box-sizing:border-box; margin:0; padding:0; }
     body { font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; color:#1c2433; line-height:1.55; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 
+    /* ── Vista en PANTALLA: hoja A4 centrada (laptops/horizontal) ── */
+    @media screen {
+      body { background:#e9edf3; padding:32px 20px; }
+      .paper {
+        max-width:760px; width:100%; margin:0 auto;
+        background:#fff; padding:46px 52px;
+        border-radius:8px; box-shadow:0 10px 40px rgba(20,30,55,0.18);
+      }
+      .cover-page { height:auto; min-height:560px; }
+    }
+    /* En impresión la "hoja" no lleva marco ni sombra */
+    @media print {
+      .paper { max-width:none; width:auto; margin:0; padding:0; background:none; box-shadow:none; border-radius:0; }
+    }
+
     /* ── PORTADA (página completa) ───────────────────────────── */
     .cover-page {
       height:calc(100vh - 38mm); min-height:240mm;
@@ -4296,6 +4311,7 @@ function exportPDFPro(historicalData, historicalYear, historicalCards){
     .back-btn-float:active { transform:scale(.96); }
   </style></head><body>
   <button class="back-btn-float" onclick="window.close(); setTimeout(function(){ history.back(); }, 100);">&larr; Volver</button>
+  <div class="paper">
 
   <!-- ══ PORTADA ══ -->
   <div class="cover-page">
@@ -4547,7 +4563,7 @@ function exportPDFPro(historicalData, historicalYear, historicalCards){
   html += `<div class="footer">
     <span>Mis Finanzas &middot; Reporte Financiero ${year}</span>
     <span>Generado el ${dateStr} &middot; Documento confidencial</span>
-  </div></body></html>`;
+  </div></div></body></html>`;
 
   const win = window.open('', '_blank');
   win.document.write(html);
