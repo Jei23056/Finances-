@@ -4569,15 +4569,29 @@ function exportPDFPro(historicalData, historicalYear, historicalCards){
   if(!isHistorical && tarjetasDebito && tarjetasDebito.length){
     const resto = _cuentaResto();
     const totalDb = debitoCapitalTotal();
-    html += `<div class="section"><h2><span class="h2-num">11</span> Cuentas de Débito &nbsp;<span style="font-size:10px;color:${SLATE};font-weight:600;letter-spacing:.04em">saldos actuales</span></h2><div class="panel">`;
+    html += `<div class="section"><h2><span class="h2-num">11</span> Cuentas de Débito &nbsp;<span style="font-size:10px;color:${SLATE};font-weight:600;letter-spacing:.04em">saldos actuales</span></h2>`;
     tarjetasDebito.forEach(tj=>{
       const saldo = debitoSaldo(tj);
-      const dig = tj.digitos ? ` &middot; •••• ${esc(tj.digitos)}` : '';
+      const info = (typeof debitoInfo === 'function') ? debitoInfo(tj) : {gastos:0, ingresos:0};
+      const dig = tj.digitos ? '•••• ' + esc(tj.digitos) : '—';
       const esResto = resto && tj.id === resto.id;
-      const cls = saldo < 0 ? 'neg' : 'pos';
-      html += `<div class="row"><span class="lbl">${esc(tj.nombre)}${dig}${esResto?' &middot; principal':''}</span><span class="${cls}">${fmtSigned(saldo)}</span></div>`;
+      const saldoCls = saldo < 0 ? 'neg' : 'pos';
+      html += `<div class="month-block">
+        <div class="month-title">
+          <span>${esc(tj.nombre)}${esResto ? ' &middot; Principal' : ''}</span>
+          <span style="font-size:11px;color:${SLATE};font-weight:500">${dig}</span>
+        </div>
+        <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+          <div class="kpi"><div class="kpi-lbl">Ingresado</div><div class="kpi-val pos">${fmt(info.ingresos)}</div></div>
+          <div class="kpi"><div class="kpi-lbl">Gastado</div><div class="kpi-val neg">${fmt(info.gastos)}</div></div>
+          <div class="kpi"><div class="kpi-lbl">Saldo actual</div><div class="kpi-val ${saldoCls}">${fmtSigned(saldo)}</div></div>
+        </div>
+      </div>`;
     });
-    html += `<div class="row" style="border-top:2px solid ${NAVY};margin-top:4px"><span class="lbl" style="color:${NAVY};font-weight:700">Total en cuentas</span><span class="pos" style="font-weight:700">${fmtSigned(totalDb)}</span></div></div></div>`;
+    html += `<div class="panel" style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px">
+      <span style="font-size:13px;font-weight:700;color:${NAVY};letter-spacing:.02em">Capital total en cuentas</span>
+      <span class="pos" style="font-size:1.15rem;font-weight:700">${fmtSigned(totalDb)}</span>
+    </div></div>`;
     debitoMostrado = true;
   }
 
