@@ -367,6 +367,20 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 .save-menu-item.gold { border-top:1px solid var(--border); margin-top:3px; padding-top:11px; }
 
 
+/* ── Modo VISOR (año cerrado, solo lectura) ──────────────────────────── */
+/* Oculta todo lo que permite editar el año presente. */
+body.viewer-mode .form-wrap,
+body.viewer-mode .bdel,
+body.viewer-mode #panel-annual .action-buttons,
+body.viewer-mode .cc-add-form,
+body.viewer-mode .cc-edit-btn,
+body.viewer-mode .cc-keep,
+body.viewer-mode .cc-del {
+  display:none !important;
+}
+body.viewer-mode #viewer-banner { display:flex !important; }
+
+
 </style>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -674,6 +688,18 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
     <button class="btn-signout" onclick="signOut()">Salir</button>
   </div>
 </header>
+
+<!-- Barra de "viendo año anterior" (solo lectura) -->
+<div id="viewer-banner" style="display:none;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--gldim);border:1px solid var(--gold);border-radius:var(--r);padding:.85rem 1.1rem;margin-bottom:1.5rem">
+  <div style="display:flex;align-items:center;gap:10px;min-width:0">
+    <span style="font-size:20px">🕓</span>
+    <div style="min-width:0">
+      <div style="font-size:14px;font-weight:600;color:var(--gold)">Viendo año <span id="viewer-year">—</span> · solo lectura</div>
+      <div style="font-size:11px;color:var(--muted2);margin-top:1px">Este es un año cerrado del historial. No se puede editar.</div>
+    </div>
+  </div>
+  <button onclick="exitYearViewer()" style="flex-shrink:0;padding:9px 16px;background:var(--gold);border:none;border-radius:var(--rs);color:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:opacity .15s" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">← Volver al año presente</button>
+</div>
 
 <div class="year-bar">
   <div class="ycard inc clickable" id="ycard-inc" onclick="toggleCurrency('inc')"><div class="ycard-lbl">Total ganado</div><span class="ycard-cur" id="cur-inc">DOP</span><div class="ycard-val" id="y-inc">$0.00</div></div>
@@ -1393,6 +1419,7 @@ function renderByCat(mi){
 }
 
 function addEntry(mi){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
   const raw    = document.getElementById(`amt-${mi}`).value.replace(/,/g,'');
   const amount = parseFloat(raw);
   const cat    = document.getElementById(`cat-${mi}`).value;
@@ -1451,6 +1478,7 @@ function addEntry(mi){
 }
 
 function delEntry(mi, id){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
   const md = getMonth(mi);
   const borrada = md.entries.find(e=>e.id===id);
   const posicion = md.entries.findIndex(e=>e.id===id);
@@ -1472,6 +1500,7 @@ function delEntry(mi, id){
 }
 
 function editStart(mi){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
   const md = getMonth(mi);
   const cur = md.startCapital ?? 0;
   const val = prompt(`Capital de inicio de ${MONTHS[mi]} (actual: ${cur}):`, cur);
@@ -1836,6 +1865,7 @@ async function switchToSince(){
 // ══════════════════════════════════════════════════════════════════════════
 function saveTarjetas(){
   if(!currentUser) return;
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
   const ind = document.getElementById('save-indicator');
   db.collection('users').doc(currentUser.uid).set({ [TARJETAS_KEY_V2]: tarjetas }, { merge: true })
     .then(()=>{
@@ -1859,6 +1889,7 @@ function saveTarjetas(){
 // ══════════════════════════════════════════════════════════════════════════
 function saveDebito(){
   if(!currentUser) return;
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
   const ind = document.getElementById('save-indicator');
   db.collection('users').doc(currentUser.uid).set({ [DEBITO_KEY]: tarjetasDebito }, { merge: true })
     .then(()=>{ if(ind){ ind.classList.add('show'); setTimeout(()=>ind.classList.remove('show'),1500); } })
@@ -1873,6 +1904,7 @@ function saveDebito(){
 // ══════════════════════════════════════════════════════════════════════════
 function saveTrabajos(){
   if(!currentUser) return;
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
   const ind = document.getElementById('save-indicator');
   db.collection('users').doc(currentUser.uid).set({ [TRABAJOS_KEY]: trabajos }, { merge: true })
     .then(()=>{ if(ind){ ind.classList.add('show'); setTimeout(()=>ind.classList.remove('show'),1500); } })
@@ -2033,6 +2065,7 @@ function debitoCapitalTotal(){
 
 // Agregar una tarjeta de débito (SIN monto: el dinero se reparte por transferencias)
 function addDebito(){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
   const nombreEl = document.getElementById('db-nombre');
   const digEl    = document.getElementById('db-digitos');
   if(!nombreEl) return;
@@ -2055,6 +2088,7 @@ function addDebito(){
 
 // Transferir dinero entre dos tarjetas (no crea ni destruye dinero)
 function transferDebito(){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
   if(tarjetasDebito.length < 2){
     alert('Necesitas al menos 2 cuentas para transferir.');
     return;
@@ -2096,6 +2130,7 @@ function transferDebito(){
 
 // Editar el nombre
 function editDebitoNombre(id){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
   const tj = tarjetasDebito.find(t=>t.id===id);
   if(!tj) return;
   const val = prompt('Nombre de la cuenta/tarjeta:', tj.nombre);
@@ -2110,6 +2145,7 @@ function editDebitoNombre(id){
 // Eliminar una tarjeta de débito.
 // Su saldo (lo que tuviera asignado) vuelve a la cuenta "resto" (corriente).
 function delDebito(id){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
   const tj = tarjetasDebito.find(t=>t.id===id);
   if(!tj) return;
   const resto = _cuentaResto();
@@ -2455,6 +2491,7 @@ function renderTrabajos(){
 }
 
 function addTrabajo(){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
   const nameEl = document.getElementById('tr-new-name');
   const nombre = nameEl.value.trim();
   if(!nombre){ nameEl.focus(); return; }
@@ -2510,6 +2547,7 @@ function ejecutarDeshacer(){
 }
 
 function delTrabajo(idx){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
   const tr = trabajos[idx];
   if(!tr) return;
   if(!confirm(`¿Eliminar el trabajo "${tr.nombre}"?\n\nLos ingresos ya registrados no se borran, solo dejan de estar asociados a este trabajo.`)) return;
@@ -2630,6 +2668,7 @@ function setCardViewYear(idx, year){
 
 // Marca o desmarca una tarjeta como "Cerrada" (ya no se usa para gastos nuevos)
 function toggleCardClosed(idx){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
   const tj = tarjetas[idx];
   if(!tj) return;
   const cerrar = !(tj.cerrada === true);
@@ -2653,6 +2692,7 @@ function toggleCardMonths(idx){
 }
 
 function addCard(){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
   const nameEl  = document.getElementById('cc-new-name');
   const startEl = document.getElementById('cc-new-start');
   const last4El = document.getElementById('cc-new-last4');
@@ -2682,6 +2722,7 @@ function addCard(){
 }
 
 function delCard(idx){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
   const tj = tarjetas[idx];
   if(!tj) return;
   if(!confirm(`¿Eliminar la tarjeta "${tj.nombre}"?\n\nLos movimientos ya registrados no se borran, solo dejan de estar asociados a esta tarjeta.`)) return;
@@ -2702,6 +2743,7 @@ function delCard(idx){
 // Editar el nombre de una tarjeta de crédito.
 // Reasigna los movimientos vinculados (e.tarjeta) para no perder el "Gastado".
 function editCreditCardName(idx){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
   const tj = tarjetas[idx];
   if(!tj) return;
   const viejo = tj.nombre;
@@ -2724,6 +2766,7 @@ function editCreditCardName(idx){
 }
 
 function editCardStart(idx){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
   const tj = tarjetas[idx];
   if(!tj) return;
   const val = prompt(`Monto inicial de "${tj.nombre}" (actual: ${tj.inicio}):`, tj.inicio);
@@ -2736,6 +2779,7 @@ function editCardStart(idx){
 }
 
 function editCardPoints(idx){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
   const tj = tarjetas[idx];
   if(!tj) return;
   const cur = (tj.puntos!==undefined && tj.puntos!=='') ? tj.puntos : '';
@@ -3014,6 +3058,11 @@ async function renderHistoryList(){
           <div style="font-size:11px;color:var(--muted);margin-top:2px">Guardado el ${savedDate}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <button onclick="enterYearViewer(${d.year})" title="Ver el año ${d.year} completo en la app"
+            style="display:flex;align-items:center;gap:6px;padding:7px 12px;background:var(--surf);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .18s;white-space:nowrap"
+            onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text)'">
+            👁️ Ver año
+          </button>
           <button onclick="viewHistoryPDF(${d.year})" title="Ver PDF de ${d.year}"
             style="display:flex;align-items:center;gap:6px;padding:7px 12px;background:var(--gldim);border:1px solid var(--gold);border-radius:var(--rs);color:var(--gold);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .18s;white-space:nowrap"
             onmouseover="this.style.background='rgba(232,185,106,.2)'" onmouseout="this.style.background='var(--gldim)'">
@@ -3035,6 +3084,96 @@ function viewHistoryPDF(year){
   exportPDFPro(histData, year, histCards);
 }
 
+// ── VISOR DE AÑOS ANTERIORES (solo lectura) ─────────────────────────────
+// Intercambia los datos en memoria por los del año del historial y vuelve a
+// pintar la app, igual que hace el PDF. NO toca Firebase ni guarda nada:
+// mientras viewerActive es true, save() queda bloqueado y se ocultan los
+// formularios y botones de borrar.
+let viewerActive = false;
+let viewerYear = null;
+let _viewerBackup = null;
+
+function enterYearViewer(year){
+  const histData = window._historyCache && window._historyCache[year];
+  if(!histData){ alert('No se pudieron cargar los datos del año ' + year); return; }
+  const histCards = (window._historyCardsCache && window._historyCardsCache[year]) || [];
+
+  // Si ya estábamos viendo otro año, primero restauramos el presente.
+  if(viewerActive) exitYearViewer(true);
+
+  // Respaldar el estado real (el año presente)
+  _viewerBackup = {
+    data, tarjetas, tarjetasDebito, trabajos,
+    activeMonth, annualActive
+  };
+
+  // Cargar los datos del año histórico (copias para no mutar la cache)
+  data           = JSON.parse(JSON.stringify(histData));
+  tarjetas       = JSON.parse(JSON.stringify(histCards));
+  tarjetasDebito = [];   // el historial no guarda débito; se omite en años cerrados
+  trabajos       = (_viewerBackup.trabajos || []);  // trabajos son persistentes (acumulado)
+
+  viewerActive = true;
+  viewerYear = year;
+
+  // Mostrar barra y marcar el body para ocultar lo editable vía CSS
+  const banner = document.getElementById('viewer-banner');
+  const yEl = document.getElementById('viewer-year');
+  if(yEl) yEl.textContent = year;
+  if(banner) banner.style.display = 'flex';
+  document.body.classList.add('viewer-mode');
+
+  // Cerrar el menú de guardar si estaba abierto
+  const menu = document.getElementById('save-menu');
+  if(menu) menu.style.display = 'none';
+
+  // Pintar todo y llevar al usuario al primer mes con datos
+  propagateCapitals();
+  renderAll();
+  try { checkAchievements(false); } catch(e){}
+  let firstMonth = 0;
+  for(let mi=0; mi<12; mi++){ if(hasData(mi)){ firstMonth = mi; break; } }
+  switchMonth(firstMonth);
+
+  // Subir al inicio para ver la barra
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function exitYearViewer(silent){
+  if(!viewerActive || !_viewerBackup) {
+    // Por si acaso, limpiar estado visual
+    const banner = document.getElementById('viewer-banner');
+    if(banner) banner.style.display = 'none';
+    document.body.classList.remove('viewer-mode');
+    viewerActive = false; viewerYear = null;
+    return;
+  }
+  // Restaurar el año presente
+  data           = _viewerBackup.data;
+  tarjetas       = _viewerBackup.tarjetas;
+  tarjetasDebito = _viewerBackup.tarjetasDebito;
+  trabajos       = _viewerBackup.trabajos;
+  const backMonth = _viewerBackup.activeMonth;
+  const backAnnual = _viewerBackup.annualActive;
+
+  viewerActive = false;
+  viewerYear = null;
+  _viewerBackup = null;
+
+  const banner = document.getElementById('viewer-banner');
+  if(banner) banner.style.display = 'none';
+  document.body.classList.remove('viewer-mode');
+
+  propagateCapitals();
+  renderAll();
+  try { checkAchievements(false); } catch(e){}
+  // Volver al mes que estaba viendo (o al actual)
+  if(backAnnual){ switchToAnnual(); }
+  else { switchMonth(typeof backMonth==='number' ? backMonth : new Date().getMonth()); }
+
+  if(!silent) window.scrollTo({top:0, behavior:'smooth'});
+}
+
 async function deleteYearFromHistory(year){
   const ok = confirm(`¿Eliminar el historial de ${year}?\n\nEsta acción no se puede deshacer.`);
   if(!ok) return;
@@ -3050,6 +3189,7 @@ async function deleteYearFromHistory(year){
 }
 
 function resetYear(){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
   const confirmed = confirm('⚠️ ¿Estás seguro?\n\nEsto borrará TODOS los movimientos de los 12 meses de forma permanente.\n\nTus tarjetas y su historial NO se borran.\n\nEsta acción no se puede deshacer.');
   if(!confirmed) return;
   const confirmed2 = confirm('¿Confirmas que quieres borrar TODO el año?\n\nPresiona Aceptar para continuar.');
@@ -4641,6 +4781,9 @@ async function loadFromFirebase(){
 
 function save(){
   if(!currentUser) return;
+  // Seguridad: si estás viendo un año cerrado (solo lectura), NUNCA guardar.
+  // Evita que el año presente se sobreescriba con datos del historial.
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
   const ind = document.getElementById('save-indicator');
   // Guardar en el campo del año actual: `finanzas_${año}`
   db.collection('users').doc(currentUser.uid).set({ [FINANZAS_KEY]: data }, { merge: true })
