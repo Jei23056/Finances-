@@ -8,31 +8,31 @@
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --bg:      #0a0a0c;
-  --surf:    #101013;
-  --card:    #141417;
-  --card2:   #1a1a1f;
+  --bg:      #070a10;
+  --surf:    #0c111a;
+  --card:    #0f151f;
+  --card2:   #141b27;
   --border:  rgba(255,255,255,0.05);
   --border2: rgba(255,255,255,0.10);
-  --text:    #f4f1ea;
-  --muted:   #62615c;
-  --muted2:  #9d9a91;
+  --text:    #eef1f6;
+  --muted:   #5d6470;
+  --muted2:  #929aa8;
   --green:   #4ec99a;
   --gdim:    rgba(78,201,154,0.08);
   --red:     #e8695d;
   --rdim:    rgba(232,105,93,0.08);
-  --gold:    #c9a44c;
-  --gold2:   #e3c477;
-  --gldim:   rgba(201,164,76,0.08);
+  --gold:    #5b8fd6;
+  --gold2:   #86b3ec;
+  --gldim:   rgba(91,143,214,0.10);
   --blue:    #6fa8e6;
   --r: 12px; --rs: 8px; --rxs: 6px;
-  /* — Capa de profundidad (lujo Onyx & Gold) — */
+  /* — Capa de profundidad (lujo Onyx & Navy) — */
   --shadow-sm:  0 1px 2px rgba(0,0,0,0.30);
-  --shadow-md:  0 6px 24px rgba(0,0,0,0.30), 0 1px 3px rgba(0,0,0,0.4);
-  --shadow-lg:  0 16px 48px rgba(0,0,0,0.5);
+  --shadow-md:  0 6px 24px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-lg:  0 16px 48px rgba(0,0,0,0.55);
   --grad-card:  linear-gradient(160deg, rgba(255,255,255,0.018), rgba(255,255,255,0) 55%);
   --hairline:   rgba(255,255,255,0.04);
-  --gold-grad:  linear-gradient(135deg, #e3c477, #c9a44c);
+  --gold-grad:  linear-gradient(135deg, #86b3ec, #5b8fd6);
 }
 html { font-size: 16px; overflow-x:hidden; }
 body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; padding:1.5rem 1rem 5rem; overflow-x:hidden; }
@@ -390,7 +390,7 @@ body.viewer-mode #viewer-banner { display:flex !important; }
 
 
 /* ═══════════════════════════════════════════════════════════════════════
-   ONYX & GOLD  ·  CAPA DE LUJO (banca privada)  ·  SOLO ESTÉTICA
+   ONYX & NAVY  ·  CAPA DE LUJO (banca privada)  ·  SOLO ESTÉTICA
    No cambia estructura ni comportamiento. Refina paleta, espaciado,
    tipografía editorial, profundidad y un grano sutil de fondo.
    ═══════════════════════════════════════════════════════════════════════ */
@@ -399,7 +399,7 @@ body.viewer-mode #viewer-banner { display:flex !important; }
 body {
   padding-top: 2.25rem;
   background:
-    radial-gradient(900px 520px at 50% -10%, rgba(201,164,76,0.06), transparent 65%),
+    radial-gradient(900px 520px at 50% -10%, rgba(91,143,214,0.10), transparent 65%),
     var(--bg);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
@@ -472,7 +472,7 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 .mtab.active {
   background:var(--card); border-color:var(--gold); color:var(--gold2); font-weight:500;
   transform:translateY(-1px);
-  box-shadow:0 4px 16px rgba(201,164,76,0.18), 0 0 0 1px rgba(201,164,76,0.12);
+  box-shadow:0 4px 16px rgba(91,143,214,0.18), 0 0 0 1px rgba(91,143,214,0.12);
   background-image:none;
 }
 
@@ -503,15 +503,15 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 
 /* Botón "Agregar": degradado dorado refinado */
 .btn-add {
-  background: linear-gradient(135deg, rgba(201,164,76,0.16), rgba(201,164,76,0.06));
+  background: linear-gradient(135deg, rgba(91,143,214,0.16), rgba(91,143,214,0.06));
   border-color: var(--gold); color: var(--gold2);
-  box-shadow: 0 2px 12px rgba(201,164,76,0.08);
+  box-shadow: 0 2px 12px rgba(91,143,214,0.08);
   transition: transform .15s, box-shadow .2s, background .2s;
   letter-spacing:.04em; font-weight:600;
 }
 .btn-add:hover {
-  background: linear-gradient(135deg, rgba(201,164,76,0.26), rgba(201,164,76,0.12));
-  box-shadow: 0 4px 18px rgba(201,164,76,0.16);
+  background: linear-gradient(135deg, rgba(91,143,214,0.26), rgba(91,143,214,0.12));
+  box-shadow: 0 4px 18px rgba(91,143,214,0.16);
 }
 
 /* ENTRIES — más padding y hover sutil */
@@ -531,7 +531,7 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 .credit-card::after {
   content:''; position:absolute; top:-50%; right:-20%;
   width:220px; height:220px;
-  background:radial-gradient(circle, rgba(201,164,76,0.08), transparent 70%);
+  background:radial-gradient(circle, rgba(91,143,214,0.08), transparent 70%);
   pointer-events:none;
 }
 .credit-card > * { position:relative; }
@@ -552,7 +552,7 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 *::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); background-clip:padding-box; }
 
 /* Selección de texto en dorado tenue */
-::selection { background: rgba(201,164,76,0.25); color: var(--text); }
+::selection { background: rgba(91,143,214,0.25); color: var(--text); }
 
 /* Detalles finales */
 .btn-signout { transition:border-color .2s, color .2s, background .2s; }
