@@ -8,30 +8,31 @@
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --bg:      #0b0c0f;
-  --surf:    #131419;
-  --card:    #181a1f;
-  --card2:   #1f2128;
-  --border:  rgba(255,255,255,0.06);
-  --border2: rgba(255,255,255,0.12);
-  --text:    #f2efe9;
-  --muted:   #6b6a64;
-  --muted2:  #a5a29a;
-  --green:   #34d8a6;
-  --gdim:    rgba(52,216,166,0.10);
-  --red:     #f3675a;
-  --rdim:    rgba(243,103,90,0.10);
-  --gold:    #ecc079;
-  --gldim:   rgba(236,192,121,0.10);
-  --blue:    #6cabfb;
-  --r: 14px; --rs: 8px; --rxs: 6px;
-  /* — Capa de profundidad (lujo) — */
+  --bg:      #0a0a0c;
+  --surf:    #101013;
+  --card:    #141417;
+  --card2:   #1a1a1f;
+  --border:  rgba(255,255,255,0.05);
+  --border2: rgba(255,255,255,0.10);
+  --text:    #f4f1ea;
+  --muted:   #62615c;
+  --muted2:  #9d9a91;
+  --green:   #4ec99a;
+  --gdim:    rgba(78,201,154,0.08);
+  --red:     #e8695d;
+  --rdim:    rgba(232,105,93,0.08);
+  --gold:    #c9a44c;
+  --gold2:   #e3c477;
+  --gldim:   rgba(201,164,76,0.08);
+  --blue:    #6fa8e6;
+  --r: 12px; --rs: 8px; --rxs: 6px;
+  /* — Capa de profundidad (lujo Onyx & Gold) — */
   --shadow-sm:  0 1px 2px rgba(0,0,0,0.30);
-  --shadow-md:  0 4px 16px rgba(0,0,0,0.28), 0 1px 3px rgba(0,0,0,0.4);
-  --shadow-lg:  0 12px 40px rgba(0,0,0,0.45);
-  --grad-card:  linear-gradient(160deg, rgba(255,255,255,0.022), rgba(255,255,255,0) 55%);
-  --hairline:   rgba(255,255,255,0.045);
-  --gold-grad:  linear-gradient(135deg, #f0cd8e, #e0ad5f);
+  --shadow-md:  0 6px 24px rgba(0,0,0,0.30), 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-lg:  0 16px 48px rgba(0,0,0,0.5);
+  --grad-card:  linear-gradient(160deg, rgba(255,255,255,0.018), rgba(255,255,255,0) 55%);
+  --hairline:   rgba(255,255,255,0.04);
+  --gold-grad:  linear-gradient(135deg, #e3c477, #c9a44c);
 }
 html { font-size: 16px; overflow-x:hidden; }
 body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; padding:1.5rem 1rem 5rem; overflow-x:hidden; }
@@ -389,70 +390,105 @@ body.viewer-mode #viewer-banner { display:flex !important; }
 
 
 /* ═══════════════════════════════════════════════════════════════════════
-   CAPA DE REFINAMIENTO VISUAL ("lujo")  ·  SOLO ESTÉTICA
-   Añade profundidad, gradientes sutiles y mejor tipografía sobre el
-   diseño existente. No cambia estructura ni comportamiento.
+   ONYX & GOLD  ·  CAPA DE LUJO (banca privada)  ·  SOLO ESTÉTICA
+   No cambia estructura ni comportamiento. Refina paleta, espaciado,
+   tipografía editorial, profundidad y un grano sutil de fondo.
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* Fondo con un sutil halo radial: ya no es negro plano */
+/* Fondo onyx con halo dorado cálido + grano de película */
 body {
+  padding-top: 2.25rem;
   background:
-    radial-gradient(1200px 600px at 50% -8%, rgba(236,192,121,0.05), transparent 60%),
-    radial-gradient(900px 500px at 100% 0%, rgba(108,171,251,0.035), transparent 55%),
+    radial-gradient(900px 520px at 50% -10%, rgba(201,164,76,0.06), transparent 65%),
     var(--bg);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.012em;
 }
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0; opacity:0.022;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.shell { position:relative; z-index:2; }
 
-/* Tipografía de cifras con números tabulares (se alinean perfecto) */
+/* Cifras tabulares (se alinean perfecto en columnas) */
 .ycard-val, .mcard-val, .eamt, .cc-stat-val, .cc-name, .bs-val,
 .edate, .bval, .blbl {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1, "lnum" 1;
 }
 
-/* Títulos serif un poco más finos y con mejor interletraje */
-header h1 { letter-spacing:-0.8px; }
-.ycard-val { letter-spacing:-0.3px; }
+/* HEADER editorial con hairline dorada */
+header {
+  padding-bottom: 1.5rem; margin-bottom: 2.5rem;
+  border-bottom-color: var(--border);
+  position: relative;
+}
+header::after {
+  content:''; position:absolute; bottom:-1px; left:0;
+  width:90px; height:1px;
+  background:linear-gradient(90deg, var(--gold), transparent);
+}
+header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 
-/* Tarjetas del año: profundidad real + gradiente sutil + borde luminoso */
+/* Etiquetas en mayúsculas más espaciadas (estilo revista de lujo) */
+.ycard-lbl  { font-size:9.5px; letter-spacing:.16em; margin-bottom:13px; }
+.mcard-lbl  { font-size:9px;  letter-spacing:.14em; margin-bottom:8px; }
+.cat-block h3 { font-size:9px; letter-spacing:.14em; margin-bottom:1.1rem; }
+.sec-lbl    { font-size:9px;  letter-spacing:.16em; margin-bottom:12px; }
+.cc-stat-lbl{ letter-spacing:.12em; }
+
+/* YEAR BAR — más aire, profundidad, hover elegante */
+.year-bar { gap:14px; margin-bottom:2.5rem; }
 .ycard {
+  padding:1.4rem 1.3rem;
   background-color: var(--card);
   background-image: var(--grad-card);
   box-shadow: var(--shadow-md);
   border-color: var(--hairline);
-  transition: transform .25s cubic-bezier(.34,1.2,.64,1), box-shadow .25s, border-color .25s;
+  transition: transform .3s cubic-bezier(.2,.8,.3,1), box-shadow .3s, border-color .3s;
 }
 .ycard.clickable:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   box-shadow: var(--shadow-lg);
   border-color: var(--border2);
 }
-/* La línea de color superior, más fina y elegante */
-.ycard::after { height:1.5px; opacity:.9; }
-
-/* La cinta de "% ahorrado" en dorado degradado */
+.ycard::after { height:1px; opacity:.5; }
+.ycard-val { font-size:1.7rem; letter-spacing:-0.5px; }
 .ycard.net .ycard-val {
   background: var(--gold-grad);
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-/* Tarjetas de mes y bloques generales: misma profundidad suave */
-.mcard, .form-wrap, .cat-block, .credit-card, .entry,
-.bycat-picker, .bycat-summary {
+/* INSIGHTS */
+.insights-bar { gap:9px; margin-bottom:2rem; }
+.insight-chip { background:var(--card); border-color:var(--border); box-shadow:var(--shadow-sm); padding:8px 16px; }
+
+/* MONTH TABS — pastillas con más aire, activa en dorado */
+.month-scroll { gap:6px; margin-bottom:2rem; }
+.mtab { padding:9px 18px; background:transparent; box-shadow:var(--shadow-sm); letter-spacing:.02em; }
+.mtab.active {
+  background:var(--card); border-color:var(--gold); color:var(--gold2); font-weight:500;
+  transform:translateY(-1px);
+  box-shadow:0 4px 16px rgba(201,164,76,0.18), 0 0 0 1px rgba(201,164,76,0.12);
+  background-image:none;
+}
+
+/* MONTH SUMMARY + bloques: profundidad suave */
+.msummary { gap:12px; margin-bottom:1.75rem; }
+.mcard, .form-wrap, .cat-block, .entry, .bycat-picker, .bycat-summary {
   background-image: var(--grad-card);
   box-shadow: var(--shadow-sm);
   border-color: var(--hairline);
 }
-.mcard { transition: border-color .2s, box-shadow .2s; }
+.mcard { padding:1.1rem 1.2rem; transition:border-color .2s, box-shadow .2s; }
+.mcard-val { font-size:1.35rem; letter-spacing:-0.3px; }
+.form-wrap { padding:1.5rem; }
+.cat-block { padding:1.3rem; }
 
-/* Pestañas de mes: un poco más de aire y mejor estado activo */
-.mtab { padding:8px 15px; box-shadow: var(--shadow-sm); }
-
-/* Inputs y selects: foco con halo dorado suave (se siente premium) */
+/* Inputs: foco con halo dorado */
 .finputs input, .finputs select,
 .bycat-picker select,
 .cc-add-inputs input, .cc-add-inputs select {
@@ -461,66 +497,70 @@ header h1 { letter-spacing:-0.8px; }
 .finputs input:focus, .finputs select:focus,
 .bycat-picker select:focus,
 .cc-add-inputs input:focus, .cc-add-inputs select:focus {
+  border-color: var(--gold);
   box-shadow: 0 0 0 3px var(--gldim);
 }
 
-/* Botón principal "Agregar": degradado dorado y sombra */
+/* Botón "Agregar": degradado dorado refinado */
 .btn-add {
-  background: linear-gradient(135deg, rgba(236,192,121,0.18), rgba(236,192,121,0.08));
-  box-shadow: 0 2px 10px rgba(236,192,121,0.10);
+  background: linear-gradient(135deg, rgba(201,164,76,0.16), rgba(201,164,76,0.06));
+  border-color: var(--gold); color: var(--gold2);
+  box-shadow: 0 2px 12px rgba(201,164,76,0.08);
   transition: transform .15s, box-shadow .2s, background .2s;
-  letter-spacing:.02em;
+  letter-spacing:.04em; font-weight:600;
 }
 .btn-add:hover {
-  background: linear-gradient(135deg, rgba(236,192,121,0.28), rgba(236,192,121,0.14));
-  box-shadow: 0 4px 16px rgba(236,192,121,0.18);
+  background: linear-gradient(135deg, rgba(201,164,76,0.26), rgba(201,164,76,0.12));
+  box-shadow: 0 4px 18px rgba(201,164,76,0.16);
 }
 
-/* Filas de movimiento: hover con leve realce y transición suave */
-.entry { transition: transform .15s, border-color .18s, box-shadow .18s; }
-.entry:hover { transform: translateX(2px); box-shadow: var(--shadow-md); }
+/* ENTRIES — más padding y hover sutil */
+.entries { gap:7px; margin-bottom:2rem; }
+.entry { padding:13px 17px; transition:transform .2s, border-color .2s, box-shadow .2s; }
+.entry:hover { transform:translateX(3px); box-shadow:var(--shadow-md); border-color:var(--border2); }
+.eamt { font-size:1.05rem; }
 
-/* Tarjetas de crédito: el acento visual de una tarjeta física */
-.credit-card { box-shadow: var(--shadow-md); }
-
-/* Chips de insights: cristal sutil */
-.insight-chip { box-shadow: var(--shadow-sm); backdrop-filter: saturate(1.2); }
-
-/* Scrollbar fina y elegante (navegadores webkit) */
-*::-webkit-scrollbar { width:9px; height:9px; }
-*::-webkit-scrollbar-track { background:transparent; }
-*::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.08);
-  border-radius:99px; border:2px solid transparent; background-clip:padding-box;
+/* CREDIT CARD — brillo dorado como tarjeta física */
+.cats-grid { gap:14px; margin-bottom:2rem; }
+.credit-card {
+  background-image: linear-gradient(150deg, rgba(255,255,255,0.02), rgba(255,255,255,0) 60%);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border2);
+  position: relative; overflow: hidden;
 }
-*::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.16); background-clip:padding-box; }
+.credit-card::after {
+  content:''; position:absolute; top:-50%; right:-20%;
+  width:220px; height:220px;
+  background:radial-gradient(circle, rgba(201,164,76,0.08), transparent 70%);
+  pointer-events:none;
+}
+.credit-card > * { position:relative; }
 
-/* Selección de texto en dorado tenue */
-::selection { background: rgba(236,192,121,0.25); color: var(--text); }
-
-/* Barras de categoría: degradado en vez de color plano (más rico) */
+/* Barras de categoría: brillo degradado */
 .bfill {
-  background-image: linear-gradient(90deg, rgba(255,255,255,0.14), rgba(255,255,255,0));
+  background-image: linear-gradient(90deg, rgba(255,255,255,0.12), rgba(255,255,255,0));
   background-blend-mode: overlay;
 }
 
-/* La barra superior (header) con una hairline dorada apenas perceptible */
-header { border-bottom-color: var(--hairline); box-shadow: 0 1px 0 rgba(236,192,121,0.06); }
+/* Scrollbar fina */
+*::-webkit-scrollbar { width:9px; height:9px; }
+*::-webkit-scrollbar-track { background:transparent; }
+*::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.07);
+  border-radius:99px; border:2px solid transparent; background-clip:padding-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); background-clip:padding-box; }
 
-/* Botón salir: más sutil */
-.btn-signout { transition: border-color .2s, color .2s, background .2s; }
-.btn-signout:hover { background: var(--rdim); }
+/* Selección de texto en dorado tenue */
+::selection { background: rgba(201,164,76,0.25); color: var(--text); }
 
-/* El indicador de guardado: pastilla con sombra */
-#save-indicator { box-shadow: var(--shadow-md); border-color: var(--hairline) !important; }
-
-/* Logros (modal y FAB): profundidad */
-.ach-modal { box-shadow: var(--shadow-lg); }
-#ach-fab { box-shadow: var(--shadow-md); }
+/* Detalles finales */
+.btn-signout { transition:border-color .2s, color .2s, background .2s; }
+.btn-signout:hover { border-color:var(--red); color:var(--red); }
+#save-indicator { box-shadow:var(--shadow-md); border-color:var(--hairline) !important; }
+.ach-modal { box-shadow:var(--shadow-lg); }
+#ach-fab { box-shadow:var(--shadow-md); }
 .ach-item { background-image: var(--grad-card); }
-
-/* Suaviza TODO lo interactivo globalmente para que nada se sienta brusco */
-button, .mtab, .itab, .ycard, .entry { will-change: transform; }
 
 </style>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
