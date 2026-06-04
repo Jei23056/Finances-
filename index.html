@@ -4608,6 +4608,7 @@ async function autoArchivePastYears(){
     const ind = document.getElementById('save-indicator');
     if(ind){ ind.textContent = 'Archivando año anterior…'; ind.classList.add('show'); }
 
+    const recienArchivados = [];   // años que se archivaron AHORA (no los que ya existían)
     for(const item of yearsToArchive){
       const histRef = ref.collection('historial').doc(String(item.year));
       const histDoc = await histRef.get();
@@ -4621,6 +4622,12 @@ async function autoArchivePastYears(){
           tarjetas: item.tarjetas
         });
         console.log(`Año ${item.year} archivado automáticamente`);
+        // Dejar los datos listos en cache para poder abrir su PDF al instante
+        window._historyCache = window._historyCache || {};
+        window._historyCardsCache = window._historyCardsCache || {};
+        window._historyCache[item.year] = item.data || {};
+        window._historyCardsCache[item.year] = item.tarjetas || [];
+        recienArchivados.push(item.year);
       }
     }
 
@@ -4628,9 +4635,61 @@ async function autoArchivePastYears(){
       ind.textContent = '✓ Año anterior archivado';
       setTimeout(()=>{ ind.classList.remove('show'); ind.textContent = 'Guardado ✓'; }, 2500);
     }
+
+    // Si se archivó algún año nuevo, ofrecer ver su PDF (aviso, no obligatorio)
+    if(recienArchivados.length){
+      const ultimo = Math.max(...recienArchivados);
+      setTimeout(()=> mostrarAvisoArchivado(ultimo), 1200);
+    }
   } catch(e){
     console.error('Error en archivado automático:', e);
   }
+}
+
+// Aviso amable cuando un año se archiva solo: ofrece abrir su PDF.
+function mostrarAvisoArchivado(year){
+  // Evitar duplicados
+  const previo = document.getElementById('archivo-aviso');
+  if(previo) previo.remove();
+
+  const box = document.createElement('div');
+  box.id = 'archivo-aviso';
+  box.style.cssText = `
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
+    background:linear-gradient(135deg, var(--card2), var(--card));
+    border:1px solid var(--gold); border-radius:14px;
+    padding:16px 20px; z-index:9200;
+    box-shadow:0 10px 34px rgba(0,0,0,0.4), 0 0 0 1px rgba(232,185,106,0.1);
+    display:flex; align-items:center; gap:16px; max-width:92%;
+    opacity:0; transition:all .45s cubic-bezier(.34,1.4,.64,1);
+    font-family:'DM Sans',sans-serif;
+  `;
+  box.innerHTML = `
+    <div style="font-size:26px">🗂️</div>
+    <div style="min-width:0">
+      <div style="font-size:14px;font-weight:600;color:var(--text)">Se archivó el año ${year}</div>
+      <div style="font-size:12px;color:var(--muted2);margin-top:2px">Ya puedes verlo en Historial. ¿Quieres abrir su reporte PDF ahora?</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-shrink:0">
+      <button id="archivo-aviso-no" style="padding:8px 14px;background:transparent;border:1px solid var(--border2);border-radius:var(--rs);color:var(--muted2);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;white-space:nowrap">Ahora no</button>
+      <button id="archivo-aviso-pdf" style="padding:8px 16px;background:var(--gold);border:none;border-radius:var(--rs);color:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">📄 Ver PDF</button>
+    </div>
+  `;
+  document.body.appendChild(box);
+  requestAnimationFrame(()=>{ box.style.opacity='1'; box.style.transform='translateX(-50%) translateY(0)'; });
+
+  const cerrar = ()=>{
+    box.style.opacity='0';
+    box.style.transform='translateX(-50%) translateY(20px)';
+    setTimeout(()=>box.remove(), 450);
+  };
+  document.getElementById('archivo-aviso-no').onclick = cerrar;
+  document.getElementById('archivo-aviso-pdf').onclick = ()=>{
+    cerrar();
+    viewHistoryPDF(year);
+  };
+  // Se va solo después de 12 segundos si no haces nada
+  setTimeout(()=>{ if(document.getElementById('archivo-aviso')) cerrar(); }, 12000);
 }
 
 // ══════════════════════════════════════════════════════════════════════════
