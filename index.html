@@ -542,6 +542,47 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
   background-blend-mode: overlay;
 }
 
+/* ── Gestor de categorías ───────────────────────────────────────── */
+.cat-manage { margin-top:1.1rem; }
+.cat-manage-toggle {
+  width:100%; display:flex; align-items:center; justify-content:space-between;
+  background:var(--card); border:1px solid var(--border); border-radius:var(--rs);
+  padding:11px 14px; color:var(--muted2); font-family:'DM Sans',sans-serif;
+  font-size:13px; font-weight:600; cursor:pointer; transition:border-color .18s, color .18s;
+}
+.cat-manage-toggle:hover { border-color:var(--border2); color:var(--text); }
+.cat-mgr { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:1.1rem; margin-top:.6rem; }
+.cat-mgr h4 { font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:0 0 .7rem; }
+.cat-mgr-section + .cat-mgr-section { margin-top:1.3rem; padding-top:1.3rem; border-top:1px solid var(--hairline); }
+.cat-add-row { display:flex; gap:8px; margin-bottom:.9rem; flex-wrap:wrap; }
+.cat-add-row .cat-emoji-in { width:54px; text-align:center; flex-shrink:0; }
+.cat-add-row .cat-name-in { flex:1; min-width:120px; }
+.cat-mgr input[type="text"] {
+  background:var(--surf); border:1px solid var(--border2); border-radius:var(--rs);
+  color:var(--text); padding:9px 11px; font-family:'DM Sans',sans-serif; font-size:13px; outline:none;
+}
+.cat-mgr input[type="text"]:focus { border-color:var(--muted); }
+.cat-add-btn {
+  background:var(--surf); border:1px solid var(--border2); border-radius:var(--rs);
+  color:var(--green); padding:9px 14px; font-family:'DM Sans',sans-serif; font-size:13px;
+  font-weight:600; cursor:pointer; transition:all .18s; flex-shrink:0;
+}
+.cat-add-btn:hover { border-color:var(--green); }
+.cat-list { display:flex; flex-direction:column; gap:6px; }
+.cat-list-empty { font-size:12px; color:var(--muted); padding:6px 2px; }
+.cat-row {
+  display:flex; align-items:center; gap:8px; background:var(--surf);
+  border:1px solid var(--border); border-radius:var(--rs); padding:8px 10px;
+}
+.cat-row .cat-row-lbl { flex:1; font-size:13px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cat-row .cat-row-base { font-size:10px; color:var(--muted); flex-shrink:0; }
+.cat-row .cat-icon-btn { background:none; border:none; cursor:pointer; color:var(--muted); font-size:14px; padding:2px 5px; line-height:1; transition:color .15s; flex-shrink:0; }
+.cat-row .cat-icon-btn:hover { color:var(--text); }
+.cat-row .cat-icon-btn.del:hover { color:var(--red); }
+.cat-edit-row { display:flex; gap:6px; flex:1; align-items:center; }
+.cat-edit-row .cat-emoji-in { width:46px; text-align:center; }
+.cat-edit-row .cat-name-in { flex:1; min-width:80px; }
+
 /* Scrollbar fina */
 *::-webkit-scrollbar { width:9px; height:9px; }
 *::-webkit-scrollbar-track { background:transparent; }
@@ -1106,7 +1147,8 @@ document.getElementById('footer-year').textContent = CURRENT_YEAR;
 
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-const EXPENSE_CATS = [
+// Categorías BASE (las de fábrica). Las personalizadas se agregan encima al cargar.
+const BASE_EXPENSE_CATS = [
   {v:'Supermercado',    l:'🛒 Supermercado'},
   {v:'Amazon',          l:'📦 Amazon'},
   {v:'Tienda / Compras',l:'🛍️ Tienda / Compras'},
@@ -1131,7 +1173,7 @@ const EXPENSE_CATS = [
   {v:'penes',           l:'penes'}
 ];
 
-const INCOME_CATS = [
+const BASE_INCOME_CATS = [
   {v:'Nómina / Salario', l:'💼 Nómina / Salario'},
   {v:'Freelance',        l:'💻 Freelance'},
   {v:'Préstamo recibido',l:'🤝 Préstamo recibido'},
@@ -1141,6 +1183,35 @@ const INCOME_CATS = [
   {v:'Depósito',         l:'🏦 Depósito'},
   {v:'Otros ingresos',   l:'📂 Otros ingresos'},
 ];
+
+// ► Claves Firebase para categorías personalizadas (persistentes entre años)
+const CUSTOM_EXP_CATS_KEY = 'cats_custom_exp_v1';
+const CUSTOM_INC_CATS_KEY = 'cats_custom_inc_v1';
+
+// ► Categorías PERSONALIZADAS (las que tú agregas). Se llenan al cargar de Firebase.
+let customExpenseCats = [];
+let customIncomeCats  = [];
+
+// ► Listas FINALES que usa toda la app = base + personalizadas.
+//   Son `let` porque se reconstruyen cada vez que agregas/editas/eliminas una.
+let EXPENSE_CATS = BASE_EXPENSE_CATS.slice();
+let INCOME_CATS  = BASE_INCOME_CATS.slice();
+
+// Reconstruye EXPENSE_CATS / INCOME_CATS juntando base + personalizadas.
+function rebuildCatLists(){
+  EXPENSE_CATS = BASE_EXPENSE_CATS.concat(customExpenseCats);
+  INCOME_CATS  = BASE_INCOME_CATS.concat(customIncomeCats);
+}
+
+// Guarda solo las categorías personalizadas en Firebase (merge, no toca nada más).
+function saveCustomCats(){
+  if(!currentUser) return;
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
+  db.collection('users').doc(currentUser.uid).set({
+    [CUSTOM_EXP_CATS_KEY]: customExpenseCats,
+    [CUSTOM_INC_CATS_KEY]: customIncomeCats
+  }, { merge: true }).catch(e=>console.error('Error guardando categorías:', e));
+}
 
 let data = {};
 // ► Lista de tarjetas de crédito del año actual
@@ -1472,6 +1543,13 @@ function renderMonth(mi){
           ${barsHTML(incData,'var(--green)')}
         </div>
       </div>
+      <div class="cat-manage">
+        <button class="cat-manage-toggle" onclick="toggleCatManager(${mi})">
+          <span>⚙️ Gestionar categorías</span>
+          <span id="cat-manage-arrow-${mi}" style="transition:transform .2s">▾</span>
+        </button>
+        <div id="cat-manage-body-${mi}" style="display:none"></div>
+      </div>
     </div>
     <div id="inner-bycat-${mi}" style="display:none">
       <div class="bycat-picker">
@@ -1499,6 +1577,304 @@ function renderMonth(mi){
 
   const mt = monthTypes[mi] || 'expense';
   setTypeVisual(mi, mt);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// GESTOR DE CATEGORÍAS (agregar / editar / eliminar+mover)  — sólo año actual
+// ══════════════════════════════════════════════════════════════════════════
+
+// ¿Es una categoría base (de fábrica)? Las base no se pueden editar ni borrar.
+function isBaseCat(type, v){
+  const list = type==='expense' ? BASE_EXPENSE_CATS : BASE_INCOME_CATS;
+  return list.some(c=>c.v===v);
+}
+
+// Cuenta cuántos movimientos del AÑO ACTUAL usan esa categoría.
+function countEntriesForCat(v){
+  let n = 0;
+  Object.keys(data).forEach(m=>{
+    const md = data[m];
+    if(md && Array.isArray(md.entries)){
+      md.entries.forEach(e=>{ if(e.cat===v) n++; });
+    }
+  });
+  return n;
+}
+
+// ── Deshacer categorías: usa el sistema registrarUndo/ejecutarDeshacer existente ──
+// Captura el estado relevante ANTES de una acción sobre categorías.
+function snapshotCats(){
+  return {
+    exp:  JSON.parse(JSON.stringify(customExpenseCats)),
+    inc:  JSON.parse(JSON.stringify(customIncomeCats)),
+    data: JSON.parse(JSON.stringify(data))
+  };
+}
+
+// Restaura un snapshot y vuelve a guardar/renderizar (usa las funciones que ya existen).
+function restoreCatsSnapshot(snap, mi){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
+  customExpenseCats = snap.exp;
+  customIncomeCats  = snap.inc;
+  data = snap.data;
+  rebuildCatLists();
+  saveCustomCats();
+  save();              // por si la acción había renombrado/movido movimientos
+  renderAll();
+  setTimeout(()=>{
+    showInner(mi,'cats');
+    const body = document.getElementById(`cat-manage-body-${mi}`);
+    const arrow= document.getElementById(`cat-manage-arrow-${mi}`);
+    if(body){ body.style.display='block'; renderCatManager(mi); }
+    if(arrow) arrow.style.transform='rotate(180deg)';
+  }, 0);
+}
+
+function toggleCatManager(mi){
+  const body  = document.getElementById(`cat-manage-body-${mi}`);
+  const arrow = document.getElementById(`cat-manage-arrow-${mi}`);
+  if(!body) return;
+  const open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  if(arrow) arrow.style.transform = open ? 'rotate(180deg)' : 'rotate(0)';
+  if(open) renderCatManager(mi);
+}
+
+// Dibuja una sección (gastos o ingresos) del gestor.
+function catManagerSection(mi, type){
+  const label   = type==='expense' ? 'Categorías de gasto' : 'Categorías de ganancia';
+  const custom  = type==='expense' ? customExpenseCats : customIncomeCats;
+  const fullList= type==='expense' ? EXPENSE_CATS : INCOME_CATS;
+
+  // Lista: primero base (no editables), luego personalizadas (editables/borrables)
+  let rows = fullList.map(c=>{
+    const base = isBaseCat(type, c.v);
+    if(base){
+      return `<div class="cat-row">
+        <span class="cat-row-lbl">${esc(c.l||c.v)}</span>
+        <span class="cat-row-base">fija</span>
+      </div>`;
+    }
+    return `<div class="cat-row" id="catrow-${type}-${esc(c.v)}">
+      <span class="cat-row-lbl">${esc(c.l||c.v)}</span>
+      <button class="cat-icon-btn" title="Editar" onclick="startEditCat(${mi},'${type}','${esc(c.v)}')">✏️</button>
+      <button class="cat-icon-btn del" title="Eliminar" onclick="deleteCatPrompt(${mi},'${type}','${esc(c.v)}')">🗑️</button>
+    </div>`;
+  }).join('');
+
+  if(!custom.length){
+    rows += `<div class="cat-list-empty">Aún no has agregado categorías propias aquí.</div>`;
+  }
+
+  return `<div class="cat-mgr-section">
+    <h4>${label}</h4>
+    <div class="cat-add-row">
+      <input type="text" class="cat-emoji-in" id="newcat-emoji-${type}-${mi}" placeholder="🙂" maxlength="3" />
+      <input type="text" class="cat-name-in"  id="newcat-name-${type}-${mi}"  placeholder="Nombre de la categoría" onkeydown="if(event.key==='Enter')addCustomCat(${mi},'${type}')" />
+      <button class="cat-add-btn" onclick="addCustomCat(${mi},'${type}')">+ Agregar</button>
+    </div>
+    <div class="cat-list">${rows}</div>
+  </div>`;
+}
+
+function renderCatManager(mi){
+  const body = document.getElementById(`cat-manage-body-${mi}`);
+  if(!body) return;
+  body.innerHTML = `<div class="cat-mgr">
+    ${catManagerSection(mi,'expense')}
+    ${catManagerSection(mi,'income')}
+  </div>`;
+}
+
+// Agregar una categoría personalizada nueva.
+function addCustomCat(mi, type){
+  if(typeof viewerActive !== 'undefined' && viewerActive){
+    alert('Estás viendo un año cerrado (solo lectura). No se pueden agregar categorías aquí.');
+    return;
+  }
+  const emojiEl = document.getElementById(`newcat-emoji-${type}-${mi}`);
+  const nameEl  = document.getElementById(`newcat-name-${type}-${mi}`);
+  if(!nameEl) return;
+  const emoji = (emojiEl ? emojiEl.value : '').trim();
+  const name  = nameEl.value.trim();
+  if(!name){ nameEl.focus(); return; }
+
+  // El "valor" (v) es el nombre tal cual; con eso se guardan los movimientos.
+  const v = name;
+  // Evitar duplicados contra base + personalizadas
+  const exists = (type==='expense' ? EXPENSE_CATS : INCOME_CATS).some(c=>c.v.toLowerCase()===v.toLowerCase());
+  if(exists){ alert('Ya existe una categoría con ese nombre.'); return; }
+
+  const l = emoji ? `${emoji} ${name}` : name;
+  const newCat = { v, l };
+  const _snap = snapshotCats();
+  if(type==='expense') customExpenseCats.push(newCat);
+  else                 customIncomeCats.push(newCat);
+
+  rebuildCatLists();
+  saveCustomCats();
+  renderAll();
+  // Reabrir el gestor en la misma pestaña tras el re-render
+  setTimeout(()=>{
+    showInner(mi,'cats');
+    const body = document.getElementById(`cat-manage-body-${mi}`);
+    const arrow= document.getElementById(`cat-manage-arrow-${mi}`);
+    if(body){ body.style.display='block'; renderCatManager(mi); }
+    if(arrow) arrow.style.transform='rotate(180deg)';
+  }, 0);
+  registrarUndo(`Categoría "${name}" agregada`, ()=>restoreCatsSnapshot(_snap, mi));
+}
+
+// Convierte la fila en modo edición (emoji + nombre + guardar/cancelar).
+function startEditCat(mi, type, v){
+  const row = document.getElementById(`catrow-${type}-${v}`);
+  if(!row) return;
+  const list = type==='expense' ? customExpenseCats : customIncomeCats;
+  const cat  = list.find(c=>c.v===v);
+  if(!cat) return;
+  // Separar emoji y nombre de la etiqueta guardada
+  const lbl = cat.l || cat.v;
+  let emoji = '', name = lbl;
+  const m = lbl.match(/^(\p{Emoji}\uFE0F?|\p{Extended_Pictographic})\s+(.*)$/u);
+  if(m){ emoji = m[1]; name = m[2]; }
+  row.innerHTML = `<div class="cat-edit-row">
+    <input type="text" class="cat-emoji-in" id="editcat-emoji-${type}-${esc(v)}" value="${esc(emoji)}" maxlength="3" />
+    <input type="text" class="cat-name-in"  id="editcat-name-${type}-${esc(v)}"  value="${esc(name)}" onkeydown="if(event.key==='Enter')saveEditCat(${mi},'${type}','${esc(v)}')" />
+    <button class="cat-icon-btn" title="Guardar" onclick="saveEditCat(${mi},'${type}','${esc(v)}')">✔️</button>
+    <button class="cat-icon-btn" title="Cancelar" onclick="renderCatManager(${mi})">✖️</button>
+  </div>`;
+  const nameInput = document.getElementById(`editcat-name-${type}-${v}`);
+  if(nameInput){ nameInput.focus(); nameInput.select(); }
+}
+
+// Guardar la edición de una categoría personalizada.
+// Si cambia el nombre, se renombra también en todos los movimientos del año actual.
+function saveEditCat(mi, type, oldV){
+  if(typeof viewerActive !== 'undefined' && viewerActive){
+    alert('Estás viendo un año cerrado (solo lectura). No se puede editar aquí.');
+    return;
+  }
+  const emojiEl = document.getElementById(`editcat-emoji-${type}-${oldV}`);
+  const nameEl  = document.getElementById(`editcat-name-${type}-${oldV}`);
+  if(!nameEl) return;
+  const emoji = (emojiEl ? emojiEl.value : '').trim();
+  const name  = nameEl.value.trim();
+  if(!name){ nameEl.focus(); return; }
+
+  const newV = name;
+  const list = type==='expense' ? customExpenseCats : customIncomeCats;
+  const cat  = list.find(c=>c.v===oldV);
+  if(!cat) return;
+
+  // Si cambió el valor, validar que no choque con otra categoría existente
+  if(newV !== oldV){
+    const exists = (type==='expense' ? EXPENSE_CATS : INCOME_CATS).some(c=>c.v.toLowerCase()===newV.toLowerCase());
+    if(exists){ alert('Ya existe otra categoría con ese nombre.'); return; }
+  }
+
+  const _snap = snapshotCats();
+
+  // Si cambió el valor, renombrar en todos los movimientos del año actual
+  if(newV !== oldV){
+    Object.keys(data).forEach(m=>{
+      const md = data[m];
+      if(md && Array.isArray(md.entries)){
+        md.entries.forEach(e=>{ if(e.cat===oldV) e.cat = newV; });
+      }
+    });
+  }
+
+  cat.v = newV;
+  cat.l = emoji ? `${emoji} ${name}` : name;
+
+  rebuildCatLists();
+  saveCustomCats();
+  if(newV !== oldV) save();   // guardar los movimientos renombrados
+  renderAll();
+  setTimeout(()=>{
+    showInner(mi,'cats');
+    const body = document.getElementById(`cat-manage-body-${mi}`);
+    const arrow= document.getElementById(`cat-manage-arrow-${mi}`);
+    if(body){ body.style.display='block'; renderCatManager(mi); }
+    if(arrow) arrow.style.transform='rotate(180deg)';
+  }, 0);
+  registrarUndo(`Categoría editada`, ()=>restoreCatsSnapshot(_snap, mi));
+}
+
+// Eliminar: pregunta a dónde mover los movimientos de esa categoría.
+function deleteCatPrompt(mi, type, v){
+  if(typeof viewerActive !== 'undefined' && viewerActive){
+    alert('Estás viendo un año cerrado (solo lectura). No se puede eliminar aquí.');
+    return;
+  }
+  const n = countEntriesForCat(v);
+  const fullList = type==='expense' ? EXPENSE_CATS : INCOME_CATS;
+  // Posibles destinos = todas las demás categorías del mismo tipo
+  const destinos = fullList.filter(c=>c.v!==v);
+
+  if(n === 0){
+    // No hay movimientos: eliminar directo
+    if(!confirm(`¿Eliminar la categoría "${v}"?\n(No tiene movimientos este año.)`)) return;
+    doDeleteCat(mi, type, v, null);
+    return;
+  }
+
+  // Hay movimientos: construir un mini-diálogo con un select de destino
+  const row = document.getElementById(`catrow-${type}-${v}`);
+  if(!row) return;
+  row.innerHTML = `<div style="flex:1">
+    <div style="font-size:12px;color:var(--text);margin-bottom:7px">
+      "${esc(v)}" tiene <strong>${n}</strong> movimiento${n!==1?'s':''} este año. Muévelos a:
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <select id="movecat-dest-${type}-${esc(v)}" style="flex:1;min-width:130px;background:var(--surf);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);padding:8px 10px;font-family:'DM Sans',sans-serif;font-size:13px">
+        ${destinos.map(c=>`<option value="${esc(c.v)}">${esc(c.l||c.v)}</option>`).join('')}
+      </select>
+      <button class="cat-add-btn" style="color:var(--red)" onclick="confirmDeleteCatMove(${mi},'${type}','${esc(v)}')">Mover y eliminar</button>
+      <button class="cat-icon-btn" title="Cancelar" onclick="renderCatManager(${mi})">✖️</button>
+    </div>
+  </div>`;
+}
+
+function confirmDeleteCatMove(mi, type, v){
+  const sel = document.getElementById(`movecat-dest-${type}-${v}`);
+  const dest = sel ? sel.value : '';
+  if(!dest){ alert('Elige una categoría destino.'); return; }
+  doDeleteCat(mi, type, v, dest);
+}
+
+// Ejecuta el borrado. Si dest no es null, mueve los movimientos del año actual a dest.
+function doDeleteCat(mi, type, v, dest){
+  const _snap = snapshotCats();
+  const movidos = dest ? countEntriesForCat(v) : 0;
+  // Mover movimientos del año actual
+  if(dest){
+    Object.keys(data).forEach(m=>{
+      const md = data[m];
+      if(md && Array.isArray(md.entries)){
+        md.entries.forEach(e=>{ if(e.cat===v) e.cat = dest; });
+      }
+    });
+  }
+  // Quitar de la lista personalizada
+  if(type==='expense') customExpenseCats = customExpenseCats.filter(c=>c.v!==v);
+  else                 customIncomeCats  = customIncomeCats.filter(c=>c.v!==v);
+
+  rebuildCatLists();
+  saveCustomCats();
+  if(dest) save();   // guardar los movimientos movidos
+  renderAll();
+  setTimeout(()=>{
+    showInner(mi,'cats');
+    const body = document.getElementById(`cat-manage-body-${mi}`);
+    const arrow= document.getElementById(`cat-manage-arrow-${mi}`);
+    if(body){ body.style.display='block'; renderCatManager(mi); }
+    if(arrow) arrow.style.transform='rotate(180deg)';
+  }, 0);
+  const msg = dest
+    ? `"${v}" eliminada${movidos ? ` · ${movidos} movimiento${movidos!==1?'s':''} a "${dest}"` : ''}`
+    : `Categoría "${v}" eliminada`;
+  registrarUndo(msg, ()=>restoreCatsSnapshot(_snap, mi));
 }
 
 const monthTypes = {};
@@ -5104,6 +5480,10 @@ async function loadFromFirebase(){
     tarjetasDebito = Array.isArray(d[DEBITO_KEY]) ? d[DEBITO_KEY] : [];
     // Cargar TRABAJOS (clave nueva, independiente)
     trabajos = Array.isArray(d[TRABAJOS_KEY]) ? d[TRABAJOS_KEY] : [];
+    // Cargar CATEGORÍAS PERSONALIZADAS (claves nuevas, persistentes entre años)
+    customExpenseCats = Array.isArray(d[CUSTOM_EXP_CATS_KEY]) ? d[CUSTOM_EXP_CATS_KEY] : [];
+    customIncomeCats  = Array.isArray(d[CUSTOM_INC_CATS_KEY]) ? d[CUSTOM_INC_CATS_KEY] : [];
+    rebuildCatLists();
   } catch(e){ console.error('Error cargando datos:', e); data = {}; tarjetas = []; tarjetasDebito = []; trabajos = []; }
 }
 
