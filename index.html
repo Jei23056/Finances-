@@ -2837,10 +2837,10 @@ function transferDebito(){
   if(!fromEsResto) from.asignado = parseFloat(((from.asignado||0) - monto).toFixed(2));
   if(!toEsResto)   to.asignado   = parseFloat(((to.asignado||0)   + monto).toFixed(2));
 
-  // Registrar el movimiento para que "Gastado"/"Ingresado" reflejen la transferencia
-  // (quien recibe ve la transferencia como ganancia; quien envía, como gasto).
-  from.transferGastado   = parseFloat(((from.transferGastado||0) + monto).toFixed(2));
-  to.transferIngresado   = parseFloat(((to.transferIngresado||0) + monto).toFixed(2));
+  // Registrar el movimiento del AÑO ACTUAL para que "Gastado"/"Ingresado" reflejen
+  // la transferencia (quien recibe la ve como ganancia; quien envía, como gasto).
+  from.transferGastadoAnio   = parseFloat(((from.transferGastadoAnio||0) + monto).toFixed(2));
+  to.transferIngresadoAnio   = parseFloat(((to.transferIngresadoAnio||0) + monto).toFixed(2));
 
   amtEl.value = '';
   saveDebito();
@@ -2963,14 +2963,79 @@ function vaciarCuentasMarcadas(){
   if(cambió) saveDebito();
 }
 
-// Gastado/Ingresado REAL de cada cuenta: suma de los gastos e ingresos que
-// registraste eligiendo esa cuenta, más lo que entró/salió por transferencias.
-// (Antes esto usaba valores fijos inventados por nombre — ya no.)
+// Gastado/Ingresado REAL de cada cuenta EN EL AÑO ACTUAL: suma de los gastos e
+// ingresos que registraste eligiendo esa cuenta, más lo que entró/salió por
+// transferencias este año. (Antes esto usaba valores fijos inventados — ya no.)
 function debitoInfo(tj){
   const mov = debitoMovimientos(tj.id);
-  const gastado   = parseFloat((mov.gastos   + (tj.transferGastado||0)).toFixed(2));
-  const ingresado = parseFloat((mov.ingresos + (tj.transferIngresado||0)).toFixed(2));
+  const gastado   = parseFloat((mov.gastos   + (tj.transferGastadoAnio||0)).toFixed(2));
+  const ingresado = parseFloat((mov.ingresos + (tj.transferIngresadoAnio||0)).toFixed(2));
   return { gastos:gastado, ingresos:ingresado };
+}
+
+// Años que una cuenta de débito tiene registrados (el actual + los archivados)
+function debitoYears(tj){
+  const set = new Set([CURRENT_YEAR]);
+  if(tj && tj.histAnios && typeof tj.histAnios === 'object'){
+    Object.keys(tj.histAnios).forEach(y=>set.add(parseInt(y)));
+  }
+  return [...set].filter(y=>!isNaN(y)).sort((a,b)=>a-b);
+}
+
+// Gastado/Ingresado de una cuenta para un año dado (actual = en vivo, pasado = congelado)
+function debitoInfoAnio(tj, year){
+  if(!year || year===CURRENT_YEAR) return debitoInfo(tj);
+  const h = (tj.histAnios && tj.histAnios[year]) || null;
+  return h ? { gastos:h.gastos, ingresos:h.ingresos } : { gastos:0, ingresos:0 };
+}
+
+// Desglose mes a mes EN VIVO (año actual) de una cuenta de débito: {mi: {gastos,ingresos}}
+function debitoMovimientosPorMesActual(id){
+  const meses = {};
+  Object.keys(data).forEach(mi=>{
+    const md = data[mi];
+    if(md && md.entries){
+      md.entries.forEach(e=>{
+        if(e.debito === id){
+          if(!meses[mi]) meses[mi] = { gastos:0, ingresos:0 };
+          if(e.type==='expense') meses[mi].gastos += e.amount;
+          else if(e.type==='income') meses[mi].ingresos += e.amount;
+        }
+      });
+    }
+  });
+  return meses;
+}
+
+// Desglose mes a mes de una cuenta de débito para un año dado:
+// [{mi, mName, gastos, ingresos}] — actual en vivo, pasado desde histAnios.meses
+function debitoSpentByMonth(tj, year){
+  const yr = year || CURRENT_YEAR;
+  const mesesData = (yr !== CURRENT_YEAR)
+    ? ((tj.histAnios && tj.histAnios[yr] && tj.histAnios[yr].meses) || {})
+    : debitoMovimientosPorMesActual(tj.id);
+  const out = [];
+  MONTHS.forEach((mName,mi)=>{
+    const m = mesesData[mi] || {};
+    out.push({ mi, mName, gastos: parseFloat((m.gastos||0).toFixed(2)), ingresos: parseFloat((m.ingresos||0).toFixed(2)) });
+  });
+  // Mismo orden de ciclo que crédito: Diciembre primero, luego Enero..Noviembre
+  out.sort((a,b)=>{
+    const oa = a.mi === 11 ? -1 : a.mi;
+    const ob = b.mi === 11 ? -1 : b.mi;
+    return oa - ob;
+  });
+  return out;
+}
+
+// Despliega u oculta el desglose por mes de una cuenta de débito
+function toggleDebitoMonths(id){
+  const box = document.getElementById(`db-months-${id}`);
+  const btn = document.getElementById(`db-toggle-${id}`);
+  if(!box || !btn) return;
+  const visible = box.style.display !== 'none';
+  box.style.display = visible ? 'none' : 'block';
+  btn.textContent = visible ? '📅 Ver desglose por mes ▾' : '📅 Ocultar desglose ▴';
 }
 
 function renderDebito(){
@@ -2984,7 +3049,9 @@ function renderDebito(){
   }
   const totalCap = debitoCapitalTotal();
   wrap.innerHTML = tarjetasDebito.map(tj=>{
-    const info = debitoInfo(tj);
+    const years = debitoYears(tj);
+    const selYear = (tj._viewYear && years.includes(tj._viewYear)) ? tj._viewYear : CURRENT_YEAR;
+    const info = debitoInfoAnio(tj, selYear);
     const saldo = debitoSaldo(tj);
     const saldoColor = saldo < 0 ? 'var(--red)' : 'var(--green)';
     const dig = tj.digitos ? `•••• ${esc(tj.digitos)}` : '—';
@@ -3001,17 +3068,46 @@ function renderDebito(){
       </div>
       <div class="cc-stats">
         <div class="cc-stat">
-          <div class="cc-stat-lbl">Gastado</div>
+          <div class="cc-stat-lbl">Gastado (${selYear})</div>
           <div class="cc-stat-val" style="color:var(--red)">${fmt(info.gastos)}</div>
         </div>
         <div class="cc-stat">
-          <div class="cc-stat-lbl">Ingresado</div>
+          <div class="cc-stat-lbl">Ingresado (${selYear})</div>
           <div class="cc-stat-val" style="color:var(--green)">${fmt(info.ingresos)}</div>
         </div>
         <div class="cc-stat" style="grid-column:span 2">
           <div class="cc-stat-lbl">Saldo actual</div>
           <div class="cc-stat-val" style="color:${saldoColor}">${fmt(saldo)}</div>
         </div>
+      </div>
+      ${years.length > 1 ? `
+      <div style="display:flex;gap:8px;margin-top:.85rem;flex-wrap:wrap">
+        ${(years.includes(CURRENT_YEAR-1) && selYear===CURRENT_YEAR) ? `<button class="cc-toggle" style="margin-top:0" onclick="setDebitoViewYear('${tj.id}',${CURRENT_YEAR-1})">◀ Ver año anterior</button>` : ''}
+        ${selYear!==CURRENT_YEAR ? `<button class="cc-toggle" style="margin-top:0" onclick="setDebitoViewYear('${tj.id}',${CURRENT_YEAR})">Ver año actual</button>` : ''}
+      </div>
+      <div class="cc-year-pick" style="margin-top:.7rem;border-bottom:none;padding-bottom:0">
+        <span class="cc-year-lbl">Año:</span>
+        ${years.map(y=>`<button class="cc-year-btn ${y===selYear?'on':''}" onclick="setDebitoViewYear('${tj.id}',${y})">${y}</button>`).join('')}
+      </div>
+      ${selYear!==CURRENT_YEAR ? `<div style="font-size:11px;color:var(--muted);margin-top:6px">El saldo mostrado siempre es el actual — lo de ${selYear} ya quedó sumado a tu balance.</div>` : ''}
+      ` : ''}
+      <button class="cc-toggle" onclick="toggleDebitoMonths('${tj.id}')" id="db-toggle-${tj.id}">📅 Ver desglose por mes ▾</button>
+      <div class="cc-months" id="db-months-${tj.id}" style="display:none">
+        <div class="cc-month-row" style="opacity:.65">
+          <div class="cc-month-name" style="flex:1;width:auto;font-size:10px;text-transform:uppercase;letter-spacing:.05em">Mes</div>
+          <div class="cc-month-amt" style="font-size:10px;text-transform:uppercase;letter-spacing:.05em">Gastado</div>
+          <div class="cc-month-amt" style="font-size:10px;text-transform:uppercase;letter-spacing:.05em">Ingresado</div>
+        </div>
+        ${(()=>{
+          const mesesSel = debitoSpentByMonth(tj, selYear).filter(m=>m.gastos>0 || m.ingresos>0);
+          return mesesSel.length
+            ? mesesSel.map(m=>`<div class="cc-month-row">
+                <div class="cc-month-name" style="flex:1;width:auto">${esc(m.mName)}</div>
+                <div class="cc-month-amt" style="color:var(--red)">${fmt(m.gastos)}</div>
+                <div class="cc-month-amt" style="color:var(--green)">${fmt(m.ingresos)}</div>
+              </div>`).join('')
+            : `<div style="font-size:12px;color:var(--muted);padding:6px 2px">Sin movimientos registrados en ${selYear}.</div>`;
+        })()}
       </div>
     </div>`;
   }).join('') +
@@ -3021,6 +3117,14 @@ function renderDebito(){
   const tw = document.getElementById('debito-transfer-box');
   if(tw) tw.style.display = (tarjetasDebito.length >= 2) ? 'block' : 'none';
   refreshDebitoSelects();
+}
+
+// Cambia el año que se muestra en el desglose de una cuenta de débito
+function setDebitoViewYear(id, year){
+  const tj = tarjetasDebito.find(t=>t.id===id);
+  if(!tj) return;
+  tj._viewYear = year;
+  renderDebito();
 }
 
 // Si hay tarjetas de débito, el "Capital Actual" de arriba lo dejamos igual
@@ -3697,6 +3801,80 @@ async function rolloverCardsIfNewYear(){
     console.error('Error en cierre de año de tarjetas:', e);
   }
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// CIERRE DE AÑO — CUENTAS DE DÉBITO (AGREGADO)
+// Al cambiar el año: congela el Gastado/Ingresado del año que terminó en
+// `histAnios[año]` de cada cuenta, y suma ese efecto neto a `asignado` para
+// que el saldo NO se pierda (las cuentas no se "reinician" en enero).
+// Lee los datos del año viejo directo de Firestore (no de `data`, que para
+// este punto ya apunta al año nuevo).
+// ══════════════════════════════════════════════════════════════════════════
+async function rolloverDebitoIfNewYear(){
+  if(!currentUser) return;
+  try {
+    const ref = db.collection('users').doc(currentUser.uid);
+    const doc = await ref.get();
+    const d = doc.exists ? (doc.data() || {}) : {};
+
+    const lastYear = d._debitoLastYear;
+    if(lastYear === undefined || lastYear === null){
+      await ref.set({ _debitoLastYear: CURRENT_YEAR }, { merge: true });
+      return;
+    }
+    if(lastYear === CURRENT_YEAR) return;
+
+    const oldFinanzas = d[`finanzas_${lastYear}`] || {};
+    const resto = _cuentaResto();
+
+    tarjetasDebito.forEach(tj=>{
+      let gastos = 0, ingresos = 0;
+      const meses = {};
+      Object.keys(oldFinanzas).forEach(mi=>{
+        const md = oldFinanzas[mi];
+        if(md && md.entries){
+          md.entries.forEach(e=>{
+            if(e.debito === tj.id){
+              if(!meses[mi]) meses[mi] = { gastos:0, ingresos:0 };
+              if(e.type==='expense'){ gastos += e.amount; meses[mi].gastos += e.amount; }
+              else if(e.type==='income'){ ingresos += e.amount; meses[mi].ingresos += e.amount; }
+            }
+          });
+        }
+      });
+      Object.keys(meses).forEach(mi=>{
+        meses[mi].gastos   = parseFloat(meses[mi].gastos.toFixed(2));
+        meses[mi].ingresos = parseFloat(meses[mi].ingresos.toFixed(2));
+      });
+      gastos   += (tj.transferGastadoAnio||0);
+      ingresos += (tj.transferIngresadoAnio||0);
+      gastos = parseFloat(gastos.toFixed(2));
+      ingresos = parseFloat(ingresos.toFixed(2));
+
+      if(!tj.histAnios || typeof tj.histAnios !== 'object') tj.histAnios = {};
+      tj.histAnios[lastYear] = { gastos, ingresos, meses };
+
+      // Doblar el efecto neto del año viejo hacia el saldo permanente.
+      // La cuenta "resto" (corriente) no usa `asignado`: su saldo ya se
+      // recalcula solo desde el capital real, que se arrastra aparte.
+      const esResto = resto && tj.id === resto.id;
+      if(!esResto){
+        tj.asignado = parseFloat(((tj.asignado||0) + (ingresos - gastos)).toFixed(2));
+      }
+      // El año nuevo arranca con acumuladores de transferencia limpios
+      tj.transferGastadoAnio = 0;
+      tj.transferIngresadoAnio = 0;
+    });
+
+    await ref.set({
+      [DEBITO_KEY]: tarjetasDebito,
+      _debitoLastYear: CURRENT_YEAR
+    }, { merge: true });
+  } catch(e){
+    console.error('Error en cierre de año de cuentas de débito:', e);
+  }
+}
+
 
 // Devuelve el gasto total del año pasado para una tarjeta (o null si no hay)
 function cardLastYearTotal(tj){
@@ -5236,6 +5414,8 @@ auth.onAuthStateChanged(async user => {
     await setupInitialCardIfNeeded();
     // ► PASO 3.6: Cerrar año anterior de tarjetas si cambió el año
     await rolloverCardsIfNewYear();
+    // ► PASO 3.65: Cerrar año anterior de cuentas de débito si cambió el año
+    await rolloverDebitoIfNewYear();
     await loadAchievementsFromFirebase();
     updateAchFab();
     buildSkeleton();
