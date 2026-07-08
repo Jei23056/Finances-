@@ -849,6 +849,7 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 @media(max-width:600px){
   .cc-stats { grid-template-columns:1fr 1fr; }
   .cc-add-inputs { grid-template-columns:1fr; }
+  #best-worst-bar { grid-template-columns:1fr !important; }
 }
 
 </style>
@@ -2318,7 +2319,8 @@ function renderAnnual(){
 
   const monthsWithData = MONTHS.map((name,mi)=>{
     const t = monthTotals(mi);
-    return { name, mi, t };
+    const count = getMonth(mi).entries.length;
+    return { name, mi, t, count };
   }).filter(m => m.t.inc > 0 && m.t.exp > 0);
 
   const bwEl = document.getElementById('best-worst-bar');
@@ -2336,16 +2338,17 @@ function renderAnnual(){
         <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;position:relative;overflow:hidden">
           <div style="position:absolute;top:0;left:0;right:0;height:2px;background:${accentColor}"></div>
           <div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">${label}</div>
-          <div style="font-family:'DM Serif Display',serif;font-size:1.4rem;color:${accentColor};margin-bottom:10px">${m.name}</div>
+          <div style="font-family:'DM Serif Display',serif;font-size:1.4rem;color:${accentColor};margin-bottom:2px">${m.name}</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px">${m.count} movimiento${m.count!==1?'s':''}</div>
 
           <div style="display:flex;justify-content:space-between;gap:10px;padding-top:8px;border-top:1px solid var(--border)">
-            <div style="flex:1">
+            <div style="flex:1;min-width:0">
               <div style="font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:3px">${verb}</div>
-              <div style="font-family:'DM Serif Display',serif;font-size:1.05rem;color:${isPositive?'var(--green)':'var(--red)'}">${fmtSigned(m.t.net)}</div>
+              <div style="font-family:'DM Serif Display',serif;font-size:1.05rem;color:${isPositive?'var(--green)':'var(--red)'};white-space:nowrap">${fmtSigned(m.t.net)}</div>
             </div>
-            <div style="flex:1;text-align:right">
+            <div style="flex:1;min-width:0;text-align:right">
               <div style="font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Eficiencia</div>
-              <div style="font-family:'DM Serif Display',serif;font-size:1.05rem;color:${m.pct>=0?'var(--green)':'var(--red)'}">${m.pct>=0?'+':''}${m.pct}%</div>
+              <div style="font-family:'DM Serif Display',serif;font-size:1.05rem;color:${m.pct>=0?'var(--green)':'var(--red)'};white-space:nowrap">${m.pct>=0?'+':''}${m.pct}%</div>
             </div>
           </div>
           <div style="font-size:10px;color:var(--muted);margin-top:8px;line-height:1.4">
