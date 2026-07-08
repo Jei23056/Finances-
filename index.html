@@ -2963,14 +2963,35 @@ function vaciarCuentasMarcadas(){
   if(cambió) saveDebito();
 }
 
-// Gastado/Ingresado REAL de cada cuenta EN EL AÑO ACTUAL: suma de los gastos e
-// ingresos que registraste eligiendo esa cuenta, más lo que entró/salió por
-// transferencias este año. (Antes esto usaba valores fijos inventados — ya no.)
+// Gastado/Ingresado REAL de cada cuenta EN EL AÑO ACTUAL.
+// Las cuentas normales: suma de gastos/ingresos que registraste eligiendo esa
+// cuenta, más transferencias de este año.
+// La cuenta "Corriente" (resto): absorbe TODO lo que no quedó etiquetado a
+// otra cuenta específica — igual que ya hace con el saldo — así el total de
+// todas las cuentas de débito siempre cuadra con "Total Gastado"/"Total Ganado".
 function debitoInfo(tj){
+  const resto = _cuentaResto();
+  if(resto && tj.id === resto.id) return debitoInfoResto();
   const mov = debitoMovimientos(tj.id);
   const gastado   = parseFloat((mov.gastos   + (tj.transferGastadoAnio||0)).toFixed(2));
   const ingresado = parseFloat((mov.ingresos + (tj.transferIngresadoAnio||0)).toFixed(2));
   return { gastos:gastado, ingresos:ingresado };
+}
+
+function debitoInfoResto(){
+  const resto = _cuentaResto();
+  if(!resto) return { gastos:0, ingresos:0 };
+  const { yInc, yExp } = yearTotals();
+  let otrosGastos = 0, otrosIngresos = 0;
+  tarjetasDebito.filter(t=>t.id!==resto.id).forEach(t=>{
+    const mov = debitoMovimientos(t.id);
+    otrosGastos   += mov.gastos   + (t.transferGastadoAnio||0);
+    otrosIngresos += mov.ingresos + (t.transferIngresadoAnio||0);
+  });
+  return {
+    gastos:   parseFloat(Math.max(0, yExp - otrosGastos).toFixed(2)),
+    ingresos: parseFloat(Math.max(0, yInc - otrosIngresos).toFixed(2))
+  };
 }
 
 // Años que una cuenta de débito tiene registrados (el actual + los archivados)
@@ -2982,11 +3003,54 @@ function debitoYears(tj){
   return [...set].filter(y=>!isNaN(y)).sort((a,b)=>a-b);
 }
 
+// Total global (todas las categorías, ignorando cuenta de débito) de un año dado.
+// Año actual → en vivo desde `data`. Año pasado → desde el historial cargado.
+function totalesGlobalesAnio(year){
+  if(!year || year===CURRENT_YEAR){
+    const t = yearTotals();
+    return { yInc:t.yInc, yExp:t.yExp };
+  }
+  const fin = historialFinanzasCache[year];
+  if(!fin) return { yInc:0, yExp:0 };
+  let yInc=0, yExp=0;
+  Object.keys(fin).forEach(mi=>{
+    const md = fin[mi];
+    if(md && Array.isArray(md.entries)){
+      md.entries.forEach(e=>{
+        if(e.type==='income') yInc += e.amount;
+        else if(e.type==='expense') yExp += e.amount;
+      });
+    }
+  });
+  return { yInc:parseFloat(yInc.toFixed(2)), yExp:parseFloat(yExp.toFixed(2)) };
+}
+
 // Gastado/Ingresado de una cuenta para un año dado (actual = en vivo, pasado = congelado)
 function debitoInfoAnio(tj, year){
-  if(!year || year===CURRENT_YEAR) return debitoInfo(tj);
+  const resto = _cuentaResto();
+  const esResto = resto && tj.id === resto.id;
+  if(!year || year===CURRENT_YEAR){
+    return esResto ? debitoInfoResto() : debitoInfo(tj);
+  }
+  if(esResto) return debitoInfoRestoAnio(year);
   const h = (tj.histAnios && tj.histAnios[year]) || null;
   return h ? { gastos:h.gastos, ingresos:h.ingresos } : { gastos:0, ingresos:0 };
+}
+
+function debitoInfoRestoAnio(year){
+  const resto = _cuentaResto();
+  if(!resto) return { gastos:0, ingresos:0 };
+  const { yInc, yExp } = totalesGlobalesAnio(year);
+  let otrosGastos = 0, otrosIngresos = 0;
+  tarjetasDebito.filter(t=>t.id!==resto.id).forEach(t=>{
+    const info = debitoInfoAnio(t, year);
+    otrosGastos   += info.gastos;
+    otrosIngresos += info.ingresos;
+  });
+  return {
+    gastos:   parseFloat(Math.max(0, yExp - otrosGastos).toFixed(2)),
+    ingresos: parseFloat(Math.max(0, yInc - otrosIngresos).toFixed(2))
+  };
 }
 
 // Desglose mes a mes EN VIVO (año actual) de una cuenta de débito: {mi: {gastos,ingresos}}
@@ -3008,9 +3072,14 @@ function debitoMovimientosPorMesActual(id){
 }
 
 // Desglose mes a mes de una cuenta de débito para un año dado:
-// [{mi, mName, gastos, ingresos}] — actual en vivo, pasado desde histAnios.meses
+// [{mi, mName, gastos, ingresos}] — actual en vivo, pasado desde histAnios.meses.
+// La cuenta "Corriente" (resto) se calcula aparte: absorbe mes a mes lo que
+// no quedó etiquetado a otra cuenta, para que la suma cuadre con el total real.
 function debitoSpentByMonth(tj, year){
   const yr = year || CURRENT_YEAR;
+  const resto = _cuentaResto();
+  if(resto && tj.id === resto.id) return debitoSpentByMonthResto(yr);
+
   const mesesData = (yr !== CURRENT_YEAR)
     ? ((tj.histAnios && tj.histAnios[yr] && tj.histAnios[yr].meses) || {})
     : debitoMovimientosPorMesActual(tj.id);
@@ -3020,6 +3089,47 @@ function debitoSpentByMonth(tj, year){
     out.push({ mi, mName, gastos: parseFloat((m.gastos||0).toFixed(2)), ingresos: parseFloat((m.ingresos||0).toFixed(2)) });
   });
   // Mismo orden de ciclo que crédito: Diciembre primero, luego Enero..Noviembre
+  out.sort((a,b)=>{
+    const oa = a.mi === 11 ? -1 : a.mi;
+    const ob = b.mi === 11 ? -1 : b.mi;
+    return oa - ob;
+  });
+  return out;
+}
+
+function debitoSpentByMonthResto(year){
+  const resto = _cuentaResto();
+  const otras = tarjetasDebito.filter(t=>t.id!==resto.id);
+  const finPasado = (year!==CURRENT_YEAR) ? (historialFinanzasCache[year] || {}) : null;
+  const out = [];
+  MONTHS.forEach((mName,mi)=>{
+    let gTotal = 0, iTotal = 0;
+    if(year === CURRENT_YEAR){
+      const t = monthTotals(mi);
+      gTotal = t.exp; iTotal = t.inc;
+    } else {
+      const md = finPasado[mi];
+      if(md && Array.isArray(md.entries)){
+        md.entries.forEach(e=>{
+          if(e.type==='expense') gTotal += e.amount;
+          else if(e.type==='income') iTotal += e.amount;
+        });
+      }
+    }
+    let otG = 0, otI = 0;
+    otras.forEach(t=>{
+      const mData = (year===CURRENT_YEAR)
+        ? (debitoMovimientosPorMesActual(t.id)[mi] || {})
+        : ((t.histAnios && t.histAnios[year] && t.histAnios[year].meses && t.histAnios[year].meses[mi]) || {});
+      otG += (mData.gastos||0);
+      otI += (mData.ingresos||0);
+    });
+    out.push({
+      mi, mName,
+      gastos:   parseFloat(Math.max(0, gTotal-otG).toFixed(2)),
+      ingresos: parseFloat(Math.max(0, iTotal-otI).toFixed(2))
+    });
+  });
   out.sort((a,b)=>{
     const oa = a.mi === 11 ? -1 : a.mi;
     const ob = b.mi === 11 ? -1 : b.mi;
