@@ -1018,78 +1018,88 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 </div>
 
 <div id="panel-cards" style="display:none">
-  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1.5rem">
-    <div style="font-size:13px;color:var(--text);font-weight:500">💳 Tarjetas de Crédito</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:2px">Agrega tus tarjetas y su monto inicial. Lo gastado se calcula con los movimientos de categoría "Crédito" que marques con cada tarjeta.</div>
+
+  <div class="cards-subtabs" style="display:flex;gap:8px;margin-bottom:1.2rem">
+    <button class="mtab active" id="cst-credito" onclick="switchCardsSubTab('credito')">💳 Crédito</button>
+    <button class="mtab" id="cst-debito" onclick="switchCardsSubTab('debito')">🏦 Débito</button>
   </div>
 
-  <div class="cc-add-form">
-    <div class="sec-lbl" style="margin-bottom:.85rem">Agregar tarjeta</div>
-    <div class="cc-add-inputs">
-      <div>
-        <label>Nombre de la tarjeta</label>
-        <input type="text" id="cc-new-name" placeholder="Ej: Banreserva" onkeydown="if(event.key==='Enter')addCard()" />
-      </div>
-      <div>
-        <label>Monto inicial</label>
-        <input type="text" id="cc-new-start" placeholder="12000" inputmode="decimal"
-          oninput="this.value=this.value.replace(/[^0-9.]/g,'')" onkeydown="if(event.key==='Enter')addCard()" />
-      </div>
-      <div>
-        <label>Últimos 4 dígitos</label>
-        <input type="text" id="cc-new-last4" placeholder="4521" inputmode="numeric" maxlength="4"
-          oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')addCard()" />
-      </div>
+  <div id="cards-sub-credito">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1.5rem">
+      <div style="font-size:13px;color:var(--text);font-weight:500">💳 Tarjetas de Crédito</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">Agrega tus tarjetas y su monto inicial. Lo gastado se calcula con los movimientos de categoría "Crédito" que marques con cada tarjeta.</div>
     </div>
-    <button class="btn-add" onclick="addCard()">Agregar tarjeta</button>
-  </div>
 
-  <div class="cards-grid" id="cards-grid"></div>
+    <div class="cc-add-form">
+      <div class="sec-lbl" style="margin-bottom:.85rem">Agregar tarjeta</div>
+      <div class="cc-add-inputs">
+        <div>
+          <label>Nombre de la tarjeta</label>
+          <input type="text" id="cc-new-name" placeholder="Ej: Banreserva" onkeydown="if(event.key==='Enter')addCard()" />
+        </div>
+        <div>
+          <label>Monto inicial</label>
+          <input type="text" id="cc-new-start" placeholder="12000" inputmode="decimal"
+            oninput="this.value=this.value.replace(/[^0-9.]/g,'')" onkeydown="if(event.key==='Enter')addCard()" />
+        </div>
+        <div>
+          <label>Últimos 4 dígitos</label>
+          <input type="text" id="cc-new-last4" placeholder="4521" inputmode="numeric" maxlength="4"
+            oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')addCard()" />
+        </div>
+      </div>
+      <button class="btn-add" onclick="addCard()">Agregar tarjeta</button>
+    </div>
+
+    <div class="cards-grid" id="cards-grid"></div>
+  </div>
 
   <!-- ══ TARJETAS DE DÉBITO (AGREGADO) ══ -->
-  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin:2.5rem 0 1.5rem">
-    <div style="font-size:13px;color:var(--text);font-weight:500">💳 Cuentas / Tarjetas de Débito</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:2px">Estas cuentas reparten tu capital, no inventan dinero. La primera recibe todo tu capital; luego transfieres entre cuentas. La suma siempre será igual a tu Capital Actual.</div>
-  </div>
-
-  <div class="cc-add-form">
-    <div class="sec-lbl" style="margin-bottom:.85rem">Agregar cuenta de débito</div>
-    <div class="cc-add-inputs" style="grid-template-columns:2fr 1fr">
-      <div>
-        <label>Nombre de la cuenta</label>
-        <input type="text" id="db-nombre" placeholder="Ej: Banreservas Ahorro" onkeydown="if(event.key==='Enter')addDebito()" />
-      </div>
-      <div>
-        <label>Últimos 4 dígitos</label>
-        <input type="text" id="db-digitos" placeholder="7547" inputmode="numeric" maxlength="4"
-          oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')addDebito()" />
-      </div>
+  <div id="cards-sub-debito" style="display:none">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1.5rem">
+      <div style="font-size:13px;color:var(--text);font-weight:500">💳 Cuentas / Tarjetas de Débito</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">Estas cuentas reparten tu capital, no inventan dinero. La primera recibe todo tu capital; luego transfieres entre cuentas. La suma siempre será igual a tu Capital Actual.</div>
     </div>
-    <div style="font-size:11px;color:var(--muted);margin:2px 0 12px">La primera cuenta recibe todo tu capital actual. Las demás empiezan en $0 y les pasas dinero con transferencias.</div>
-    <button class="btn-add" onclick="addDebito()">Agregar cuenta</button>
-  </div>
 
-  <div class="cc-add-form" id="debito-transfer-box" style="display:none;margin-top:12px">
-    <div class="sec-lbl" style="margin-bottom:.85rem">🔄 Transferir entre cuentas</div>
-    <div class="cc-add-inputs" style="grid-template-columns:1fr 1fr 1fr">
-      <div>
-        <label>De</label>
-        <select id="db-transfer-from"><option value="">Cuenta…</option></select>
+    <div class="cc-add-form">
+      <div class="sec-lbl" style="margin-bottom:.85rem">Agregar cuenta de débito</div>
+      <div class="cc-add-inputs" style="grid-template-columns:2fr 1fr">
+        <div>
+          <label>Nombre de la cuenta</label>
+          <input type="text" id="db-nombre" placeholder="Ej: Banreservas Ahorro" onkeydown="if(event.key==='Enter')addDebito()" />
+        </div>
+        <div>
+          <label>Últimos 4 dígitos</label>
+          <input type="text" id="db-digitos" placeholder="7547" inputmode="numeric" maxlength="4"
+            oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')addDebito()" />
+        </div>
       </div>
-      <div>
-        <label>A</label>
-        <select id="db-transfer-to"><option value="">Cuenta…</option></select>
-      </div>
-      <div>
-        <label>Monto</label>
-        <input type="text" id="db-transfer-amt" placeholder="0.00" inputmode="decimal"
-          oninput="this.value=this.value.replace(/[^0-9.]/g,'')" onkeydown="if(event.key==='Enter')transferDebito()" />
-      </div>
+      <div style="font-size:11px;color:var(--muted);margin:2px 0 12px">La primera cuenta recibe todo tu capital actual. Las demás empiezan en $0 y les pasas dinero con transferencias.</div>
+      <button class="btn-add" onclick="addDebito()">Agregar cuenta</button>
     </div>
-    <button class="btn-add" onclick="transferDebito()">Transferir</button>
-  </div>
 
-  <div class="cards-grid" id="debito-cards"></div>
+    <div class="cc-add-form" id="debito-transfer-box" style="display:none;margin-top:12px">
+      <div class="sec-lbl" style="margin-bottom:.85rem">🔄 Transferir entre cuentas</div>
+      <div class="cc-add-inputs" style="grid-template-columns:1fr 1fr 1fr">
+        <div>
+          <label>De</label>
+          <select id="db-transfer-from"><option value="">Cuenta…</option></select>
+        </div>
+        <div>
+          <label>A</label>
+          <select id="db-transfer-to"><option value="">Cuenta…</option></select>
+        </div>
+        <div>
+          <label>Monto</label>
+          <input type="text" id="db-transfer-amt" placeholder="0.00" inputmode="decimal"
+            oninput="this.value=this.value.replace(/[^0-9.]/g,'')" onkeydown="if(event.key==='Enter')transferDebito()" />
+        </div>
+      </div>
+      <button class="btn-add" onclick="transferDebito()">Transferir</button>
+    </div>
+
+    <div class="cards-grid" id="debito-cards"></div>
+  </div>
 </div>
 
 <div id="panel-trabajos" style="display:none">
@@ -2827,6 +2837,11 @@ function transferDebito(){
   if(!fromEsResto) from.asignado = parseFloat(((from.asignado||0) - monto).toFixed(2));
   if(!toEsResto)   to.asignado   = parseFloat(((to.asignado||0)   + monto).toFixed(2));
 
+  // Registrar el movimiento para que "Gastado"/"Ingresado" reflejen la transferencia
+  // (quien recibe ve la transferencia como ganancia; quien envía, como gasto).
+  from.transferGastado   = parseFloat(((from.transferGastado||0) + monto).toFixed(2));
+  to.transferIngresado   = parseFloat(((to.transferIngresado||0) + monto).toFixed(2));
+
   amtEl.value = '';
   saveDebito();
   renderAll();
@@ -2897,11 +2912,11 @@ function refreshDebitoSelects(){
   });
 }
 
-// Gastado/Ingresado INFORMATIVO de cada cuenta (NO afecta el saldo real).
-// Regla pedida por el usuario:
-//  • Qik → todo en 0 (no tiene nada).
-//  • Banreservas Ahorro → Gastado fijo 6000.
-//  • Banreservas Corriente → recibe el RESTO de gastos e ingresos, y todo el saldo real.
+// NOTA: Esta función forzaba valores fijos (Ahorro=6000, Qik=0, etc.) sin
+// importar los movimientos reales, lo que causaba que "Gastado"/"Ingresado"
+// nunca cambiaran aunque hicieras gastos, ingresos o transferencias reales.
+// Ya NO se llama desde renderDebito (ver más abajo) — se deja definida solo
+// por si algo más la referencia, pero no tiene efecto en las cuentas nuevas.
 function aplicarRolesInfoDebito(){
   let cambió = false;
   tarjetasDebito.forEach(tj=>{
@@ -2948,39 +2963,19 @@ function vaciarCuentasMarcadas(){
   if(cambió) saveDebito();
 }
 
+// Gastado/Ingresado REAL de cada cuenta: suma de los gastos e ingresos que
+// registraste eligiendo esa cuenta, más lo que entró/salió por transferencias.
+// (Antes esto usaba valores fijos inventados por nombre — ya no.)
 function debitoInfo(tj){
-  // Usar los totales ACUMULADOS (año actual + historial), no solo el año en curso.
-  // Así las cuentas no se reinician en enero (como un banco real).
-  let totalGastos = 0, totalIngresos = 0;
-  if(typeof totalesDesde === 'function'){
-    const acc = totalesDesde();
-    totalGastos   = acc.totalExp || 0;
-    totalIngresos = acc.totalInc || 0;
-  } else {
-    const tot = (typeof yearTotals === 'function') ? yearTotals() : {yInc:0,yExp:0};
-    totalGastos   = tot.yExp || 0;
-    totalIngresos = tot.yInc || 0;
-  }
-  // Suma de montos fijos del resto de tarjetas
-  const sumaGastoFijo    = tarjetasDebito.reduce((s,t)=> s + (t.infoGastadoFijo||0), 0);
-  const sumaIngresoFijo  = tarjetasDebito.reduce((s,t)=> s + (t.infoIngresadoFijo||0), 0);
-  let gastado = 0, ingresado = 0;
-  if(typeof tj.infoGastadoFijo === 'number')   gastado   = tj.infoGastadoFijo;
-  if(typeof tj.infoIngresadoFijo === 'number') ingresado = tj.infoIngresadoFijo;
-  if(tj.infoCorriente === true){
-    gastado   = parseFloat((totalGastos - sumaGastoFijo).toFixed(2));
-    ingresado = parseFloat((totalIngresos - sumaIngresoFijo).toFixed(2));
-    if(gastado < 0) gastado = 0;
-    if(ingresado < 0) ingresado = 0;
-  }
+  const mov = debitoMovimientos(tj.id);
+  const gastado   = parseFloat((mov.gastos   + (tj.transferGastado||0)).toFixed(2));
+  const ingresado = parseFloat((mov.ingresos + (tj.transferIngresado||0)).toFixed(2));
   return { gastos:gastado, ingresos:ingresado };
 }
 
 function renderDebito(){
   const wrap = document.getElementById('debito-cards');
   if(!wrap) return;
-  // Asignar roles informativos por nombre (una vez), si no están definidos
-  aplicarRolesInfoDebito();
   if(!tarjetasDebito.length){
     wrap.innerHTML = '<div class="empty">Aún no has agregado cuentas. Crea una y recibirá todo tu capital actual.</div>';
     const tw = document.getElementById('debito-transfer-box');
@@ -3136,6 +3131,21 @@ function switchToCards(){
   renderDebito();
   refreshDebitoSelects();
   applyMonthsCollapsed();
+  switchCardsSubTab(cardsSubTabActual);
+}
+
+// Sub-pestañas dentro de "Tarjetas": Crédito / Débito, cada una en su propio lugar
+let cardsSubTabActual = 'credito';
+function switchCardsSubTab(which){
+  cardsSubTabActual = which;
+  const credEl = document.getElementById('cards-sub-credito');
+  const debEl  = document.getElementById('cards-sub-debito');
+  const credBtn = document.getElementById('cst-credito');
+  const debBtn  = document.getElementById('cst-debito');
+  if(credEl) credEl.style.display = (which==='credito') ? 'block' : 'none';
+  if(debEl)  debEl.style.display  = (which==='debito')  ? 'block' : 'none';
+  if(credBtn) credBtn.className = 'mtab' + (which==='credito' ? ' active' : '');
+  if(debBtn)  debBtn.className  = 'mtab' + (which==='debito'  ? ' active' : '');
 }
 
 // ── PANEL TRABAJO ───────────────────────────────────────────────────────────
@@ -3335,7 +3345,10 @@ function renderCards(){
         </div>
       </div>
       <div class="cc-track"><div class="cc-fill" style="width:${fillW}%;background:${usoColor}"></div></div>
-      <button class="cc-toggle" onclick="toggleCardMonths(${idx})" id="cc-toggle-${idx}">📅 Ver desglose por año ▾</button>
+      <div style="display:flex;gap:8px;margin-top:.85rem">
+        <button class="cc-toggle" style="margin-top:0" onclick="toggleCardMonths(${idx})" id="cc-toggle-${idx}">📅 Ver desglose por año ▾</button>
+        ${years.includes(CURRENT_YEAR-1) ? `<button class="cc-toggle" style="margin-top:0" onclick="setCardViewYear(${idx},${CURRENT_YEAR-1})">◀ Ver año anterior</button>` : ''}
+      </div>
       <div class="cc-months" id="cc-months-${idx}" style="display:none">
         <div class="cc-year-pick">
           <span class="cc-year-lbl">Año:</span>
@@ -3353,6 +3366,22 @@ function renderCards(){
               </div>`;
             }).join('')
           : `<div style="font-size:12px;color:var(--muted);padding:6px 2px">Sin gastos registrados en ${selYear}.</div>`}
+      </div>
+      <button class="cc-toggle" onclick="toggleCardHistorial(${idx})" id="cc-hist-toggle-${idx}">🗂️ Ver historial completo</button>
+      <div class="cc-months" id="cc-hist-${idx}" style="display:none">
+        ${years.map(y=>{
+            const t = cardSpent(tj, y);
+            return `<div class="cc-month-row">
+              <div class="cc-month-name">${y}</div>
+              <div class="cc-month-bar"></div>
+              <div class="cc-month-amt">${fmt(t)}</div>
+              <div class="cc-month-pct"></div>
+            </div>`;
+          }).join('')}
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:12px;color:var(--muted2)">Total de todos los años (pasado + actual)</span>
+          <b style="font-family:'DM Serif Display',serif;color:var(--gold);font-size:1.05rem">${fmt(years.reduce((s,y)=>s+cardSpent(tj,y),0))}</b>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -3394,6 +3423,16 @@ function toggleCardMonths(idx){
   const visible = box.style.display !== 'none';
   box.style.display = visible ? 'none' : 'block';
   btn.textContent = visible ? '📅 Ver desglose por año ▾' : '📅 Ocultar desglose ▴';
+}
+
+// Despliega u oculta el historial completo (todos los años sumados) de una tarjeta
+function toggleCardHistorial(idx){
+  const box = document.getElementById(`cc-hist-${idx}`);
+  const btn = document.getElementById(`cc-hist-toggle-${idx}`);
+  if(!box || !btn) return;
+  const visible = box.style.display !== 'none';
+  box.style.display = visible ? 'none' : 'block';
+  btn.textContent = visible ? '🗂️ Ver historial completo' : '🗂️ Ocultar historial ▴';
 }
 
 function addCard(){
@@ -5656,3 +5695,4 @@ function dismissSplash(){
 </script>
 </body>
 </html>
+
