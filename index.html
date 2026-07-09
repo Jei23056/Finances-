@@ -1506,7 +1506,6 @@ function renderMonth(mi){
         <div class="mcard-val" style="color:${t.net>=0?'var(--green)':'var(--red)'}"><span class="mcard-num" data-val="${t.net}" data-signed="1">${fmtSigned(t.net)}</span></div>
       </div>
     </div>
-    <div style="font-size:11px;color:var(--muted);text-align:right;margin-top:6px">${md.entries.length} movimiento${md.entries.length!==1?'s':''} este mes</div>
 
     <div class="mprogress"><div class="mprogress-fill" style="width:${pct}%;background:${progressColor}"></div></div>
 
@@ -1571,7 +1570,7 @@ function renderMonth(mi){
       <div class="entries">${recentHTML}</div>
     </div>
     <div id="inner-all-${mi}" style="display:none">
-      <div class="sec-lbl">Todos los movimientos</div>
+      <div class="sec-lbl">Todos los movimientos (${md.entries.length})</div>
       <div class="entries">${allHTML}</div>
     </div>
     <div id="inner-cats-${mi}" style="display:none">
@@ -6011,3 +6010,4 @@ function dismissSplash(){
 </script>
 </body>
 </html>
+
