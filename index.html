@@ -1577,10 +1577,12 @@ function renderMonth(mi){
       <div class="cats-grid">
         <div class="cat-block">
           <h3>En qué gasté más</h3>
+          ${donutSVGLive(expData)}
           ${barsHTML(expData,'var(--red)')}
         </div>
         <div class="cat-block">
           <h3>De dónde gané</h3>
+          ${donutSVGLive(incData)}
           ${barsHTML(incData,'var(--green)')}
         </div>
       </div>
