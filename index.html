@@ -3194,14 +3194,7 @@ function renderDebito(){
         </div>
       </div>
       ${years.length > 1 ? `
-      <div style="display:flex;gap:8px;margin-top:.85rem;flex-wrap:wrap">
-        ${(years.includes(CURRENT_YEAR-1) && selYear===CURRENT_YEAR) ? `<button class="cc-toggle" style="margin-top:0" onclick="setDebitoViewYear('${tj.id}',${CURRENT_YEAR-1})">◀ Ver año anterior</button>` : ''}
-        ${selYear!==CURRENT_YEAR ? `<button class="cc-toggle" style="margin-top:0" onclick="setDebitoViewYear('${tj.id}',${CURRENT_YEAR})">Ver año actual</button>` : ''}
-      </div>
-      <div class="cc-year-pick" style="margin-top:.7rem;border-bottom:none;padding-bottom:0">
-        <span class="cc-year-lbl">Año:</span>
-        ${years.map(y=>`<button class="cc-year-btn ${y===selYear?'on':''}" onclick="setDebitoViewYear('${tj.id}',${y})">${y}</button>`).join('')}
-      </div>
+      <button class="cc-toggle" style="margin-top:.85rem" onclick="debitoYearButtonClick('${tj.id}')" id="db-yearbtn-${tj.id}">${esc(debitoYearButtonLabel(years, selYear))}</button>
       ${selYear!==CURRENT_YEAR ? `<div style="font-size:11px;color:var(--muted);margin-top:6px">El saldo mostrado siempre es el actual — lo de ${selYear} ya quedó sumado a tu balance.</div>` : ''}
       ` : ''}
       <button class="cc-toggle" onclick="toggleDebitoMonths('${tj.id}')" id="db-toggle-${tj.id}">📅 Ver desglose por mes ▾</button>
@@ -3230,6 +3223,43 @@ function renderDebito(){
   const tw = document.getElementById('debito-transfer-box');
   if(tw) tw.style.display = (tarjetasDebito.length >= 2) ? 'block' : 'none';
   refreshDebitoSelects();
+}
+
+// Texto del botón único de año, según cuántos años tiene la cuenta
+function debitoYearButtonLabel(years, selYear){
+  if(years.length === 2){
+    return selYear === CURRENT_YEAR ? '◀ Ver año anterior' : `Ver año actual (${CURRENT_YEAR}) ▸`;
+  }
+  // 3+ años disponibles (año actual + 2 o más años pasados): el botón pregunta cuál ver
+  return selYear === CURRENT_YEAR ? '📅 Ver otro año ▾' : `📅 Viendo ${selYear} — cambiar año ▾`;
+}
+
+// Un solo botón para el año de una cuenta de débito:
+//  • Con 1 año pasado (2 años en total) → alterna directo entre actual y ese año.
+//  • Con 2+ años pasados (3+ en total) → pregunta cuál año quiere ver.
+function debitoYearButtonClick(id){
+  const tj = tarjetasDebito.find(t=>t.id===id);
+  if(!tj) return;
+  const years = debitoYears(tj);
+  if(years.length <= 1) return;
+  const selYear = (tj._viewYear && years.includes(tj._viewYear)) ? tj._viewYear : CURRENT_YEAR;
+
+  if(years.length === 2){
+    const otroAnio = years.find(y=>y!==selYear);
+    setDebitoViewYear(id, otroAnio);
+    return;
+  }
+
+  const opciones = years.slice().sort((a,b)=>b-a);
+  const listaTxt = opciones.map(y => y===CURRENT_YEAR ? `${y} (año actual)` : `${y}`).join('\n');
+  const resp = prompt(`¿Qué año quieres ver de "${tj.nombre}"?\n\n${listaTxt}\n\nEscribe el año:`, String(selYear));
+  if(resp === null) return; // canceló
+  const year = parseInt(resp.trim(), 10);
+  if(!years.includes(year)){
+    alert('Ese año no está disponible para esta cuenta.');
+    return;
+  }
+  setDebitoViewYear(id, year);
 }
 
 // Cambia el año que se muestra en el desglose de una cuenta de débito
