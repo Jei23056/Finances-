@@ -641,7 +641,7 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
   position:fixed; bottom:1.25rem; left:50%; transform:translateX(-50%) translateY(20px);
   display:flex; align-items:center; gap:14px;
   background:var(--card2); border:1px solid var(--border2);
-  border-radius:999px; padding:10px 12px 10px 18px;
+  border-radius:999px; padding:10px 12px 10px 12px;
   box-shadow:0 8px 24px rgba(0,0,0,0.4);
   z-index:9000; opacity:0; pointer-events:none;
   transition:opacity .25s, transform .25s;
@@ -1127,6 +1127,11 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 </div>
 <div id="save-indicator">Guardado ✓</div>
 <div id="undo-toast">
+  <svg width="26" height="26" viewBox="0 0 26 26" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
+    <circle cx="13" cy="13" r="12" fill="none" stroke="var(--gold)" stroke-width="1"/>
+    <circle cx="13" cy="13" r="9.5" fill="var(--gldim)"/>
+    <text x="13" y="17" text-anchor="middle" font-family="'DM Serif Display',serif" font-size="10" fill="var(--gold)" letter-spacing="0.5">JB</text>
+  </svg>
   <span class="undo-msg" id="undo-msg">Eliminado</span>
   <button class="undo-btn" onclick="ejecutarDeshacer()">↩ Deshacer</button>
   <button class="undo-x" onclick="ocultarUndoToast()" title="Cerrar">×</button>
@@ -5330,6 +5335,7 @@ function exportPDFPro(historicalData, historicalYear, historicalCards){
     .cover-snapshot { display:flex; gap:34px; }
     .cs-item .cs-lbl { font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:${SLATE}; margin-bottom:3px; }
     .cs-item .cs-val { font-size:19px; font-weight:700; }
+    .cover-brand-row { display:flex; align-items:center; justify-content:flex-end; gap:10px; }
     .cover-brand { font-size:11px; color:${SLATE}; text-align:right; letter-spacing:.04em; }
     .cover-brand strong { color:${NAVY}; font-weight:700; display:block; font-size:13px; letter-spacing:.06em; }
 
@@ -5450,7 +5456,17 @@ function exportPDFPro(historicalData, historicalYear, historicalCards){
         <div class="cs-item"><div class="cs-lbl">Balance neto</div><div class="cs-val ${yNet>=0?'pos':'neg'}">${fmtSigned(yNet)}</div></div>
         <div class="cs-item"><div class="cs-lbl">Capital final</div><div class="cs-val navy">${fmtSigned(yCap)}</div></div>
       </div>
-      <div class="cover-brand"><strong>MIS FINANZAS</strong>Reporte confidencial</div>
+      <div class="cover-brand-row">
+        <svg width="34" height="34" viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="17" cy="17" r="16" fill="none" stroke="#9a7b2e" stroke-width="1"/>
+          <circle cx="17" cy="17" r="13" fill="none" stroke="#9a7b2e" stroke-width="0.5"/>
+          <circle cx="17" cy="17" r="12" fill="#1b2a4a"/>
+          <text x="17" y="22.5" text-anchor="middle" font-family="'DM Serif Display',serif" font-size="12" fill="#9a7b2e" letter-spacing="0.5">JB</text>
+          <circle cx="17" cy="3.5" r="0.8" fill="#9a7b2e"/>
+          <circle cx="17" cy="30.5" r="0.8" fill="#9a7b2e"/>
+        </svg>
+        <div class="cover-brand"><strong>MIS FINANZAS</strong>Reporte confidencial</div>
+      </div>
     </div>
   </div>
 
