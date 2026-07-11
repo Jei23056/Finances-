@@ -1438,6 +1438,7 @@ function entryHTML(e, mi){
     <div class="eright">
       <span class="eamt" style="color:${color}">${sign}${fmt(e.amount)}</span>
       <span class="edate">${e.date}</span>
+      <button class="bdel" onclick="editEntryStart(${mi},${e.id})" title="Editar" style="color:var(--muted2)">✏️</button>
       <button class="bdel" onclick="delEntry(${mi},${e.id})" title="Eliminar">×</button>
     </div>
   </div>`;
@@ -1555,7 +1556,10 @@ function renderMonth(mi){
           </select>
         </div>
       </div>
-      <button class="btn-add" onclick="addEntry(${mi})">Agregar movimiento</button>
+      <button class="btn-add" id="addbtn-${mi}" onclick="addEntry(${mi})">Agregar movimiento</button>
+      <div id="edit-cancel-${mi}" style="display:none;text-align:center;margin-top:8px">
+        <a href="#" onclick="cancelEdit(${mi});return false;" style="font-size:12px;color:var(--muted2);text-decoration:underline">Cancelar edición</a>
+      </div>
     </div>
 
     <div class="inner-tabs">
@@ -1620,6 +1624,11 @@ function renderMonth(mi){
 
   const mt = monthTypes[mi] || 'expense';
   setTypeVisual(mi, mt);
+
+  // Si había una edición en curso y este panel se volvió a dibujar por otra
+  // razón, los campos del formulario se resetean — hay que soltar el estado
+  // de edición para que el botón y lo que hace realmente queden sincronizados.
+  if(editingEntryId[mi]) delete editingEntryId[mi];
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -2100,6 +2109,8 @@ function renderByCat(mi){
   listEl.innerHTML = blocks.reverse().join('');
 }
 
+let editingEntryId = {}; // { [mi]: id del movimiento en edición, o undefined }
+
 function addEntry(mi){
   if(typeof viewerActive !== 'undefined' && viewerActive) return;
   const raw    = document.getElementById(`amt-${mi}`).value.replace(/,/g,'');
@@ -2113,25 +2124,29 @@ function addEntry(mi){
   if(!desc)              { document.getElementById(`desc-${mi}`).focus(); return; }
 
   const md = getMonth(mi);
-  const entry = {
-    id: Date.now(),
-    type,
-    amount: parseFloat(amount.toFixed(2)),
-    cat, desc,
-    date: todayStr()
+  const editId = editingEntryId[mi];
+  const existingIdx = editId ? md.entries.findIndex(x=>x.id===editId) : -1;
+  const isEditing = existingIdx !== -1;
+
+  // Se arma en un borrador APARTE — solo se aplica al final si todo pasa la
+  // validación. Así, si cancelas por falta de saldo u otro motivo, el
+  // movimiento original que estabas editando queda intacto, sin dañarse.
+  const draft = {
+    id:   isEditing ? md.entries[existingIdx].id   : Date.now(),
+    date: isEditing ? md.entries[existingIdx].date : todayStr(),
+    type, amount: parseFloat(amount.toFixed(2)), cat, desc
   };
   // Si es un gasto de categoría "Crédito", guardar con cuál tarjeta se pagó
   if(type==='expense' && cat==='Crédito'){
     const tjEl = document.getElementById(`tarjeta-${mi}`);
-    if(tjEl && tjEl.value) entry.tarjeta = tjEl.value;
+    if(tjEl && tjEl.value) draft.tarjeta = tjEl.value;
   }
   // Si es un ingreso de "Nómina / Salario", guardar de qué trabajo es
   if(type==='income' && cat==='Nómina / Salario'){
     const trEl = document.getElementById(`trabajo-${mi}`);
-    if(trEl && trEl.value) entry.trabajo = trEl.value;
+    if(trEl && trEl.value) draft.trabajo = trEl.value;
   }
   // Tarjeta de DÉBITO: obligatoria siempre que haya cuentas creadas.
-  // En gastos de Crédito = de cuál cuenta pagas la tarjeta (sale tu dinero real).
   if(tarjetasDebito.length){
     const dbEl = document.getElementById(`debito-${mi}`);
     if(!dbEl || !dbEl.value){
@@ -2139,30 +2154,99 @@ function addEntry(mi){
       alert('Elige de cuál cuenta/tarjeta de débito sale o entra el dinero.');
       return;
     }
-    // Si es un GASTO, verificar que la cuenta tenga saldo suficiente
     if(type==='expense'){
       const cuenta = tarjetasDebito.find(t=>t.id===dbEl.value);
-      const saldoDisp = cuenta ? debitoSaldo(cuenta) : 0;
+      let saldoDisp = cuenta ? debitoSaldo(cuenta) : 0;
+      // Si estamos editando y el movimiento original ya restaba de ESTA MISMA
+      // cuenta, hay que devolverle su monto viejo antes de comparar (ese
+      // gasto sigue "puesto" en el saldo actual hasta que confirmemos el cambio).
+      if(isEditing){
+        const original = md.entries[existingIdx];
+        if(original.type==='expense' && original.debito===dbEl.value){
+          saldoDisp += original.amount;
+        }
+      }
       if(amount > saldoDisp){
         alert(`"${cuenta ? cuenta.nombre : 'Esa cuenta'}" no tiene saldo suficiente.\nSaldo disponible: ${fmt(saldoDisp)}\nQuieres gastar: ${fmt(amount)}`);
         return;
       }
     }
-    entry.debito = dbEl.value;   // guarda el id de la tarjeta de débito
+    draft.debito = dbEl.value;   // guarda el id de la tarjeta de débito
   }
-  md.entries.push(entry);
+
+  if(isEditing){
+    md.entries[existingIdx] = draft;
+  } else {
+    md.entries.push(draft);
+  }
 
   document.getElementById(`amt-${mi}`).value = '';
+  document.getElementById(`desc-${mi}`).value = '';
+  const catSelReset = document.getElementById(`cat-${mi}`);
+  if(catSelReset) catSelReset.value = '';
+
+  if(isEditing) cancelEdit(mi); // restaura el botón y limpia el estado de edición
 
   save();
   propagateCapitals();
   renderAll();
 }
 
+// Pone el formulario de arriba en modo "edición" con los datos de un movimiento
+function editEntryStart(mi, id){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
+  const md = getMonth(mi);
+  const e = md.entries.find(x=>x.id===id);
+  if(!e) return;
+
+  editingEntryId[mi] = id;
+
+  setType(mi, e.type);
+  const amtEl = document.getElementById(`amt-${mi}`);
+  if(amtEl) amtEl.value = e.amount;
+  const catSel = document.getElementById(`cat-${mi}`);
+  if(catSel) catSel.value = e.cat;
+  const descEl = document.getElementById(`desc-${mi}`);
+  if(descEl) descEl.value = e.desc || '';
+  onCatChange(mi); // muestra/oculta selects de tarjeta/trabajo/débito según la categoría
+
+  const tjEl = document.getElementById(`tarjeta-${mi}`);
+  if(tjEl && e.tarjeta) tjEl.value = e.tarjeta;
+  const trEl = document.getElementById(`trabajo-${mi}`);
+  if(trEl && e.trabajo) trEl.value = e.trabajo;
+  const dbEl = document.getElementById(`debito-${mi}`);
+  if(dbEl && e.debito) dbEl.value = e.debito;
+
+  const btn = document.getElementById(`addbtn-${mi}`);
+  if(btn) btn.textContent = '✏️ Guardar cambios';
+  const cancelWrap = document.getElementById(`edit-cancel-${mi}`);
+  if(cancelWrap) cancelWrap.style.display = 'block';
+
+  if(amtEl) amtEl.scrollIntoView({ behavior:'smooth', block:'center' });
+}
+
+// Cancela la edición en curso (o simplemente limpia el estado tras guardar)
+function cancelEdit(mi){
+  delete editingEntryId[mi];
+  const btn = document.getElementById(`addbtn-${mi}`);
+  if(btn) btn.textContent = 'Agregar movimiento';
+  const cancelWrap = document.getElementById(`edit-cancel-${mi}`);
+  if(cancelWrap) cancelWrap.style.display = 'none';
+  const amtEl = document.getElementById(`amt-${mi}`);
+  if(amtEl) amtEl.value = '';
+  const descEl = document.getElementById(`desc-${mi}`);
+  if(descEl) descEl.value = '';
+  const catSel = document.getElementById(`cat-${mi}`);
+  if(catSel) catSel.value = '';
+}
+
 function delEntry(mi, id){
   if(typeof viewerActive !== 'undefined' && viewerActive) return;
   const md = getMonth(mi);
   const borrada = md.entries.find(e=>e.id===id);
+  if(!borrada) return;
+  const etiquetaConfirm = borrada.desc ? `"${borrada.desc}" (${fmt(borrada.amount)})` : `este movimiento (${fmt(borrada.amount)})`;
+  if(!confirm(`¿Eliminar ${etiquetaConfirm}?`)) return;
   const posicion = md.entries.findIndex(e=>e.id===id);
   md.entries = md.entries.filter(e=>e.id!==id);
   save();
@@ -2309,9 +2393,9 @@ function donutSVGLive(entries, opts){
   });
   const svg = `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
     ${paths}
-    <circle cx="${cx}" cy="${cy}" r="${rInner}" fill="var(--card)"/>
-    <text x="${cx}" y="${cy-3}" text-anchor="middle" font-size="9" fill="var(--muted)" font-weight="600" letter-spacing="0.5" font-family="'DM Sans',sans-serif">TOTAL</text>
-    <text x="${cx}" y="${cy+12}" text-anchor="middle" font-size="11" fill="var(--text)" font-weight="700" font-family="'DM Sans',sans-serif">${fmt(total)}</text>
+    <circle cx="${cx}" cy="${cy}" r="${rInner}" fill="#0f151f"/>
+    <text x="${cx}" y="${cy-3}" text-anchor="middle" font-size="9" fill="#5d6470" font-weight="600" letter-spacing="0.5" font-family="'DM Sans',sans-serif">TOTAL</text>
+    <text x="${cx}" y="${cy+12}" text-anchor="middle" font-size="11" fill="#eef1f6" font-weight="700" font-family="'DM Sans',sans-serif">${fmt(total)}</text>
   </svg>`;
 
   const legend = segs.map((s,i)=>{
@@ -3412,6 +3496,21 @@ function cardSpent(arg, year){
 
 // Alias con nombre explícito de año (usados por renderCards y el PDF)
 function cardSpentByMonthForYear(arg, year){ return cardSpentByMonth(arg, year); }
+
+// Todos los meses con gasto de una tarjeta, de TODOS los años, en una sola
+// lista continua — el año más reciente primero. Cada mes lleva su año
+// pegado (ej. "Enero 2027") solo cuando hay más de un año en juego, para
+// que los meses viejos no se sientan "borrados", solo se quedan más abajo.
+function cardAllMonthsCombined(tj){
+  const years = cardYears(tj).slice().sort((a,b)=>b-a); // más reciente arriba
+  const multi = years.length > 1;
+  let out = [];
+  years.forEach(y=>{
+    const meses = cardSpentByMonth(tj, y).filter(m=>m.gastado>0);
+    meses.forEach(m=> out.push({ ...m, year:y, showYear:multi }));
+  });
+  return out;
+}
 function cardSpentForYear(arg, year){ return cardSpent(arg, year); }
 
 function switchToCards(){
@@ -3617,10 +3716,7 @@ function renderCards(){
     const lastYearTotal = cardLastYearTotal(tj);
     const lastYearTxt = (lastYearTotal===null) ? '—' : fmt(lastYearTotal);
     const cerrada = tj.cerrada === true;
-    // Año seleccionado para el desglose (por defecto el actual)
     const years = cardYears(tj);
-    const selYear = (tj._viewYear && years.includes(tj._viewYear)) ? tj._viewYear : CURRENT_YEAR;
-    const mesesSel = cardSpentByMonth(tj, selYear).filter(m=>m.gastado>0);
     return `<div class="credit-card ${cerrada?'cc-closed':''}">
       <div class="cc-head">
         <div>
@@ -3655,27 +3751,24 @@ function renderCards(){
         </div>
       </div>
       <div class="cc-track"><div class="cc-fill" style="width:${fillW}%;background:${usoColor}"></div></div>
-      <div style="display:flex;gap:8px;margin-top:.85rem">
-        <button class="cc-toggle" style="margin-top:0" onclick="toggleCardMonths(${idx})" id="cc-toggle-${idx}">📅 Ver desglose por año ▾</button>
-        ${years.includes(CURRENT_YEAR-1) ? `<button class="cc-toggle" style="margin-top:0" onclick="setCardViewYear(${idx},${CURRENT_YEAR-1})">◀ Ver año anterior</button>` : ''}
-      </div>
+      <button class="cc-toggle" style="margin-top:.85rem" onclick="toggleCardMonths(${idx})" id="cc-toggle-${idx}">📅 Ver desglose por mes ▾</button>
       <div class="cc-months" id="cc-months-${idx}" style="display:none">
-        <div class="cc-year-pick">
-          <span class="cc-year-lbl">Año:</span>
-          ${years.map(y=>`<button class="cc-year-btn ${y===selYear?'on':''}" onclick="setCardViewYear(${idx},${y})">${y}</button>`).join('')}
-        </div>
-        ${mesesSel.length
-          ? mesesSel.map(m=>{
-              const mUso = inicio>0 ? (m.gastado/inicio*100) : 0;
-              const mColor = mUso>=100 ? 'var(--red)' : mUso>=75 ? 'var(--gold)' : 'var(--green)';
-              return `<div class="cc-month-row">
-                <div class="cc-month-name">${esc(m.mName)}</div>
-                <div class="cc-month-bar"><div class="cc-month-fill" style="width:${Math.min(100,mUso)}%;background:${mColor}"></div></div>
-                <div class="cc-month-amt">${fmt(m.gastado)}</div>
-                <div class="cc-month-pct" style="color:${mColor}">${mUso.toFixed(2)}%</div>
-              </div>`;
-            }).join('')
-          : `<div style="font-size:12px;color:var(--muted);padding:6px 2px">Sin gastos registrados en ${selYear}.</div>`}
+        ${(()=>{
+          const todosLosMeses = cardAllMonthsCombined(tj);
+          return todosLosMeses.length
+            ? todosLosMeses.map(m=>{
+                const mUso = inicio>0 ? (m.gastado/inicio*100) : 0;
+                const mColor = mUso>=100 ? 'var(--red)' : mUso>=75 ? 'var(--gold)' : 'var(--green)';
+                const label = m.showYear ? `${m.mName} ${m.year}` : m.mName;
+                return `<div class="cc-month-row">
+                  <div class="cc-month-name">${esc(label)}</div>
+                  <div class="cc-month-bar"><div class="cc-month-fill" style="width:${Math.min(100,mUso)}%;background:${mColor}"></div></div>
+                  <div class="cc-month-amt">${fmt(m.gastado)}</div>
+                  <div class="cc-month-pct" style="color:${mColor}">${mUso.toFixed(2)}%</div>
+                </div>`;
+              }).join('')
+            : `<div style="font-size:12px;color:var(--muted);padding:6px 2px">Sin gastos registrados todavía.</div>`;
+        })()}
       </div>
       <button class="cc-toggle" onclick="toggleCardHistorial(${idx})" id="cc-hist-toggle-${idx}">🗂️ Ver historial completo</button>
       <div class="cc-months" id="cc-hist-${idx}" style="display:none">
@@ -3732,7 +3825,7 @@ function toggleCardMonths(idx){
   if(!box || !btn) return;
   const visible = box.style.display !== 'none';
   box.style.display = visible ? 'none' : 'block';
-  btn.textContent = visible ? '📅 Ver desglose por año ▾' : '📅 Ocultar desglose ▴';
+  btn.textContent = visible ? '📅 Ver desglose por mes ▾' : '📅 Ocultar desglose ▴';
 }
 
 // Despliega u oculta el historial completo (todos los años sumados) de una tarjeta
@@ -4617,6 +4710,50 @@ function applyMonthTabColors(){
   });
 }
 
+// ── RACHAS (días consecutivos gastando / sin gastar) ──────────────────────
+// Usa la fecha EXACTA de cada movimiento (guardada en su id, que es Date.now())
+// en vez del texto "08-jul", para poder comparar días con precisión.
+function hasExpenseOnDate(date){
+  const year = date.getFullYear();
+  const mi = date.getMonth();
+  const day = date.getDate();
+  let entries;
+  if(year === CURRENT_YEAR){
+    entries = (data[mi] && data[mi].entries) || [];
+  } else {
+    const fin = historialFinanzasCache[year];
+    entries = (fin && fin[mi] && fin[mi].entries) || [];
+  }
+  return entries.some(e=>{
+    if(e.type!=='expense') return false;
+    const d = new Date(e.id);
+    return d.getFullYear()===year && d.getMonth()===mi && d.getDate()===day;
+  });
+}
+
+function calcularRachas(){
+  const hoy = new Date();
+  let racha = 0, tipo;
+  if(hasExpenseOnDate(hoy)){
+    tipo = 'gastando';
+    const d = new Date(hoy);
+    while(hasExpenseOnDate(d)){
+      racha++;
+      d.setDate(d.getDate()-1);
+    }
+  } else {
+    tipo = 'sin';
+    const d = new Date(hoy);
+    let limite = 0;
+    while(!hasExpenseOnDate(d) && limite < 3650){
+      racha++;
+      d.setDate(d.getDate()-1);
+      limite++;
+    }
+  }
+  return { racha, tipo };
+}
+
 function generateInsights(){
   const insights = [];
   const now = new Date();
@@ -4631,6 +4768,15 @@ function generateInsights(){
   else if(h>=12 && h<19) saludo = '🌤️ Buena tarde';
   else saludo = '🌙 Buena noche';
   insights.push({ icon:'', text: saludo });
+
+  const { racha, tipo } = calcularRachas();
+  if(racha >= 2){
+    if(tipo === 'sin'){
+      insights.push({ icon:'🎉', text:`Llevas ${racha} días sin gastar` });
+    } else {
+      insights.push({ icon:'🔥', text:`Llevas ${racha} días gastando seguido` });
+    }
+  }
 
   if(t.inc > 0){
     const pct = Math.round((t.inc - t.exp) / t.inc * 100);
