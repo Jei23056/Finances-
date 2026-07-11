@@ -4062,7 +4062,11 @@ async function rolloverCardsIfNewYear(){
     }
     if(lastYear === CURRENT_YEAR) return;
 
-    // Cambió el año: fotografiar el desglose del año viejo en cada tarjeta
+    // Cambió el año: fotografiar el desglose del año viejo en cada tarjeta.
+    // OJO: se lee directo del documento de Firestore (oldFinanzas), NO de la
+    // variable global `data` — esa, en este punto, ya apunta al año NUEVO.
+    // (Este era el bug: antes leía de `data` y guardaba la foto en $0.00.)
+    const oldFinanzas = d[`finanzas_${lastYear}`] || {};
     tarjetas.forEach(tj=>{
       // Las tarjetas CERRADAS se saltan: ya no se usan, no se les crea
       // desglose nuevo ni se les toca nada. Quedan congeladas tal cual.
@@ -4075,7 +4079,7 @@ async function rolloverCardsIfNewYear(){
           if(tj.manualMeses && typeof tj.manualMeses === 'object' && tj.manualMeses[mi]!==undefined){
             m = parseFloat(tj.manualMeses[mi]) || 0;
           } else {
-            const md = data[mi];
+            const md = oldFinanzas[mi];
             if(md && md.entries){
               md.entries.forEach(e=>{
                 if(e.type==='expense' && e.cat==='Crédito' && e.tarjeta===tj.nombre){
