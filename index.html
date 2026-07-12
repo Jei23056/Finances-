@@ -90,7 +90,7 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 .tbtn { padding:9px; border:1px solid var(--border2); border-radius:var(--rs); background:transparent; font-family:'DM Sans',sans-serif; font-size:13px; cursor:pointer; color:var(--muted2); transition:all .18s; }
 .tbtn.ae { background:var(--rdim); border-color:var(--red); color:var(--red); font-weight:500; }
 .tbtn.ai { background:var(--gdim); border-color:var(--green); color:var(--green); font-weight:500; }
-.finputs { display:grid; grid-template-columns:120px 70px 150px 1fr; gap:8px; }
+.finputs { display:grid; grid-template-columns:130px 160px 1fr; gap:8px; }
 .finputs label { font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:4px; }
 .finputs input, .finputs select {
   width:100%; padding:8px 10px;
@@ -156,7 +156,6 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   .cats-grid { grid-template-columns:1fr; }
   .finputs   { grid-template-columns:1fr 1fr; }
   .finputs .fdesc { grid-column:1/-1; }
-  .finputs .fday input { width:100%; box-sizing:border-box; }
   .ycard-val { font-size:1.1rem; }
   .shell { padding:0 .5rem; }
   .year-bar { gap:6px; }
@@ -980,20 +979,6 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
     <div id="annual-month-bars"></div>
   </div>
 
-  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:1.5rem">
-    <div class="sec-lbl" style="margin-bottom:1rem">Comparar dos meses</div>
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:1rem">
-      <select id="cmp-mes-a" onchange="renderCompareMeses()" style="flex:1;min-width:120px;padding:8px 10px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px">
-        ${MONTHS.map((n,i)=>`<option value="${i}">${n}</option>`).join('')}
-      </select>
-      <span style="color:var(--muted2);font-size:12px">vs</span>
-      <select id="cmp-mes-b" onchange="renderCompareMeses()" style="flex:1;min-width:120px;padding:8px 10px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px">
-        ${MONTHS.map((n,i)=>`<option value="${i}">${n}</option>`).join('')}
-      </select>
-    </div>
-    <div id="compare-meses-body"></div>
-  </div>
-
   <div id="annual-trabajos-wrap" style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:1.5rem;display:none">
     <div class="sec-lbl" style="margin-bottom:1rem">💼 Ganado por trabajo (acumulado)</div>
     <div id="annual-trabajos-bars"></div>
@@ -1177,7 +1162,6 @@ document.getElementById('splash-tagline').textContent = `Mis Finanzas · ${CURRE
 document.getElementById('footer-year').textContent = CURRENT_YEAR;
 
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-const MONTHS_ABBR = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 
 // Categorías BASE (las de fábrica). Las personalizadas se agregan encima al cargar.
 const BASE_EXPENSE_CATS = [
@@ -1543,12 +1527,6 @@ function renderMonth(mi){
             oninput="this.value=this.value.replace(/[^0-9.]/g,'')"
             onblur="formatAmtInput(this)"
             onfocus="this.select()" />
-        </div>
-        <div class="fday">
-          <label>Día</label>
-          <input type="number" id="day-${mi}" min="1" max="31" inputmode="numeric"
-            value="${parseDayFromDateStr(todayStr())}"
-            oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,2)" />
         </div>
         <div>
           <label>Categoría</label>
@@ -2158,19 +2136,9 @@ function addEntry(mi){
   // Se arma en un borrador APARTE — solo se aplica al final si todo pasa la
   // validación. Así, si cancelas por falta de saldo u otro motivo, el
   // movimiento original que estabas editando queda intacto, sin dañarse.
-  // Día elegido en el campo "Día" (1-31). Si es válido, se usa para armar la
-  // fecha del movimiento; si no, se conserva el comportamiento anterior.
-  const dayEl = document.getElementById(`day-${mi}`);
-  const dayNum = dayEl ? parseInt(dayEl.value, 10) : NaN;
-  let dateStr = null;
-  if(!isNaN(dayNum) && dayNum>=1 && dayNum<=31){
-    dateStr = `${String(dayNum).padStart(2,'0')} ${MONTHS_ABBR[mi]}`;
-  }
-  if(!dateStr) dateStr = isEditing ? md.entries[existingIdx].date : todayStr();
-
   const draft = {
     id:   isEditing ? md.entries[existingIdx].id   : Date.now(),
-    date: dateStr,
+    date: isEditing ? md.entries[existingIdx].date : todayStr(),
     type, amount: parseFloat(amount.toFixed(2)), cat, desc
   };
   // Si es un gasto de categoría "Crédito", guardar con cuál tarjeta se pagó
@@ -2219,8 +2187,6 @@ function addEntry(mi){
 
   document.getElementById(`amt-${mi}`).value = '';
   document.getElementById(`desc-${mi}`).value = '';
-  const daySelReset = document.getElementById(`day-${mi}`);
-  if(daySelReset) daySelReset.value = parseDayFromDateStr(todayStr());
   const catSelReset = document.getElementById(`cat-${mi}`);
   if(catSelReset) catSelReset.value = '';
 
@@ -2243,8 +2209,6 @@ function editEntryStart(mi, id){
   setType(mi, e.type);
   const amtEl = document.getElementById(`amt-${mi}`);
   if(amtEl) amtEl.value = e.amount;
-  const dayEl = document.getElementById(`day-${mi}`);
-  if(dayEl) dayEl.value = parseDayFromDateStr(e.date) || '';
   const catSel = document.getElementById(`cat-${mi}`);
   if(catSel) catSel.value = e.cat;
   const descEl = document.getElementById(`desc-${mi}`);
@@ -2277,8 +2241,6 @@ function cancelEdit(mi){
   if(amtEl) amtEl.value = '';
   const descEl = document.getElementById(`desc-${mi}`);
   if(descEl) descEl.value = '';
-  const dayEl = document.getElementById(`day-${mi}`);
-  if(dayEl) dayEl.value = parseDayFromDateStr(todayStr());
   const catSel = document.getElementById(`cat-${mi}`);
   if(catSel) catSel.value = '';
 }
@@ -2507,17 +2469,6 @@ function renderAnnual(){
   document.getElementById('annual-exp-bars').innerHTML = donutSVGLive(expData) + catListHTML(expData, 'expense');
   document.getElementById('annual-inc-bars').innerHTML = donutSVGLive(incData) + catListHTML(incData, 'income');
 
-  // Por default, comparar el mes actual con el anterior
-  const cmpAEl = document.getElementById('cmp-mes-a');
-  const cmpBEl = document.getElementById('cmp-mes-b');
-  if(cmpAEl && cmpBEl && !cmpAEl.dataset.init){
-    const hoyMi = new Date().getMonth();
-    cmpAEl.value = Math.max(0, hoyMi - 1);
-    cmpBEl.value = hoyMi;
-    cmpAEl.dataset.init = '1';
-  }
-  renderCompareMeses();
-
   const monthsWithData = MONTHS.map((name,mi)=>{
     const t = monthTotals(mi);
     const count = getMonth(mi).entries.length;
@@ -2658,88 +2609,6 @@ function renderAnnual(){
   }
 
   renderCapitalChart();
-}
-
-// Muestra dos meses lado a lado, categoría por categoría, con la variación
-// entre ellos. Usa monthTotals() y las entries de cada mes, sin tocar Firebase.
-function renderCompareMeses(){
-  const wrap = document.getElementById('compare-meses-body');
-  if(!wrap) return;
-  const aEl = document.getElementById('cmp-mes-a');
-  const bEl = document.getElementById('cmp-mes-b');
-  if(!aEl || !bEl) return;
-  const miA = parseInt(aEl.value, 10);
-  const miB = parseInt(bEl.value, 10);
-
-  const tA = monthTotals(miA), tB = monthTotals(miB);
-
-  function catMap(mi){
-    const md = getMonth(mi);
-    const map = {};
-    md.entries.filter(e=>e.type==='expense').forEach(e=>{ map[e.cat] = (map[e.cat]||0) + e.amount; });
-    return map;
-  }
-  const mapA = catMap(miA), mapB = catMap(miB);
-  const cats = Array.from(new Set([...Object.keys(mapA), ...Object.keys(mapB)]));
-  // orden: por el mayor gasto combinado entre los dos meses, de mayor a menor
-  cats.sort((c1,c2)=> ((mapA[c2]||0)+(mapB[c2]||0)) - ((mapA[c1]||0)+(mapB[c1]||0)));
-
-  function catLabel(v){
-    const def = EXPENSE_CATS.find(c=>c.v===v);
-    return def?.l || v;
-  }
-  function variacion(va, vb){
-    if(va<=0 && vb<=0) return '';
-    if(va<=0) return `<span style="color:var(--red);font-size:11px">nuevo</span>`;
-    const diff = ((vb - va) / va * 100);
-    const up = diff > 0;
-    const color = up ? 'var(--red)' : 'var(--green)';
-    const arrow = up ? '▲' : (diff<0 ? '▼' : '—');
-    return `<span style="color:${color};font-size:11px">${arrow} ${Math.abs(diff).toFixed(0)}%</span>`;
-  }
-
-  if(miA === miB){
-    wrap.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:8px 0">Elige dos meses distintos para comparar.</div>`;
-    return;
-  }
-
-  const rows = cats.length ? cats.map(c=>{
-    const va = mapA[c]||0, vb = mapB[c]||0;
-    return `<div style="display:grid;grid-template-columns:1fr 90px 90px 70px;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
-      <div style="font-size:12.5px;color:var(--text)">${esc(catLabel(c))}</div>
-      <div style="font-size:12.5px;color:var(--muted2);text-align:right">${fmt(va)}</div>
-      <div style="font-size:12.5px;color:var(--muted2);text-align:right">${fmt(vb)}</div>
-      <div style="text-align:right">${variacion(va,vb)}</div>
-    </div>`;
-  }).join('') : `<div style="font-size:12px;color:var(--muted);padding:8px 0">Sin gastos registrados en ninguno de los dos meses.</div>`;
-
-  wrap.innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 90px 90px 70px;gap:8px;padding-bottom:6px;border-bottom:1px solid var(--border2)">
-      <div style="font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)">Categoría</div>
-      <div style="font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);text-align:right">${MONTHS[miA]}</div>
-      <div style="font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);text-align:right">${MONTHS[miB]}</div>
-      <div style="font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);text-align:right">Cambio</div>
-    </div>
-    ${rows}
-    <div style="display:grid;grid-template-columns:1fr 90px 90px 70px;gap:8px;padding-top:10px;margin-top:4px;border-top:1px solid var(--border2)">
-      <div style="font-size:12.5px;color:var(--text);font-weight:600">Total gastado</div>
-      <div style="font-family:'DM Serif Display',serif;font-size:13px;color:var(--red);text-align:right">${fmt(tA.exp)}</div>
-      <div style="font-family:'DM Serif Display',serif;font-size:13px;color:var(--red);text-align:right">${fmt(tB.exp)}</div>
-      <div style="text-align:right">${variacion(tA.exp, tB.exp)}</div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 90px 90px 70px;gap:8px;padding-top:6px">
-      <div style="font-size:12.5px;color:var(--text);font-weight:600">Total ganado</div>
-      <div style="font-family:'DM Serif Display',serif;font-size:13px;color:var(--green);text-align:right">${fmt(tA.inc)}</div>
-      <div style="font-family:'DM Serif Display',serif;font-size:13px;color:var(--green);text-align:right">${fmt(tB.inc)}</div>
-      <div style="text-align:right">${variacion(tA.inc, tB.inc)}</div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 90px 90px 70px;gap:8px;padding-top:6px">
-      <div style="font-size:12.5px;color:var(--text);font-weight:600">Balance</div>
-      <div style="font-family:'DM Serif Display',serif;font-size:13px;color:${tA.net>=0?'var(--green)':'var(--red)'};text-align:right">${fmtSigned(tA.net)}</div>
-      <div style="font-family:'DM Serif Display',serif;font-size:13px;color:${tB.net>=0?'var(--green)':'var(--red)'};text-align:right">${fmtSigned(tB.net)}</div>
-      <div style="text-align:right"></div>
-    </div>
-  `;
 }
 
 // ══════════════════════════════════════════════════════════════════════════
