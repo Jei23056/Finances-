@@ -2977,10 +2977,12 @@ function transferDebito(){
   const to   = tarjetasDebito.find(t=>t.id===toId);
   if(!from || !to) return;
 
-  // Verificar que la cuenta de origen tenga saldo suficiente
+  // Verificar que la cuenta de origen tenga saldo suficiente.
+  // No se permite transferir más de lo que hay disponible (no se crea dinero imaginario).
   const saldoFrom = debitoSaldo(from);
   if(monto > saldoFrom){
-    if(!confirm(`"${from.nombre}" solo tiene ${fmt(saldoFrom)}. ¿Transferir de todas formas y dejarla en negativo?`)) return;
+    alert(`Saldo insuficiente. "${from.nombre}" solo tiene ${fmt(saldoFrom)} disponible.`);
+    return;
   }
 
   // Mover dinero: ajustar `asignado` de cada lado.
@@ -6276,3 +6278,4 @@ function dismissSplash(){
 </script>
 </body>
 </html>
+
