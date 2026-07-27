@@ -3408,10 +3408,21 @@ function renderDebito(){
       <div class="cc-months" id="db-hist-${tj.id}" style="display:none">
         ${years.slice().reverse().map(y=>{
           const info = debitoInfoAnio(tj, y);
-          return `<div class="cc-month-row">
-            <div class="cc-month-name" style="flex:1;width:auto">${y}</div>
-            <div class="cc-month-amt" style="color:var(--red)">${fmt(info.gastos)}</div>
-            <div class="cc-month-amt" style="color:var(--green)">${fmt(info.ingresos)}</div>
+          const mesesAnio = debitoSpentByMonth(tj, y).filter(m=>m.gastos>0 || m.ingresos>0);
+          const mesRows = mesesAnio.map(m=>`<div class="cc-month-row" style="padding-left:10px;opacity:.85">
+            <div class="cc-month-name" style="flex:1;width:auto">${esc(m.mName)}</div>
+            <div class="cc-month-amt" style="color:var(--red)">${fmt(m.gastos)}</div>
+            <div class="cc-month-amt" style="color:var(--green)">${fmt(m.ingresos)}</div>
+          </div>`).join('');
+          return `<div style="border-bottom:1px solid var(--border);padding-bottom:4px;margin-bottom:4px">
+            <div class="cc-month-row" onclick="toggleCCHistAnio(this)" style="cursor:pointer">
+              <div class="cc-month-name" style="flex:1;width:auto;font-weight:600;color:var(--text)">${y} ▾</div>
+              <div class="cc-month-amt" style="color:var(--red)">${fmt(info.gastos)}</div>
+              <div class="cc-month-amt" style="color:var(--green)">${fmt(info.ingresos)}</div>
+            </div>
+            <div class="cc-hist-anio-meses" style="display:none">
+              ${mesRows || `<div style="font-size:12px;color:var(--muted);padding:4px 10px">Sin movimientos en ${y}.</div>`}
+            </div>
           </div>`;
         }).join('')}
         <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
@@ -3838,35 +3849,50 @@ function renderCards(){
       <button class="cc-toggle" style="margin-top:.85rem" onclick="toggleCardMonths(${idx})" id="cc-toggle-${idx}">📅 Ver desglose por mes ▾</button>
       <div class="cc-months" id="cc-months-${idx}" style="display:none">
         ${(()=>{
-          const todosLosMeses = cardAllMonthsCombined(tj);
-          return todosLosMeses.length
-            ? todosLosMeses.map(m=>{
+          const mesesActuales = cardSpentByMonth(tj, CURRENT_YEAR).filter(m=>m.gastado>0);
+          return mesesActuales.length
+            ? mesesActuales.map(m=>{
                 const mUso = inicio>0 ? (m.gastado/inicio*100) : 0;
                 const mColor = mUso>=100 ? 'var(--red)' : mUso>=75 ? 'var(--gold)' : 'var(--green)';
-                const label = m.showYear ? `${m.mName} ${m.year}` : m.mName;
                 return `<div class="cc-month-row">
-                  <div class="cc-month-name">${esc(label)}</div>
+                  <div class="cc-month-name">${esc(m.mName)}</div>
                   <div class="cc-month-bar"><div class="cc-month-fill" style="width:${Math.min(100,mUso)}%;background:${mColor}"></div></div>
                   <div class="cc-month-amt">${fmt(m.gastado)}</div>
                   <div class="cc-month-pct" style="color:${mColor}">${mUso.toFixed(2)}%</div>
                 </div>`;
               }).join('')
-            : `<div style="font-size:12px;color:var(--muted);padding:6px 2px">Sin gastos registrados todavía.</div>`;
+            : `<div style="font-size:12px;color:var(--muted);padding:6px 2px">Sin gastos en ${CURRENT_YEAR} todavía.</div>`;
         })()}
       </div>
       <button class="cc-toggle" onclick="toggleCardHistorial(${idx})" id="cc-hist-toggle-${idx}">🗂️ Ver historial completo</button>
       <div class="cc-months" id="cc-hist-${idx}" style="display:none">
-        ${years.map(y=>{
+        ${years.slice().reverse().map(y=>{
             const t = cardSpent(tj, y);
-            return `<div class="cc-month-row">
-              <div class="cc-month-name">${y}</div>
-              <div class="cc-month-bar"></div>
-              <div class="cc-month-amt">${fmt(t)}</div>
-              <div class="cc-month-pct"></div>
+            const mesesAnio = cardSpentByMonth(tj, y).filter(m=>m.gastado>0);
+            const mesRows = mesesAnio.map(m=>{
+              const mUso = inicio>0 ? (m.gastado/inicio*100) : 0;
+              const mColor = mUso>=100 ? 'var(--red)' : mUso>=75 ? 'var(--gold)' : 'var(--green)';
+              return `<div class="cc-month-row" style="padding-left:10px;opacity:.85">
+                <div class="cc-month-name">${esc(m.mName)}</div>
+                <div class="cc-month-bar"><div class="cc-month-fill" style="width:${Math.min(100,mUso)}%;background:${mColor}"></div></div>
+                <div class="cc-month-amt">${fmt(m.gastado)}</div>
+                <div class="cc-month-pct" style="color:${mColor}">${mUso.toFixed(2)}%</div>
+              </div>`;
+            }).join('');
+            return `<div style="border-bottom:1px solid var(--border);padding-bottom:4px;margin-bottom:4px">
+              <div class="cc-month-row" onclick="toggleCCHistAnio(this)" style="cursor:pointer">
+                <div class="cc-month-name" style="font-weight:600;color:var(--text)">${y} ▾</div>
+                <div class="cc-month-bar"></div>
+                <div class="cc-month-amt" style="color:var(--red)">${fmt(t)}</div>
+                <div class="cc-month-pct"></div>
+              </div>
+              <div class="cc-hist-anio-meses" style="display:none">
+                ${mesRows || `<div style="font-size:12px;color:var(--muted);padding:4px 10px">Sin gastos en ${y}.</div>`}
+              </div>
             </div>`;
           }).join('')}
         <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:12px;color:var(--muted2)">Total de todos los años (pasado + actual)</span>
+          <span style="font-size:12px;color:var(--muted2)">Total de todos los años</span>
           <b style="font-family:'DM Serif Display',serif;color:var(--gold);font-size:1.05rem">${fmt(years.reduce((s,y)=>s+cardSpent(tj,y),0))}</b>
         </div>
       </div>
@@ -3920,6 +3946,17 @@ function toggleDebitoHistorial(id){
   const visible = box.style.display !== 'none';
   box.style.display = visible ? 'none' : 'block';
   btn.textContent = visible ? '🗂️ Ver historial completo' : '🗂️ Ocultar historial ▴';
+}
+
+// Despliega u oculta el desglose de meses de un año dentro del historial completo
+// Funciona tanto en crédito como en débito (misma estructura HTML)
+function toggleCCHistAnio(rowEl){
+  const meses = rowEl.nextElementSibling;
+  if(!meses) return;
+  const visible = meses.style.display !== 'none';
+  meses.style.display = visible ? 'none' : 'block';
+  const label = rowEl.querySelector('.cc-month-name');
+  if(label) label.textContent = label.textContent.replace(visible ? ' ▴' : ' ▾', visible ? ' ▾' : ' ▴');
 }
 
 // Despliega u oculta el historial completo (todos los años sumados) de una tarjeta
