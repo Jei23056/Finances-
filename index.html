@@ -3404,6 +3404,25 @@ function renderDebito(){
             : `<div style="font-size:12px;color:var(--muted);padding:6px 2px">Sin movimientos registrados en ${selYear}.</div>`;
         })()}
       </div>
+      <button class="cc-toggle" onclick="toggleDebitoHistorial('${tj.id}')" id="db-hist-toggle-${tj.id}">🗂️ Ver historial completo</button>
+      <div class="cc-months" id="db-hist-${tj.id}" style="display:none">
+        ${years.slice().reverse().map(y=>{
+          const info = debitoInfoAnio(tj, y);
+          return `<div class="cc-month-row">
+            <div class="cc-month-name" style="flex:1;width:auto">${y}</div>
+            <div class="cc-month-amt" style="color:var(--red)">${fmt(info.gastos)}</div>
+            <div class="cc-month-amt" style="color:var(--green)">${fmt(info.ingresos)}</div>
+          </div>`;
+        }).join('')}
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:12px;color:var(--muted2)">Total todos los años</span>
+          <div style="text-align:right">
+            <span style="font-family:'DM Serif Display',serif;color:var(--red);font-size:1rem">${fmt(years.reduce((s,y)=>s+debitoInfoAnio(tj,y).gastos,0))}</span>
+            <span style="color:var(--muted);font-size:11px;margin:0 4px">/</span>
+            <span style="font-family:'DM Serif Display',serif;color:var(--green);font-size:1rem">${fmt(years.reduce((s,y)=>s+debitoInfoAnio(tj,y).ingresos,0))}</span>
+          </div>
+        </div>
+      </div>
     </div>`;
   }).join('') +
   `<div class="debito-total">Capital total (suma de cuentas): <b>${fmt(totalCap)}</b></div>`;
@@ -3891,6 +3910,16 @@ function toggleCardMonths(idx){
   const visible = box.style.display !== 'none';
   box.style.display = visible ? 'none' : 'block';
   btn.textContent = visible ? '📅 Ver desglose por mes ▾' : '📅 Ocultar desglose ▴';
+}
+
+// Despliega u oculta el historial completo (todos los años) de una cuenta débito
+function toggleDebitoHistorial(id){
+  const box = document.getElementById(`db-hist-${id}`);
+  const btn = document.getElementById(`db-hist-toggle-${id}`);
+  if(!box || !btn) return;
+  const visible = box.style.display !== 'none';
+  box.style.display = visible ? 'none' : 'block';
+  btn.textContent = visible ? '🗂️ Ver historial completo' : '🗂️ Ocultar historial ▴';
 }
 
 // Despliega u oculta el historial completo (todos los años sumados) de una tarjeta
