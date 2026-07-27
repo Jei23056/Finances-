@@ -816,6 +816,11 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 .cc-stat { background:var(--surf); border:1px solid var(--border); border-radius:var(--rs); padding:.6rem .7rem; }
 .cc-stat-lbl { font-size:9px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin-bottom:3px; }
 .cc-stat-val { font-family:'DM Serif Display',serif; font-size:1.05rem; }
+.tr-desglose { margin-top:.6rem; border-top:1px solid var(--border); padding-top:.5rem; display:none; }
+.tr-desglose.open { display:block; }
+.tr-desglose-row { display:flex; justify-content:space-between; align-items:center; padding:3px 0; }
+.tr-desglose-row span:first-child { font-size:11px; color:var(--muted); }
+.tr-desglose-row span:last-child { font-family:'DM Serif Display',serif; font-size:12px; color:var(--green); }
 .cc-edit { background:none; border:none; color:var(--muted); cursor:pointer; font-size:11px; margin-left:3px; }
 .cc-track { height:8px; background:var(--surf); border-radius:4px; overflow:hidden; }
 .cc-toggle {
@@ -2810,6 +2815,36 @@ function trabajoTotal(nombre){
   return parseFloat(total.toFixed(2));
 }
 
+// Devuelve el total ganado en un trabajo para un año específico
+function trabajoTotalAnio(nombre, year){
+  let total = 0;
+  function sumar(finanzasObj){
+    if(!finanzasObj || typeof finanzasObj !== 'object') return;
+    Object.keys(finanzasObj).forEach(mi=>{
+      const md = finanzasObj[mi];
+      if(md && Array.isArray(md.entries)){
+        md.entries.forEach(e=>{
+          if(e.type==='income' && e.cat==='Nómina / Salario' && e.trabajo===nombre)
+            total += e.amount;
+        });
+      }
+    });
+  }
+  if(parseInt(year,10) === CURRENT_YEAR){
+    sumar(data);
+  } else if(historialFinanzasCache && historialFinanzasCache[year]){
+    sumar(historialFinanzasCache[year]);
+  }
+  return parseFloat(total.toFixed(2));
+}
+
+// Abre/cierra el desglose por año de una tarjeta de trabajo
+function toggleTrDesglose(id){
+  const el = document.getElementById('tr-desglose-'+id);
+  if(!el) return;
+  el.classList.toggle('open');
+}
+
 // Bandera para no repetir la asignación masiva de nóminas
 // (v2: corregido el nombre del trabajo a "porvenir")
 const NOMINAS_PORENIR_FLAG = 'nominas_porvenir_asignadas_v2';
@@ -3599,8 +3634,28 @@ function renderTrabajos(){
     grid.innerHTML = '<div class="empty">Aún no has agregado ningún trabajo. Usa el formulario de arriba para agregar uno.</div>';
     return;
   }
+
+  // Construir lista de años disponibles: año actual + años del historial, de más reciente a más antiguo
+  const anios = [CURRENT_YEAR];
+  if(historialFinanzasCache && typeof historialFinanzasCache==='object'){
+    Object.keys(historialFinanzasCache)
+      .map(y=>parseInt(y,10))
+      .filter(y=>y!==CURRENT_YEAR)
+      .sort((a,b)=>b-a)
+      .forEach(y=>anios.push(y));
+  }
+
   grid.innerHTML = trabajos.map((tr,idx)=>{
     const total = trabajoTotal(tr.nombre);
+    const desgloseRows = anios.map(y=>{
+      const monto = trabajoTotalAnio(tr.nombre, y);
+      if(monto <= 0) return '';
+      return `<div class="tr-desglose-row">
+        <span>${y}</span>
+        <span>${fmt(monto)}</span>
+      </div>`;
+    }).join('');
+
     return `<div class="credit-card">
       <div class="cc-head">
         <div>
@@ -3612,9 +3667,12 @@ function renderTrabajos(){
         </div>
       </div>
       <div class="cc-stats">
-        <div class="cc-stat">
-          <div class="cc-stat-lbl">Total</div>
+        <div class="cc-stat" onclick="toggleTrDesglose('${tr.id}')" style="cursor:pointer" title="Ver por año">
+          <div class="cc-stat-lbl">Total ▾</div>
           <div class="cc-stat-val" style="color:var(--green)">${fmt(total)}</div>
+          <div class="tr-desglose" id="tr-desglose-${tr.id}">
+            ${desgloseRows || '<span style="font-size:11px;color:var(--muted)">Sin ingresos registrados</span>'}
+          </div>
         </div>
       </div>
     </div>`;
@@ -6278,4 +6336,5 @@ function dismissSplash(){
 </script>
 </body>
 </html>
+
 
