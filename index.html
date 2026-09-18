@@ -5422,33 +5422,29 @@ function exportPDFPro(historicalData, historicalYear, historicalCards){
     * { box-sizing:border-box; margin:0; padding:0; }
     body { font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; color:#1c2433; line-height:1.55; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 
-    /* ── Vista en PANTALLA: hoja A4 centrada (laptops/horizontal) ── */
+    /* ── Vista en PANTALLA: ocupa todo el ancho disponible ── */
     @media screen {
-      body { background:#e9edf3; padding:32px 20px; }
+      body { background:#fff; padding:0; margin:0; }
       .paper {
-        max-width:760px; width:100%; margin:0 auto;
-        background:#fff; padding:46px 52px;
-        border-radius:8px; box-shadow:0 10px 40px rgba(20,30,55,0.18);
-      }
-      .cover-page { height:auto; min-height:560px; }
-    }
-    /* ── Pantallas grandes (Mac/desktop): la portada se ve completa, sin recortes ── */
-    @media screen and (min-width:1024px) {
-      body { padding:40px 20px; }
-      .paper { max-width:820px; }
-      .cover-page { height:calc(100vh - 160px); min-height:600px; }
-    }
-    /* ── Pantallas pequeñas (iPhone/móvil): ocupa toda la pantalla, de borde a borde ── */
-    @media screen and (max-width:640px) {
-      body { padding:0; background:#fff; }
-      .paper {
-        max-width:100%; width:100%; margin:0; padding:28px 18px;
+        max-width:100%; width:100%; margin:0;
+        background:#fff; padding:40px 48px;
         border-radius:0; box-shadow:none;
       }
       .cover-page { height:auto; min-height:100vh; }
     }
-    /* En impresión la "hoja" no lleva marco ni sombra */
+    /* ── Pantallas grandes (Mac/desktop) ── */
+    @media screen and (min-width:1024px) {
+      .paper { padding:52px 72px; }
+      .cover-page { min-height:100vh; }
+    }
+    /* ── Pantallas pequeñas (iPhone/móvil) ── */
+    @media screen and (max-width:640px) {
+      .paper { padding:28px 18px; }
+      .cover-page { min-height:100vh; }
+    }
+    /* ── Al imprimir: A4 limpio, sin marco ni sombra ── */
     @media print {
+      body { background:#fff; padding:0; margin:0; }
       .paper { max-width:none; width:auto; margin:0; padding:0; background:none; box-shadow:none; border-radius:0; }
     }
 
@@ -6402,5 +6398,6 @@ function dismissSplash(){
 </script>
 </body>
 </html>
+
 
 
