@@ -36,7 +36,9 @@
 }
 html { font-size: 16px; overflow-x:hidden; }
 body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; padding:1.5rem 1rem 5rem; overflow-x:hidden; }
-.shell { max-width:860px; margin:0 auto; }
+.shell { max-width:100%; margin:0 auto; }
+@media screen and (min-width:768px)  { body { padding-left:2rem; padding-right:2rem; } }
+@media screen and (min-width:1280px) { body { padding-left:3rem; padding-right:3rem; } }
 header { display:flex; align-items:flex-start; justify-content:space-between; padding-bottom:1.25rem; border-bottom:1px solid var(--border); margin-bottom:2rem; }
 header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:400; letter-spacing:-0.5px; }
 .year-bar { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:2rem; }
@@ -6398,6 +6400,7 @@ function dismissSplash(){
 </script>
 </body>
 </html>
+
 
 
 
