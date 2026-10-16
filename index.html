@@ -139,6 +139,64 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 .inner-tabs { display:flex;gap:4px;margin-bottom:1rem;align-items:center; }
 .itab { padding:6px 14px;background:transparent;border:1px solid var(--border);border-radius:999px;font-size:12px;color:var(--muted);cursor:pointer;transition:all .15s; }
 .itab.active { background:var(--surf);border-color:var(--border2);color:var(--text);font-weight:500; }
+.inner-tabs { flex-wrap:wrap; row-gap:6px; }
+/* Calendario de gastos */
+.cal-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px; }
+.cal-stat { background:var(--card); border:1px solid var(--border); border-radius:var(--rs); padding:10px 12px; }
+.cal-stat-l { font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+.cal-stat-v { font-size:13px; font-weight:500; color:var(--text); }
+.cal-wrap { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:12px; }
+.cal-head, .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
+.cal-head div { text-align:center; font-size:10px; color:var(--muted); letter-spacing:.08em; padding-bottom:4px; }
+.cal-cell { position:relative; min-height:54px; border-radius:8px; padding:5px 6px; cursor:pointer; border:1px solid var(--border); background:var(--surf); display:flex; flex-direction:column; justify-content:space-between; transition:transform .12s, border-color .12s; }
+.cal-cell:active { transform:scale(.96); }
+.cal-cell.empty-c { background:transparent; border:none; cursor:default; }
+.cal-cell.future { opacity:.35; }
+.cal-cell.today { border-color:var(--gold); }
+.cal-cell.sel { outline:2px solid var(--text); outline-offset:-1px; }
+.cal-d { font-size:11px; color:var(--muted2); }
+.cal-amt { font-size:11px; font-weight:600; color:var(--text); text-align:right; }
+.cal-inc { position:absolute; top:6px; right:6px; width:6px; height:6px; border-radius:50%; background:var(--green); display:inline-block; }
+.lvl1 { background:rgba(232,105,93,0.14) !important; } .lvl2 { background:rgba(232,105,93,0.28) !important; }
+.lvl3 { background:rgba(232,105,93,0.45) !important; } .lvl4 { background:rgba(232,105,93,0.68) !important; }
+.cal-legend { display:flex; align-items:center; gap:4px; margin-top:10px; font-size:10px; color:var(--muted); flex-wrap:wrap; }
+.cal-legend i { width:12px; height:12px; border-radius:3px; display:inline-block; background:var(--surf); border:1px solid var(--border); }
+.cal-hint { font-size:12px; color:var(--muted); text-align:center; padding:1rem 0; }
+@media(max-width:600px){
+  .cal-cell { min-height:46px; padding:4px; }
+  .cal-amt { font-size:9.5px; }
+  .cal-stat { padding:8px; } .cal-stat-v { font-size:11.5px; }
+}
+/* Resumen del año (historias) */
+.wr-launch { width:100%; display:flex; align-items:center; gap:14px; text-align:left; cursor:pointer; margin-bottom:1rem; padding:1rem 1.1rem; border-radius:var(--r); border:1px solid rgba(134,179,236,0.35); background:linear-gradient(120deg, rgba(91,143,214,0.22), rgba(78,201,154,0.12) 60%, rgba(232,105,93,0.12)); color:var(--text); font-family:'DM Sans',sans-serif; }
+.wr-launch:active { transform:scale(.99); }
+.wr-launch .wl-ic { font-size:28px; }
+.wr-launch .wl-t { font-family:'DM Serif Display',serif; font-size:1.15rem; }
+.wr-launch .wl-s { font-size:12px; color:var(--muted2); margin-top:2px; }
+#wrapped { position:fixed; inset:0; z-index:9600; display:none; align-items:center; justify-content:center; background:#000; }
+#wrapped.show { display:flex; }
+.wr-stage { position:relative; width:100%; height:100%; max-width:460px; max-height:860px; overflow:hidden; color:#fff; font-family:'DM Sans',sans-serif; }
+@media(min-width:600px){ .wr-stage { height:92vh; border-radius:22px; } }
+.wr-bars { position:absolute; top:calc(12px + env(safe-area-inset-top)); left:12px; right:12px; display:flex; gap:4px; z-index:3; }
+.wr-bars span { flex:1; height:3px; border-radius:2px; background:rgba(255,255,255,0.25); overflow:hidden; }
+.wr-bars span i { display:block; height:100%; width:0; background:#fff; }
+.wr-bars span.done i { width:100%; }
+.wr-bars span.cur i { animation:wr-fill linear forwards; }
+@keyframes wr-fill { from{width:0} to{width:100%} }
+.wr-close { position:absolute; top:calc(24px + env(safe-area-inset-top)); right:14px; z-index:4; background:rgba(0,0,0,0.25); border:none; color:#fff; width:34px; height:34px; border-radius:50%; font-size:20px; cursor:pointer; }
+.wr-tap { position:absolute; top:0; bottom:0; z-index:2; }
+.wr-tap.l { left:0; width:35%; } .wr-tap.r { right:0; width:65%; }
+.wr-slide { position:absolute; inset:0; padding:calc(80px + env(safe-area-inset-top)) 28px 48px; display:flex; flex-direction:column; justify-content:center; animation:wr-in .45s ease; }
+@keyframes wr-in { from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:none} }
+.wr-k { font-size:12px; letter-spacing:.16em; text-transform:uppercase; opacity:.75; margin-bottom:14px; }
+.wr-big { font-family:'DM Serif Display',serif; font-size:clamp(2.6rem, 11vw, 3.6rem); line-height:1.05; margin-bottom:14px; word-break:break-word; }
+.wr-mid { font-family:'DM Serif Display',serif; font-size:clamp(1.7rem, 7vw, 2.2rem); line-height:1.15; margin-bottom:12px; }
+.wr-p { font-size:15px; line-height:1.55; opacity:.88; }
+.wr-list { margin-top:18px; display:flex; flex-direction:column; gap:10px; }
+.wr-li { display:flex; justify-content:space-between; gap:10px; font-size:15px; padding:10px 14px; border-radius:12px; background:rgba(255,255,255,0.10); }
+.wr-li b { font-weight:600; }
+.wr-foot { position:absolute; bottom:calc(18px + env(safe-area-inset-bottom)); left:0; right:0; text-align:center; font-size:11px; opacity:.55; letter-spacing:.05em; }
+.wr-emoji { font-size:54px; margin-bottom:16px; }
 .repeat-note { font-size:11px; color:var(--muted2); padding:6px 12px; margin:4px 0; font-style:italic; opacity:.85; display:flex; align-items:center; gap:6px; }
 .repeat-note::before { content:'↑'; color:var(--gold); font-style:normal; font-weight:bold; }
 .bycat-picker { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:.9rem; margin-bottom:1rem; }
@@ -890,6 +948,16 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
   </div>
 </div>
 
+<div id="wrapped">
+  <div class="wr-stage" id="wr-stage">
+    <div class="wr-bars" id="wr-bars"></div>
+    <button class="wr-close" onclick="closeWrapped()">×</button>
+    <div id="wr-slide-host"></div>
+    <div class="wr-tap l" onclick="wrappedGo(-1)"></div>
+    <div class="wr-tap r" onclick="wrappedGo(1)"></div>
+  </div>
+</div>
+
 <div id="ahorro-panel" onclick="if(event.target.id==='ahorro-panel')closeAhorroPanel()">
   <div class="ach-modal">
     <h3>% Ahorrado <button class="ach-close" onclick="closeAhorroPanel()">×</button></h3>
@@ -958,6 +1026,10 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 <div id="month-panels"></div>
 
 <div id="panel-annual" style="display:none">
+  <button class="wr-launch" onclick="openWrapped()">
+    <span class="wl-ic">✨</span>
+    <span><div class="wl-t" id="wr-launch-t">Tu año en resumen</div><div class="wl-s">Mira tu año en historias: lo que ganaste, gastaste y tus récords</div></span>
+  </button>
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;box-sizing:border-box;width:100%">
     <div>
       <div style="font-size:13px;color:var(--text);font-weight:500">Acciones del año</div>
@@ -1508,6 +1580,186 @@ function closeAhorroPanel(){
   document.getElementById('ahorro-panel').classList.remove('show');
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+// RESUMEN DEL AÑO (estilo historias) — solo lee los movimientos del año
+// ══════════════════════════════════════════════════════════════════════════
+let _wr = { slides:[], i:0, timer:null };
+(function(){ const t = document.getElementById('wr-launch-t'); if(t) t.textContent = `Tu ${CURRENT_YEAR} en resumen`; })();
+const WR_MS = 7000;
+
+function _wrStats(){
+  const now = new Date();
+  const lastM = CURRENT_YEAR === now.getFullYear() ? now.getMonth() : 11;
+  let inc=0, exp=0, nInc=0, nExp=0, biggest=null, sinGastar=0, diasTot=0;
+  const catMap={}, descMap={}, dayMap={}, months=[];
+  for(let m=0; m<=lastM; m++){
+    let mi=0, me=0;
+    _calEntries(m).forEach(e=>{
+      const a = Number(e.amount) || 0;
+      if(e.type==='income'){ inc+=a; mi+=a; nInc++; }
+      else if(e.type==='expense'){
+        exp+=a; me+=a; nExp++;
+        catMap[e.cat] = (catMap[e.cat]||0) + a;
+        const label = String(e.desc||'').trim();
+        const k = label.toLowerCase();
+        if(k){ if(!descMap[k]) descMap[k]={ n:0, t:0, label }; descMap[k].n++; descMap[k].t+=a; }
+        const d = parseDayFromDateStr(e.date);
+        if(d){ const dk = m+'-'+d; dayMap[dk] = (dayMap[dk]||0) + a; }
+        if(!biggest || a > biggest.amount) biggest = { desc:label, cat:e.cat, amount:a, m, d };
+      }
+    });
+    months.push({ m, inc:mi, exp:me, net:mi-me });
+    const cd = _calDays(m);
+    for(let d=1; d<=cd.lastDay; d++){ diasTot++; if(cd.gasto[d]===0) sinGastar++; }
+  }
+  const cats = Object.entries(catMap).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
+  const fav = Object.values(descMap).sort((a,b)=>b.n-a.n || b.t-a.t)[0] || null;
+  let topDay = null;
+  Object.entries(dayMap).forEach(([k,v])=>{ if(!topDay || v>topDay.v){ const [m,d]=k.split('-').map(Number); topDay={m,d,v}; } });
+  const conMov = months.filter(x=>x.inc>0 || x.exp>0);
+  const caro = conMov.slice().sort((a,b)=>b.exp-a.exp)[0] || null;
+  const mejor = months.filter(x=>x.inc>0).sort((a,b)=>b.net-a.net)[0] || null;
+  return { lastM, inc, exp, nInc, nExp, net:inc-exp, cats, fav, topDay, caro, mejor, biggest, sinGastar, diasTot, conMov };
+}
+
+function _wrBuild(){
+  const s = _wrStats();
+  const Y = CURRENT_YEAR;
+  let name = '';
+  try { if(currentUser && currentUser.displayName) name = currentUser.displayName.split(' ')[0]; } catch(e){}
+  const enCurso = Y === new Date().getFullYear() && s.lastM < 11;
+  const rango = enCurso ? `de enero a ${MONTHS[s.lastM].toLowerCase()}` : 'en todo el año';
+  const fecha = (m,d)=> `${d} de ${MONTHS[m].toLowerCase()}`;
+  const G = {
+    blue:  'linear-gradient(160deg,#1d3b6e 0%,#0d1830 55%,#070a10 100%)',
+    green: 'linear-gradient(160deg,#145c45 0%,#0b2a22 55%,#070a10 100%)',
+    red:   'linear-gradient(160deg,#7a2a22 0%,#33140f 55%,#070a10 100%)',
+    gold:  'linear-gradient(160deg,#6b4e14 0%,#2c2008 55%,#070a10 100%)',
+    purple:'linear-gradient(160deg,#4a2a78 0%,#1d1233 55%,#070a10 100%)',
+    teal:  'linear-gradient(160deg,#155e6b 0%,#0a2a30 55%,#070a10 100%)'
+  };
+  const sl = [];
+  const add = (bg, html)=> sl.push({ bg, html });
+
+  if(!s.nInc && !s.nExp){
+    add(G.blue, `<div class="wr-emoji">🗓️</div><div class="wr-mid">Todavía no hay movimientos en ${Y}</div><div class="wr-p">Cuando empieces a registrar tus gastos e ingresos, aquí vas a ver tu año en resumen.</div>`);
+    return sl;
+  }
+
+  add(G.blue, `<div class="wr-emoji">✨</div>
+    <div class="wr-k">JB Marte Finance</div>
+    <div class="wr-big">${name ? name+', este' : 'Este'} es tu ${Y}</div>
+    <div class="wr-p">${enCurso ? `El año todavía no termina, así que esto es lo que llevas ${rango}.` : 'Un repaso de todo lo que pasó con tu dinero este año.'} Toca la derecha para avanzar.</div>`);
+
+  add(G.green, `<div class="wr-k">Ganaste</div>
+    <div class="wr-big" data-count="${s.inc}">${fmt(s.inc)}</div>
+    <div class="wr-p">En <b>${s.nInc}</b> ingreso${s.nInc!==1?'s':''} ${rango}. Eso es un promedio de <b>${fmt(s.inc/(s.lastM+1))}</b> al mes.</div>`);
+
+  add(G.red, `<div class="wr-k">Gastaste</div>
+    <div class="wr-big" data-count="${s.exp}">${fmt(s.exp)}</div>
+    <div class="wr-p">En <b>${s.nExp}</b> movimiento${s.nExp!==1?'s':''}. Más o menos <b>${fmt(s.exp/(s.lastM+1))}</b> al mes.</div>`);
+
+  const pct = s.inc>0 ? Math.round(s.net/s.inc*100) : 0;
+  add(s.net>=0 ? G.teal : G.red, `<div class="wr-k">Te quedó</div>
+    <div class="wr-big" data-count="${s.net}" data-signed="1">${fmtSigned(s.net)}</div>
+    <div class="wr-p">${s.net>=0
+      ? `De cada $100 que ganaste te quedaron unos <b>$${pct}</b>. ${pct>=20?'¡Eso es ahorrar en serio! 💪':pct>=10?'Vas bien, se puede subir un poco más.':'Positivo, que ya es ganar. A subirlo el próximo año.'}`
+      : `Gastaste <b>${fmt(s.net)}</b> más de lo que ganaste ${rango}. Es un dato para tomar en cuenta el próximo año.`}</div>`);
+
+  if(s.cats.length){
+    const top = s.cats[0];
+    const p = s.exp>0 ? Math.round(top.v/s.exp*100) : 0;
+    add(G.purple, `<div class="wr-k">Tu categoría #1</div>
+      <div class="wr-mid">${esc(_catLabel(top.k,'expense'))}</div>
+      <div class="wr-p">Se llevó <b>${fmt(top.v)}</b>, el <b>${p}%</b> de todo lo que gastaste.</div>
+      <div class="wr-list">${s.cats.slice(0,5).map((c,i)=>`<div class="wr-li"><span>${i+1}. ${esc(_catLabel(c.k,'expense'))}</span><b>${fmt(c.v)}</b></div>`).join('')}</div>`);
+  }
+
+  if(s.caro && s.conMov.length > 1){
+    add(G.gold, `<div class="wr-k">Tus meses</div>
+      <div class="wr-p" style="margin-bottom:6px">El mes más caro fue</div>
+      <div class="wr-mid">${MONTHS[s.caro.m]} · ${fmt(s.caro.exp)}</div>
+      ${s.mejor && s.mejor.net>0 ? `<div class="wr-p" style="margin:18px 0 6px">Y tu mejor mes ahorrando fue</div>
+      <div class="wr-mid" style="color:#9ff0cf">${MONTHS[s.mejor.m]} · ${fmtSigned(s.mejor.net)}</div>` : ''}`);
+  }
+
+  if(s.topDay){
+    add(G.red, `<div class="wr-emoji">📅</div><div class="wr-k">El día que más gastaste</div>
+      <div class="wr-mid">${fecha(s.topDay.m, s.topDay.d)}</div>
+      <div class="wr-p">Ese día se fueron <b>${fmt(s.topDay.v)}</b>.${s.biggest ? ` Y tu gasto más grande de un solo golpe fue <b>${fmt(s.biggest.amount)}</b> en <b>${esc(s.biggest.desc || _catLabel(s.biggest.cat,'expense'))}</b>${s.biggest.d?` (${fecha(s.biggest.m, s.biggest.d)})`:''}.` : ''}</div>`);
+  }
+
+  if(s.fav && s.fav.n > 1){
+    add(G.teal, `<div class="wr-emoji">📍</div><div class="wr-k">Tu lugar favorito</div>
+      <div class="wr-mid">${esc(s.fav.label)}</div>
+      <div class="wr-p">Lo registraste <b>${s.fav.n} veces</b> y en total le dejaste <b>${fmt(s.fav.t)}</b>.</div>`);
+  }
+
+  if(s.diasTot){
+    add(G.green, `<div class="wr-emoji">🧘</div><div class="wr-k">Días sin gastar</div>
+      <div class="wr-big">${s.sinGastar}</div>
+      <div class="wr-p">De ${s.diasTot} días ${rango}, hubo <b>${s.sinGastar}</b> en los que no gastaste ni un peso.</div>`);
+  }
+
+  add(G.blue, `<div class="wr-k">Mi ${Y} en números</div>
+    <div class="wr-list" style="margin-top:4px">
+      <div class="wr-li"><span>💰 Ganado</span><b>${fmt(s.inc)}</b></div>
+      <div class="wr-li"><span>💸 Gastado</span><b>${fmt(s.exp)}</b></div>
+      <div class="wr-li"><span>${s.net>=0?'🟢':'🔴'} Me quedó</span><b>${fmtSigned(s.net)}</b></div>
+      ${s.cats.length?`<div class="wr-li"><span>🏷️ Categoría #1</span><b>${esc(_catLabel(s.cats[0].k,'expense'))}</b></div>`:''}
+      ${s.mejor && s.mejor.net>0?`<div class="wr-li"><span>🏆 Mejor mes</span><b>${MONTHS[s.mejor.m]}</b></div>`:''}
+      ${s.diasTot?`<div class="wr-li"><span>🧘 Días sin gastar</span><b>${s.sinGastar}</b></div>`:''}
+    </div>
+    <div class="wr-p" style="margin-top:18px;font-size:13px;opacity:.7">${enCurso?'Vuelve en diciembre para ver el año completo.':'¡Por un '+(Y+1)+' todavía mejor!'}</div>`);
+  return sl;
+}
+
+function openWrapped(){
+  _wr.slides = _wrBuild();
+  _wr.i = 0;
+  document.getElementById('wr-bars').innerHTML = _wr.slides.map(()=>'<span><i></i></span>').join('');
+  document.getElementById('wrapped').classList.add('show');
+  document.body.style.overflow = 'hidden';
+  document.addEventListener('keydown', _wrKey);
+  _wrShow();
+}
+function closeWrapped(){
+  clearTimeout(_wr.timer);
+  document.getElementById('wrapped').classList.remove('show');
+  document.body.style.overflow = '';
+  document.removeEventListener('keydown', _wrKey);
+}
+function _wrKey(e){
+  if(e.key==='Escape') closeWrapped();
+  else if(e.key==='ArrowRight') wrappedGo(1);
+  else if(e.key==='ArrowLeft') wrappedGo(-1);
+}
+function wrappedGo(dir){
+  const n = _wr.i + dir;
+  if(n < 0) return;
+  if(n >= _wr.slides.length){ closeWrapped(); return; }
+  _wr.i = n; _wrShow();
+}
+function _wrShow(){
+  clearTimeout(_wr.timer);
+  const s = _wr.slides[_wr.i];
+  const host = document.getElementById('wr-slide-host');
+  host.innerHTML = `<div class="wr-slide" style="background:${s.bg}">${s.html}</div><div class="wr-foot">Design by Jeiron &amp; Claude ✦ ${CURRENT_YEAR}</div>`;
+  host.querySelectorAll('[data-count]').forEach(el=>{
+    const v = parseFloat(el.dataset.count);
+    _animState.set(el, { raf:null, current:0 });
+    animateNumber(el, v, { prefix:'$', signed: el.dataset.signed==='1', duration:1400 });
+  });
+  const last = _wr.i === _wr.slides.length - 1;
+  document.querySelectorAll('#wr-bars span').forEach((b,i)=>{
+    b.className = i < _wr.i ? 'done' : (i === _wr.i ? (last ? 'done' : 'cur') : '');
+    const bar = b.querySelector('i');
+    bar.style.animation = 'none'; void bar.offsetWidth; bar.style.animation = '';
+    if(i === _wr.i && !last) bar.style.animationDuration = WR_MS + 'ms';
+  });
+  if(!last) _wr.timer = setTimeout(()=>wrappedGo(1), WR_MS);
+}
+
 function entryHTML(e, mi){
   const color = e.type==='income'?'var(--green)':'var(--red)';
   const sign  = e.type==='income'?'+':'−';
@@ -1649,7 +1901,9 @@ function renderMonth(mi){
       <button class="itab"        id="it-all-${mi}"    onclick="showInner(${mi},'all')">Todos</button>
       <button class="itab"        id="it-cats-${mi}"   onclick="showInner(${mi},'cats')">Categorías</button>
       <button class="itab"        id="it-bycat-${mi}"  onclick="showInner(${mi},'bycat')">Detallado</button>
+      <button class="itab"        id="it-cal-${mi}"    onclick="showInner(${mi},'cal')">📅 Calendario</button>
     </div>
+    <div id="inner-cal-${mi}" style="display:none"></div>
 
     <div id="inner-recent-${mi}">
       <div class="sec-lbl">Últimos movimientos</div>
@@ -2114,12 +2368,127 @@ function setTypeVisual(mi, type){
 }
 
 function showInner(mi, which){
-  ['recent','all','cats','bycat'].forEach(t=>{
+  ['recent','all','cats','bycat','cal'].forEach(t=>{
     const el = document.getElementById(`inner-${t}-${mi}`);
     const bt = document.getElementById(`it-${t}-${mi}`);
     if(el) el.style.display = t===which?'block':'none';
     if(bt) bt.className = 'itab'+(t===which?' active':'');
   });
+  if(which==='cal') renderCalendar(mi);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// CALENDARIO DE GASTOS — solo lee los movimientos, no guarda ni cambia nada
+// ══════════════════════════════════════════════════════════════════════════
+const _calSel = {};
+function _calEntries(mi){
+  const md = data[mi];
+  return (md && Array.isArray(md.entries)) ? md.entries : [];
+}
+function _catLabel(v, type){
+  const list = type==='income' ? INCOME_CATS : EXPENSE_CATS;
+  const c = (list||[]).find(c=>c.v===v);
+  return (c && (c.l||c.v)) || v || '';
+}
+function _fmtShort(n){
+  if(n >= 1000) return '$' + (n/1000).toFixed(n >= 10000 ? 0 : 1).replace('.0','') + 'k';
+  return '$' + Math.round(n);
+}
+function _calDays(mi){
+  const y = CURRENT_YEAR;
+  const days = new Date(y, mi+1, 0).getDate();
+  const gasto = Array(days+1).fill(0), ing = Array(days+1).fill(0);
+  _calEntries(mi).forEach(e=>{
+    const d = parseDayFromDateStr(e.date);
+    if(!d || d > days) return;
+    const a = Number(e.amount) || 0;
+    if(e.type==='expense') gasto[d] += a;
+    else if(e.type==='income') ing[d] += a;
+  });
+  const now = new Date();
+  let lastDay = 0;
+  if(y < now.getFullYear() || (y===now.getFullYear() && mi < now.getMonth())) lastDay = days;
+  else if(y===now.getFullYear() && mi===now.getMonth()) lastDay = now.getDate();
+  return { y, days, gasto, ing, lastDay };
+}
+function renderCalendar(mi){
+  const el = document.getElementById(`inner-cal-${mi}`);
+  if(!el) return;
+  const { y, days, gasto, ing, lastDay } = _calDays(mi);
+  const firstDow = (new Date(y, mi, 1).getDay() + 6) % 7; // lunes primero
+  const max = Math.max(0, ...gasto);
+  const total = gasto.reduce((s,v)=>s+v, 0);
+
+  if(_calSel[mi] === undefined) _calSel[mi] = lastDay && lastDay < days+1 && mi===new Date().getMonth() ? lastDay : null;
+
+  let cells = '';
+  for(let i=0;i<firstDow;i++) cells += '<div class="cal-cell empty-c"></div>';
+  for(let d=1; d<=days; d++){
+    const g = gasto[d];
+    let lvl = 0;
+    if(g > 0 && max > 0){ const r = g/max; lvl = r<=.25?1 : r<=.5?2 : r<=.75?3 : 4; }
+    const future = d > lastDay;
+    const cls = ['cal-cell', 'lvl'+lvl];
+    if(future) cls.push('future');
+    if(_calSel[mi]===d) cls.push('sel');
+    if(mi===new Date().getMonth() && y===new Date().getFullYear() && d===new Date().getDate()) cls.push('today');
+    cells += `<div class="${cls.join(' ')}" onclick="calSelectDay(${mi},${d})">
+      <span class="cal-d">${d}</span>
+      ${g>0 ? `<span class="cal-amt">${_fmtShort(g)}</span>` : ''}
+      ${ing[d]>0 ? '<span class="cal-inc"></span>' : ''}
+    </div>`;
+  }
+
+  // Resumen
+  let sinGastar = 0, topDay = 0;
+  for(let d=1; d<=lastDay; d++){ if(gasto[d]===0) sinGastar++; if(gasto[d] > (gasto[topDay]||0)) topDay = d; }
+  const prom = lastDay ? total / lastDay : 0;
+  const stats = lastDay ? `
+    <div class="cal-stats">
+      <div class="cal-stat"><div class="cal-stat-l">Día más caro</div><div class="cal-stat-v" style="color:var(--red)">${topDay ? `${topDay} ${MONTHS[mi].slice(0,3).toLowerCase()} · ${fmt(gasto[topDay])}` : '—'}</div></div>
+      <div class="cal-stat"><div class="cal-stat-l">Promedio por día</div><div class="cal-stat-v">${fmt(prom)}</div></div>
+      <div class="cal-stat"><div class="cal-stat-l">Días sin gastar</div><div class="cal-stat-v" style="color:var(--green)">${sinGastar} de ${lastDay}</div></div>
+    </div>` : '';
+
+  el.innerHTML = `
+    ${stats}
+    <div class="cal-wrap">
+      <div class="cal-head">${['L','M','M','J','V','S','D'].map(x=>`<div>${x}</div>`).join('')}</div>
+      <div class="cal-grid">${cells}</div>
+      <div class="cal-legend">
+        <span>Menos</span><i class="lvl0"></i><i class="lvl1"></i><i class="lvl2"></i><i class="lvl3"></i><i class="lvl4"></i><span>Más gasto</span>
+        <span style="margin-left:auto;display:flex;align-items:center;gap:5px"><span class="cal-inc" style="position:static"></span>Ingreso</span>
+      </div>
+    </div>
+    <div id="cal-day-${mi}"></div>`;
+  _renderCalDay(mi);
+}
+function calSelectDay(mi, d){
+  _calSel[mi] = (_calSel[mi]===d) ? null : d;
+  renderCalendar(mi);
+}
+function _renderCalDay(mi){
+  const box = document.getElementById(`cal-day-${mi}`);
+  if(!box) return;
+  const d = _calSel[mi];
+  if(!d){ box.innerHTML = '<div class="cal-hint">Toca un día para ver qué compraste.</div>'; return; }
+  const list = _calEntries(mi).filter(e=>parseDayFromDateStr(e.date)===d);
+  const dow = new Date(CURRENT_YEAR, mi, d).toLocaleDateString('es-DO',{weekday:'long'});
+  const g = list.filter(e=>e.type==='expense').reduce((s,e)=>s+(Number(e.amount)||0),0);
+  const i = list.filter(e=>e.type==='income').reduce((s,e)=>s+(Number(e.amount)||0),0);
+  let sub = [];
+  if(g>0) sub.push(`gastaste <b style="color:var(--red)">${fmt(g)}</b>`);
+  if(i>0) sub.push(`ganaste <b style="color:var(--green)">${fmt(i)}</b>`);
+  const rows = list.length ? list.slice().reverse().map(e=>{
+    const inc = e.type==='income';
+    return `<div class="entry">
+      <div class="edot" style="background:${inc?'var(--green)':'var(--red)'}"></div>
+      <div class="einfo"><div class="edesc">${esc(e.desc||'')}</div><div class="ecat">${esc(_catLabel(e.cat, e.type))}</div></div>
+      <div class="eright"><span class="eamt" style="color:${inc?'var(--green)':'var(--red)'}">${inc?'+':'−'}${fmt(Number(e.amount)||0)}</span></div>
+    </div>`;
+  }).join('') : '<div class="empty">No hubo movimientos este día 🎉</div>';
+  box.innerHTML = `<div class="sec-lbl" style="margin-top:1rem">${dow.charAt(0).toUpperCase()+dow.slice(1)} ${d} de ${MONTHS[mi].toLowerCase()}${sub.length?' · '+sub.join(' · '):''}</div>
+    <div class="entries">${rows}</div>`;
 }
 
 // ── TAB "POR CATEGORÍA" ─────────────────────────────────────────────────
