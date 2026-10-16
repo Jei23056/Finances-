@@ -333,6 +333,13 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   padding:1rem;
 }
 #ach-panel.show { display:flex; animation:fade-in .3s; }
+#ahorro-panel { position:fixed; inset:0; z-index:9500; background:rgba(0,0,0,0.7); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center; padding:1rem; }
+#ahorro-panel.show { display:flex; animation:fade-in .3s; }
+.ah-box { background:var(--surf); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
+.ah-tit { font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+.ah-row { display:flex; justify-content:space-between; font-size:13px; padding:3px 0; color:var(--text); }
+.ah-row.tot { border-top:1px solid var(--border); margin-top:6px; padding-top:8px; font-weight:600; }
+.ah-txt { font-size:13px; line-height:1.55; color:var(--text); }
 @keyframes fade-in { from {opacity:0} to {opacity:1} }
 .ach-modal {
   background:var(--card); border:1px solid var(--border2);
@@ -883,6 +890,13 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
   </div>
 </div>
 
+<div id="ahorro-panel" onclick="if(event.target.id==='ahorro-panel')closeAhorroPanel()">
+  <div class="ach-modal">
+    <h3>% Ahorrado <button class="ach-close" onclick="closeAhorroPanel()">×</button></h3>
+    <div id="ahorro-body"></div>
+  </div>
+</div>
+
 <div id="splash-screen">
   <div class="splash-particles" id="splash-particles"></div>
   <div class="splash-logo">💰</div>
@@ -934,7 +948,7 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 <div class="year-bar">
   <div class="ycard inc clickable" id="ycard-inc" onclick="toggleCurrency('inc')"><div class="ycard-lbl">Total ganado</div><span class="ycard-cur" id="cur-inc">DOP</span><div class="ycard-val" id="y-inc">$0.00</div></div>
   <div class="ycard exp clickable" id="ycard-exp" onclick="toggleCurrency('exp')"><div class="ycard-lbl">Total gastado</div><span class="ycard-cur" id="cur-exp">DOP</span><div class="ycard-val" id="y-exp">$0.00</div></div>
-  <div class="ycard net"><div class="ycard-lbl">% Ahorrado</div><div class="ycard-val" id="y-net">—</div><div class="ycard-hint" id="y-net-hint">mes actual</div></div>
+  <div class="ycard net clickable" onclick="openAhorroPanel()"><div class="ycard-lbl">% Ahorrado</div><div class="ycard-val" id="y-net">—</div><div class="ycard-hint" id="y-net-hint">mes actual</div></div>
   <div class="ycard sav clickable" id="ycard-cap" onclick="toggleCurrency('cap')"><div class="ycard-lbl">Capital actual</div><span class="ycard-cur" id="cur-cap">DOP</span><div class="ycard-val" id="y-cap">$0.00</div></div>
 </div>
 
@@ -1436,6 +1450,62 @@ function renderYear(){
   const capEl = document.getElementById('y-cap');
   animateNumber(capEl, yCap, { prefix:'$', signed:true });
   capEl.style.color = yCap>=0?'var(--green)':'var(--red)';
+}
+
+// Explica el % ahorrado (solo lee números, no cambia nada)
+function openAhorroPanel(){
+  const mi    = annualActive ? new Date().getMonth() : activeMonth;
+  const tCur  = monthTotals(mi);
+  const tPrev = mi > 0 ? monthTotals(mi - 1) : null;
+  const queda = tCur.inc - tCur.exp;
+  const row = (l,v,c)=>`<div class="ah-row"><span>${l}</span><span style="color:${c}">${v}</span></div>`;
+  let h = '';
+
+  if(tCur.inc > 0){
+    const exacto = queda / tCur.inc * 100;
+    const pct = Math.round(exacto);
+    h += `<div class="ah-box"><div class="ah-tit">${MONTHS[mi]}</div>
+      ${row('Ganaste', fmt(tCur.inc), 'var(--green)')}
+      ${row('Gastaste', fmt(tCur.exp), 'var(--red)')}
+      <div class="ah-row tot"><span>Te quedó</span><span style="color:${queda>=0?'var(--green)':'var(--red)'}">${fmtSigned(queda)}</span></div></div>`;
+    let txt;
+    if(queda > 0){
+      txt = `De cada $100 que ganaste te quedaron unos <b>$${pct}</b>. Por eso llevas <b>${pct}%</b> ahorrado en ${MONTHS[mi]}.`;
+    } else if(queda === 0){
+      txt = `Gastaste exactamente lo mismo que ganaste, así que no te quedó nada: <b>0%</b>.`;
+    } else if(pct === 0){
+      txt = `Gastaste <b>${fmt(queda)}</b> más de lo que ganaste. Es tan poquito comparado con lo que ganaste (${exacto.toFixed(1)}%) que se redondea a <b>0%</b>. En pocas palabras: este mes no has ahorrado nada todavía.`;
+    } else {
+      txt = `Gastaste <b>${fmt(queda)}</b> más de lo que ganaste, por eso el ahorro sale en negativo: <b>${pct}%</b>.`;
+    }
+    h += `<div class="ah-box"><div class="ah-txt">${txt}</div></div>`;
+
+    if(tPrev && tPrev.inc > 0){
+      const prevPct = Math.round((tPrev.inc - tPrev.exp) / tPrev.inc * 100);
+      const diff = pct - prevPct;
+      const qPrev = tPrev.inc - tPrev.exp;
+      h += `<div class="ah-box"><div class="ah-tit">Comparado con ${MONTHS[mi-1]}</div>
+        ${row('Ganaste', fmt(tPrev.inc), 'var(--green)')}
+        ${row('Gastaste', fmt(tPrev.exp), 'var(--red)')}
+        <div class="ah-row tot"><span>Te quedó</span><span style="color:${qPrev>=0?'var(--green)':'var(--red)'}">${fmtSigned(qPrev)} (${prevPct}%)</span></div>
+        <div class="ah-txt" style="margin-top:8px">`;
+      if(diff > 0)      h += `En ${MONTHS[mi-1]} tu ahorro fue <b>${prevPct}%</b> y ahora va en <b>${pct}%</b>. Por eso dice <b style="color:var(--green)">▲ +${diff}%</b>: vas mejor que el mes pasado.`;
+      else if(diff < 0) h += `En ${MONTHS[mi-1]} tu ahorro fue <b>${prevPct}%</b> y ahora va en <b>${pct}%</b>. Por eso dice <b style="color:var(--red)">▼ ${diff}%</b>: vas peor que el mes pasado.`;
+      else              h += `Vas igual que en ${MONTHS[mi-1]}: <b>${pct}%</b> los dos meses.`;
+      h += `</div></div>`;
+    }
+    if(mi === new Date().getMonth()){
+      h += `<div class="ah-txt" style="color:var(--muted);font-size:12px">El mes no ha terminado, así que este % puede cambiar con lo que ganes o gastes de aquí a fin de mes.</div>`;
+    }
+  } else {
+    h += `<div class="ah-box"><div class="ah-txt">En ${MONTHS[mi]} todavía no has registrado ingresos${tCur.exp>0?` (y llevas ${fmt(tCur.exp)} gastado)`:''}. El % ahorrado se calcula sobre lo que ganas, así que aparece cuando registres tu primer ingreso del mes.</div></div>`;
+  }
+
+  document.getElementById('ahorro-body').innerHTML = h;
+  document.getElementById('ahorro-panel').classList.add('show');
+}
+function closeAhorroPanel(){
+  document.getElementById('ahorro-panel').classList.remove('show');
 }
 
 function entryHTML(e, mi){
