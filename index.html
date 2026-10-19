@@ -1508,6 +1508,19 @@ function yearTotals(){
   };
 }
 
+// Mes anterior para comparar el % ahorrado. En enero usa diciembre del año
+// pasado (del Historial, ya cargado). Solo lee: no guarda nada.
+function _mesAnterior(mi){
+  if(mi > 0) return { t: monthTotals(mi - 1), nombre: MONTHS[mi - 1] };
+  if(typeof viewerActive !== 'undefined' && viewerActive) return null;
+  const h = (typeof historialFinanzasCache !== 'undefined' && historialFinanzasCache) ? historialFinanzasCache[CURRENT_YEAR - 1] : null;
+  const md = h && h[11];
+  if(!md || !Array.isArray(md.entries)) return null;
+  let inc = 0, exp = 0;
+  md.entries.forEach(e=>{ if(e.type==='income') inc += e.amount; else if(e.type==='expense') exp += e.amount; });
+  return { t: { inc: parseFloat(inc.toFixed(2)), exp: parseFloat(exp.toFixed(2)) }, nombre: `Diciembre ${CURRENT_YEAR - 1}` };
+}
+
 function renderYear(){
   const {yInc,yExp,yNet,yCap} = yearTotals();
 
@@ -1516,7 +1529,8 @@ function renderYear(){
 
   const mi    = annualActive ? new Date().getMonth() : activeMonth;
   const tCur  = monthTotals(mi);
-  const tPrev = mi > 0 ? monthTotals(mi - 1) : null;
+  const _ant  = _mesAnterior(mi);
+  const tPrev = _ant ? _ant.t : null;
   const netEl = document.getElementById('y-net');
   const hintEl = document.getElementById('y-net-hint');
   if(tCur.inc > 0){
@@ -1527,7 +1541,7 @@ function renderYear(){
       const prevPct = Math.round((tPrev.inc - tPrev.exp) / tPrev.inc * 100);
       const diff = savPct - prevPct;
       const sign = diff >= 0 ? '▲ +' : '▼ ';
-      hintEl.textContent = sign + diff + '% vs ' + MONTHS[mi-1];
+      hintEl.textContent = sign + diff + '% vs ' + _ant.nombre;
       hintEl.style.color = diff >= 0 ? 'var(--green)' : 'var(--red)';
     } else {
       hintEl.textContent = MONTHS[mi];
@@ -1550,7 +1564,8 @@ function renderYear(){
 function openAhorroPanel(){
   const mi    = annualActive ? new Date().getMonth() : activeMonth;
   const tCur  = monthTotals(mi);
-  const tPrev = mi > 0 ? monthTotals(mi - 1) : null;
+  const _ant  = _mesAnterior(mi);
+  const tPrev = _ant ? _ant.t : null;
   const queda = tCur.inc - tCur.exp;
   const row = (l,v,c)=>`<div class="ah-row"><span>${l}</span><span style="color:${c}">${v}</span></div>`;
   let h = '';
@@ -1578,14 +1593,14 @@ function openAhorroPanel(){
       const prevPct = Math.round((tPrev.inc - tPrev.exp) / tPrev.inc * 100);
       const diff = pct - prevPct;
       const qPrev = tPrev.inc - tPrev.exp;
-      h += `<div class="ah-box"><div class="ah-tit">Comparado con ${MONTHS[mi-1]}</div>
+      h += `<div class="ah-box"><div class="ah-tit">Comparado con ${_ant.nombre}</div>
         ${row('Ganaste', fmt(tPrev.inc), 'var(--green)')}
         ${row('Gastaste', fmt(tPrev.exp), 'var(--red)')}
         <div class="ah-row tot"><span>Te quedó</span><span style="color:${qPrev>=0?'var(--green)':'var(--red)'}">${fmtSigned(qPrev)} (${prevPct}%)</span></div>
         <div class="ah-txt" style="margin-top:8px">`;
-      if(diff > 0)      h += `En ${MONTHS[mi-1]} tu ahorro fue <b>${prevPct}%</b> y ahora va en <b>${pct}%</b>. Por eso dice <b style="color:var(--green)">▲ +${diff}%</b>: vas mejor que el mes pasado.`;
-      else if(diff < 0) h += `En ${MONTHS[mi-1]} tu ahorro fue <b>${prevPct}%</b> y ahora va en <b>${pct}%</b>. Por eso dice <b style="color:var(--red)">▼ ${diff}%</b>: vas peor que el mes pasado.`;
-      else              h += `Vas igual que en ${MONTHS[mi-1]}: <b>${pct}%</b> los dos meses.`;
+      if(diff > 0)      h += `En ${_ant.nombre} tu ahorro fue <b>${prevPct}%</b> y ahora va en <b>${pct}%</b>. Por eso dice <b style="color:var(--green)">▲ +${diff}%</b>: vas mejor que el mes pasado.`;
+      else if(diff < 0) h += `En ${_ant.nombre} tu ahorro fue <b>${prevPct}%</b> y ahora va en <b>${pct}%</b>. Por eso dice <b style="color:var(--red)">▼ ${diff}%</b>: vas peor que el mes pasado.`;
+      else              h += `Vas igual que en ${_ant.nombre}: <b>${pct}%</b> los dos meses.`;
       h += `</div></div>`;
     }
     if(mi === new Date().getMonth()){
@@ -6646,6 +6661,11 @@ async function arrastrarCapitalDeAnioAnterior(){
       cur[0].startCapital = cap;
       cur[0]._autoCapital = false;  // marcado como fijado (no se recalcula)
       await ref.set({ [FINANZAS_KEY]: cur, [flag]: true }, { merge: true });
+      // Poner el mismo capital en los datos ya cargados en memoria. Sin esto,
+      // la app mostraba enero en $0 y el primer guardado borraba el arrastre.
+      if(!data[0]) data[0] = { entries: [], startCapital: 0 };
+      data[0].startCapital = cap;
+      data[0]._autoCapital = false;
       console.log(`Capital arrastrado de ${prevYear}: ${cap} → inicio de enero ${CURRENT_YEAR}`);
     } else {
       // Aun así marcar la bandera para no reintentar cada vez
