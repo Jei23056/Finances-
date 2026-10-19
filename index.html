@@ -2896,10 +2896,13 @@ function propagateCapitals(){
   for(let mi=1; mi<12; mi++){
     const prev = monthTotals(mi-1);
     const cur  = getMonth(mi);
-    // De febrero a diciembre la capital de inicio es SIEMPRE el cierre del mes
-    // anterior (así cambia sola cuando agregas o quitas dinero). Solo enero se fija a mano.
-    cur.startCapital = prev.end;
-    cur._autoCapital = true;
+    // Los meses siguen solos al cierre del mes anterior. Si un mes ya tenía
+    // una capital puesta a mano desde antes, se respeta (no se toca tu número).
+    // El lápiz para editar ahora solo aparece en enero.
+    if(cur._autoCapital !== false){
+      cur.startCapital = prev.end;
+      cur._autoCapital = true;
+    }
   }
 }
 
@@ -6487,7 +6490,10 @@ function _exportPDFProInner(historicalData, historicalYear, historicalCards){
   // Capital de inicio de cada mes: enero el fijado, los demás el cierre del anterior
   const _capIniPDF = [];
   { let c = (getMonth(0).startCapital ?? 0);
-    MONTHS.forEach((_,i)=>{ _capIniPDF[i] = c; c = parseFloat((c + monthTotals(i).net).toFixed(2)); }); }
+    MONTHS.forEach((_,i)=>{
+      const md0 = getMonth(i);
+      if(i > 0 && md0._autoCapital === false && typeof md0.startCapital === 'number') c = md0.startCapital;
+      _capIniPDF[i] = c; c = parseFloat((c + monthTotals(i).net).toFixed(2)); }); }
   MONTHS.forEach((name, mi) => {
     const md = getMonth(mi);
     const t  = monthTotals(mi);
