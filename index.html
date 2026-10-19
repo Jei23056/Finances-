@@ -175,7 +175,9 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 .wr-launch .wl-s { font-size:12px; color:var(--muted2); margin-top:2px; }
 #wrapped { position:fixed; inset:0; z-index:9600; display:none; align-items:center; justify-content:center; background:#000; }
 #wrapped.show { display:flex; }
-.wr-stage { position:relative; width:100%; height:100%; max-width:460px; max-height:860px; overflow:hidden; color:#fff; font-family:'DM Sans',sans-serif; }
+.wr-stage { position:relative; width:100%; height:100%; max-width:460px; max-height:860px; overflow:hidden; color:#fff; font-family:'DM Sans',sans-serif; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action:manipulation; }
+.wr-stage .wr-bars, .wr-stage .wr-close, .wr-stage .wr-foot { transition:opacity .2s; }
+.wr-stage.paused .wr-bars, .wr-stage.paused .wr-close, .wr-stage.paused .wr-foot { opacity:0; }
 @media(min-width:600px){ .wr-stage { height:92vh; border-radius:22px; } }
 .wr-bars { position:absolute; top:calc(12px + env(safe-area-inset-top)); left:12px; right:12px; display:flex; gap:4px; z-index:3; }
 .wr-bars span { flex:1; height:3px; border-radius:2px; background:rgba(255,255,255,0.25); overflow:hidden; }
@@ -197,6 +199,19 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 .wr-li b { font-weight:600; }
 .wr-foot { position:absolute; bottom:calc(18px + env(safe-area-inset-bottom)); left:0; right:0; text-align:center; font-size:11px; opacity:.55; letter-spacing:.05em; }
 .wr-emoji { font-size:54px; margin-bottom:16px; }
+.wr-launch { margin-bottom:.6rem; }
+.wr-arch { background:var(--card); border:1px solid var(--border); border-radius:var(--r); margin-bottom:1rem; overflow:hidden; }
+.wr-arch-btn { width:100%; display:flex; justify-content:space-between; align-items:center; padding:.85rem 1.1rem; background:none; border:none; color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; }
+#wr-arch-list { padding:0 1.1rem .6rem; }
+.wr-arch-empty { font-size:12px; color:var(--muted); line-height:1.6; padding:.4rem 0 .6rem; }
+.wr-arch-item { display:flex; align-items:center; gap:14px; padding:12px 0; border-top:1px solid var(--border); cursor:pointer; }
+.wr-arch-y { font-family:'DM Serif Display',serif; font-size:1.5rem; color:var(--text); min-width:62px; }
+.wr-arch-s { flex:1; display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12px; }
+.wr-arch-go { font-size:12px; color:var(--gold2); border:1px solid rgba(134,179,236,0.35); border-radius:999px; padding:5px 12px; white-space:nowrap; }
+.wr-toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px); opacity:0; z-index:9300; display:flex; align-items:center; gap:12px; width:min(92%, 440px); box-sizing:border-box; padding:14px 16px; border-radius:14px; background:linear-gradient(135deg,var(--card2),var(--card)); border:1px solid rgba(134,179,236,0.45); box-shadow:var(--shadow-lg); color:var(--text); font-family:'DM Sans',sans-serif; font-size:14px; transition:all .4s ease; }
+.wr-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+.wr-toast-b { padding:7px 14px; border-radius:var(--rs); border:1px solid var(--gold); background:var(--gldim); color:var(--gold2); cursor:pointer; font-family:'DM Sans',sans-serif; font-size:13px; white-space:nowrap; }
+.wr-toast-x { background:none; border:none; color:var(--muted2); font-size:20px; cursor:pointer; padding:0 4px; }
 .repeat-note { font-size:11px; color:var(--muted2); padding:6px 12px; margin:4px 0; font-style:italic; opacity:.85; display:flex; align-items:center; gap:6px; }
 .repeat-note::before { content:'↑'; color:var(--gold); font-style:normal; font-weight:bold; }
 .bycat-picker { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:.9rem; margin-bottom:1rem; }
@@ -953,8 +968,8 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
     <div class="wr-bars" id="wr-bars"></div>
     <button class="wr-close" onclick="closeWrapped()">×</button>
     <div id="wr-slide-host"></div>
-    <div class="wr-tap l" onclick="wrappedGo(-1)"></div>
-    <div class="wr-tap r" onclick="wrappedGo(1)"></div>
+    <div class="wr-tap l" onclick="wrTap(-1)"></div>
+    <div class="wr-tap r" onclick="wrTap(1)"></div>
   </div>
 </div>
 
@@ -1030,6 +1045,13 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
     <span class="wl-ic">✨</span>
     <span><div class="wl-t" id="wr-launch-t">Tu año en resumen</div><div class="wl-s">Mira tu año en historias: lo que ganaste, gastaste y tus récords</div></span>
   </button>
+  <div class="wr-arch">
+    <button class="wr-arch-btn" onclick="toggleResumenes()">
+      <span>🗂️ Resúmenes de años anteriores</span>
+      <span id="wr-arch-arrow" style="transition:transform .2s">▾</span>
+    </button>
+    <div id="wr-arch-list" style="display:none"></div>
+  </div>
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;box-sizing:border-box;width:100%">
     <div>
       <div style="font-size:13px;color:var(--text);font-weight:500">Acciones del año</div>
@@ -1587,14 +1609,14 @@ let _wr = { slides:[], i:0, timer:null };
 (function(){ const t = document.getElementById('wr-launch-t'); if(t) t.textContent = `Tu ${CURRENT_YEAR} en resumen`; })();
 const WR_MS = 7000;
 
-function _wrStats(){
+function _wrStats(src, year){
   const now = new Date();
-  const lastM = CURRENT_YEAR === now.getFullYear() ? now.getMonth() : 11;
+  const lastM = year === now.getFullYear() ? now.getMonth() : 11;
   let inc=0, exp=0, nInc=0, nExp=0, biggest=null, sinGastar=0, diasTot=0;
   const catMap={}, descMap={}, dayMap={}, months=[];
   for(let m=0; m<=lastM; m++){
     let mi=0, me=0;
-    _calEntries(m).forEach(e=>{
+    _calEntries(m, src).forEach(e=>{
       const a = Number(e.amount) || 0;
       if(e.type==='income'){ inc+=a; mi+=a; nInc++; }
       else if(e.type==='expense'){
@@ -1609,7 +1631,7 @@ function _wrStats(){
       }
     });
     months.push({ m, inc:mi, exp:me, net:mi-me });
-    const cd = _calDays(m);
+    const cd = _calDays(m, src, year);
     for(let d=1; d<=cd.lastDay; d++){ diasTot++; if(cd.gasto[d]===0) sinGastar++; }
   }
   const cats = Object.entries(catMap).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
@@ -1622,9 +1644,9 @@ function _wrStats(){
   return { lastM, inc, exp, nInc, nExp, net:inc-exp, cats, fav, topDay, caro, mejor, biggest, sinGastar, diasTot, conMov };
 }
 
-function _wrBuild(){
-  const s = _wrStats();
-  const Y = CURRENT_YEAR;
+function _wrBuild(src, year){
+  const s = _wrStats(src, year);
+  const Y = year;
   let name = '';
   try { if(currentUser && currentUser.displayName) name = currentUser.displayName.split(' ')[0]; } catch(e){}
   const enCurso = Y === new Date().getFullYear() && s.lastM < 11;
@@ -1714,8 +1736,17 @@ function _wrBuild(){
   return sl;
 }
 
-function openWrapped(){
-  _wr.slides = _wrBuild();
+// year vacío = el año que se está viendo ahora. Con un año anterior, usa su
+// copia del Historial (ya cargada al iniciar). Solo lectura: no guarda nada.
+function openWrapped(year){
+  let src = data, Y = _curDataYear();
+  if(year && Number(year) !== Y){
+    const h = (typeof historialFinanzasCache !== 'undefined' && historialFinanzasCache) ? historialFinanzasCache[year] : null;
+    if(!h){ alert('No se encontraron los datos de ' + year + ' en el historial.'); return; }
+    src = h; Y = Number(year);
+  }
+  _wr.year = Y;
+  _wr.slides = _wrBuild(src, Y);
   _wr.i = 0;
   document.getElementById('wr-bars').innerHTML = _wr.slides.map(()=>'<span><i></i></span>').join('');
   document.getElementById('wrapped').classList.add('show');
@@ -1733,6 +1764,7 @@ function _wrKey(e){
   if(e.key==='Escape') closeWrapped();
   else if(e.key==='ArrowRight') wrappedGo(1);
   else if(e.key==='ArrowLeft') wrappedGo(-1);
+  else if(e.key===' '){ e.preventDefault(); _wr.paused ? _wrResume() : _wrPause(); }
 }
 function wrappedGo(dir){
   const n = _wr.i + dir;
@@ -1744,7 +1776,7 @@ function _wrShow(){
   clearTimeout(_wr.timer);
   const s = _wr.slides[_wr.i];
   const host = document.getElementById('wr-slide-host');
-  host.innerHTML = `<div class="wr-slide" style="background:${s.bg}">${s.html}</div><div class="wr-foot">Design by Jeiron &amp; Claude ✦ ${CURRENT_YEAR}</div>`;
+  host.innerHTML = `<div class="wr-slide" style="background:${s.bg}">${s.html}</div><div class="wr-foot">Design by Jeiron &amp; Claude ✦ ${_wr.year}</div>`;
   host.querySelectorAll('[data-count]').forEach(el=>{
     const v = parseFloat(el.dataset.count);
     _animState.set(el, { raf:null, current:0 });
@@ -1757,8 +1789,111 @@ function _wrShow(){
     bar.style.animation = 'none'; void bar.offsetWidth; bar.style.animation = '';
     if(i === _wr.i && !last) bar.style.animationDuration = WR_MS + 'ms';
   });
-  if(!last) _wr.timer = setTimeout(()=>wrappedGo(1), WR_MS);
+  _wr.paused = false;
+  document.getElementById('wr-stage').classList.remove('paused');
+  _wr.remaining = WR_MS;
+  if(!last) _wrRun();
 }
+function _wrRun(){
+  clearTimeout(_wr.timer);
+  _wr.startedAt = Date.now();
+  _wr.timer = setTimeout(()=>wrappedGo(1), _wr.remaining);
+}
+function _wrCurBar(){ return document.querySelector('#wr-bars span.cur i'); }
+function _wrPause(){
+  if(_wr.paused) return;
+  _wr.paused = true;
+  clearTimeout(_wr.timer);
+  _wr.remaining = Math.max(0, _wr.remaining - (Date.now() - _wr.startedAt));
+  const bar = _wrCurBar(); if(bar) bar.style.animationPlayState = 'paused';
+  document.getElementById('wr-stage').classList.add('paused');
+}
+function _wrResume(){
+  if(!_wr.paused) return;
+  _wr.paused = false;
+  const bar = _wrCurBar(); if(bar) bar.style.animationPlayState = 'running';
+  document.getElementById('wr-stage').classList.remove('paused');
+  if(_wr.i < _wr.slides.length - 1) _wrRun();
+}
+// Mantener presionado = pausa. Al soltar sigue (y no cambia de historia).
+function _wrDown(e){
+  if(e.target.closest('.wr-close')) return;
+  clearTimeout(_wr.holdTimer);
+  _wr.holdTimer = setTimeout(()=>{ _wr.holdTimer = null; _wrPause(); _wr.held = true; }, 220);
+}
+function _wrUp(){
+  if(_wr.holdTimer){ clearTimeout(_wr.holdTimer); _wr.holdTimer = null; }
+  if(_wr.held){ _wr.held = false; _wr.ignoreUntil = Date.now() + 400; _wrResume(); }
+}
+function wrTap(dir){
+  if(Date.now() < (_wr.ignoreUntil || 0)) return;   // fue una pausa, no un toque
+  wrappedGo(dir);
+}
+
+// ── RESÚMENES DE AÑOS ANTERIORES ────────────────────────────────────────
+// Cada año que pasa al Historial (automático en enero) aparece aquí con su
+// resumen. Usa los datos que la app ya carga del Historial: no guarda nada.
+let _wrArchOpen = false;
+function toggleResumenes(){
+  _wrArchOpen = !_wrArchOpen;
+  const el = document.getElementById('wr-arch-list');
+  const ar = document.getElementById('wr-arch-arrow');
+  if(el) el.style.display = _wrArchOpen ? 'block' : 'none';
+  if(ar) ar.style.transform = _wrArchOpen ? 'rotate(180deg)' : '';
+  if(_wrArchOpen) renderResumenes();
+}
+function renderResumenes(){
+  const el = document.getElementById('wr-arch-list');
+  if(!el) return;
+  const cache = (typeof historialFinanzasCache !== 'undefined' && historialFinanzasCache) ? historialFinanzasCache : {};
+  const years = Object.keys(cache).map(Number).filter(y=>y && y < CURRENT_YEAR).sort((a,b)=>b-a);
+  if(!years.length){
+    el.innerHTML = `<div class="wr-arch-empty">Todavía no hay años anteriores.<br>Cuando termine ${CURRENT_YEAR}, su resumen se guarda aquí solo.</div>`;
+    return;
+  }
+  el.innerHTML = years.map(y=>{
+    const s = _wrStats(cache[y], y);
+    return `<div class="wr-arch-item" onclick="openWrapped(${y})">
+      <div class="wr-arch-y">${y}</div>
+      <div class="wr-arch-s">
+        <span style="color:var(--green)">+${fmt(s.inc)}</span>
+        <span style="color:var(--red)">−${fmt(s.exp)}</span>
+        <span style="color:${s.net>=0?'var(--green)':'var(--red)'}">${s.net>=0?'Te quedó':'Faltó'} ${fmt(s.net)}</span>
+      </div>
+      <div class="wr-arch-go">▶ Ver</div>
+    </div>`;
+  }).join('');
+}
+// En enero, la primera vez que abres la app, avisa que el resumen del año pasado está listo.
+function avisoResumenListo(){
+  try {
+    const prev = CURRENT_YEAR - 1;
+    if(new Date().getMonth() !== 0) return;
+    if(typeof historialFinanzasCache === 'undefined' || !historialFinanzasCache || !historialFinanzasCache[prev]) return;
+    const k = 'wr_aviso_' + prev;
+    try { if(localStorage.getItem(k)) return; localStorage.setItem(k, '1'); } catch(e){}
+    const box = document.createElement('div');
+    box.className = 'wr-toast';
+    box.innerHTML = `<span style="font-size:22px">✨</span>
+      <div style="min-width:0"><div style="font-weight:600">Tu ${prev} en resumen está listo</div><div style="font-size:12px;color:var(--muted2)">Quedó guardado en Año completo → Resúmenes</div></div>
+      <button class="wr-toast-b">Ver</button><button class="wr-toast-x">×</button>`;
+    document.body.appendChild(box);
+    const quitar = ()=>{ box.classList.remove('show'); setTimeout(()=>box.remove(), 400); };
+    box.querySelector('.wr-toast-b').onclick = ()=>{ quitar(); openWrapped(prev); };
+    box.querySelector('.wr-toast-x').onclick = quitar;
+    requestAnimationFrame(()=>box.classList.add('show'));
+    setTimeout(quitar, 15000);
+  } catch(e){}
+}
+(function(){
+  const st = document.getElementById('wr-stage');
+  if(!st) return;
+  st.addEventListener('pointerdown', _wrDown);
+  st.addEventListener('pointerup', _wrUp);
+  st.addEventListener('pointercancel', _wrUp);
+  st.addEventListener('pointerleave', _wrUp);
+  st.addEventListener('contextmenu', e=>e.preventDefault());
+})();
 
 function entryHTML(e, mi){
   const color = e.type==='income'?'var(--green)':'var(--red)';
@@ -2381,9 +2516,13 @@ function showInner(mi, which){
 // CALENDARIO DE GASTOS — solo lee los movimientos, no guarda ni cambia nada
 // ══════════════════════════════════════════════════════════════════════════
 const _calSel = {};
-function _calEntries(mi){
-  const md = data[mi];
+function _calEntries(mi, src){
+  const md = (src || data)[mi];
   return (md && Array.isArray(md.entries)) ? md.entries : [];
+}
+// Año de los datos que se están mostrando (el presente, o el año que abriste en el visor)
+function _curDataYear(){
+  return (typeof viewerActive !== 'undefined' && viewerActive && viewerYear) ? Number(viewerYear) : CURRENT_YEAR;
 }
 function _catLabel(v, type){
   const list = type==='income' ? INCOME_CATS : EXPENSE_CATS;
@@ -2394,11 +2533,11 @@ function _fmtShort(n){
   if(n >= 1000) return '$' + (n/1000).toFixed(n >= 10000 ? 0 : 1).replace('.0','') + 'k';
   return '$' + Math.round(n);
 }
-function _calDays(mi){
-  const y = CURRENT_YEAR;
+function _calDays(mi, src, year){
+  const y = year || _curDataYear();
   const days = new Date(y, mi+1, 0).getDate();
   const gasto = Array(days+1).fill(0), ing = Array(days+1).fill(0);
-  _calEntries(mi).forEach(e=>{
+  _calEntries(mi, src).forEach(e=>{
     const d = parseDayFromDateStr(e.date);
     if(!d || d > days) return;
     const a = Number(e.amount) || 0;
@@ -2419,7 +2558,7 @@ function renderCalendar(mi){
   const max = Math.max(0, ...gasto);
   const total = gasto.reduce((s,v)=>s+v, 0);
 
-  if(_calSel[mi] === undefined) _calSel[mi] = lastDay && lastDay < days+1 && mi===new Date().getMonth() ? lastDay : null;
+  if(_calSel[mi] === undefined) _calSel[mi] = lastDay && y===new Date().getFullYear() && mi===new Date().getMonth() ? lastDay : null;
 
   let cells = '';
   for(let i=0;i<firstDow;i++) cells += '<div class="cal-cell empty-c"></div>';
@@ -2473,7 +2612,7 @@ function _renderCalDay(mi){
   const d = _calSel[mi];
   if(!d){ box.innerHTML = '<div class="cal-hint">Toca un día para ver qué compraste.</div>'; return; }
   const list = _calEntries(mi).filter(e=>parseDayFromDateStr(e.date)===d);
-  const dow = new Date(CURRENT_YEAR, mi, d).toLocaleDateString('es-DO',{weekday:'long'});
+  const dow = new Date(_curDataYear(), mi, d).toLocaleDateString('es-DO',{weekday:'long'});
   const g = list.filter(e=>e.type==='expense').reduce((s,e)=>s+(Number(e.amount)||0),0);
   const i = list.filter(e=>e.type==='income').reduce((s,e)=>s+(Number(e.amount)||0),0);
   let sub = [];
@@ -6385,6 +6524,8 @@ auth.onAuthStateChanged(async user => {
     buildSkeleton();
     renderAll();
     dismissSplash();
+    // ► Aviso de "tu resumen del año pasado está listo" (solo en enero, una vez)
+    setTimeout(()=>{ try { avisoResumenListo(); } catch(e){} }, 2500);
     // ► Cargar tasa de cambio peso→dólar (en segundo plano, no bloquea)
     initExchangeRate();
   } else {
