@@ -1055,12 +1055,11 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;box-sizing:border-box;width:100%">
     <div>
       <div style="font-size:13px;color:var(--text);font-weight:500">Acciones del año</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px">Exporta un resumen o restablece al terminar el año.</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">Exporta un resumen o guárdalo en el historial. El cambio de año es automático.</div>
     </div>
     <div style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;position:relative" class="action-buttons">
       <button onclick="toggleSaveMenu(event)" id="save-menu-btn" style="padding:8px 16px;background:var(--gldim);border:1px solid var(--gold);border-radius:var(--rs);color:var(--gold);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .18s" onmouseover="this.style.background='rgba(232,185,106,.2)'" onmouseout="this.style.background='var(--gldim)'">💾 Guardar / Exportar ▾</button>
       <button onclick="toggleHistory()" style="padding:8px 16px;background:transparent;border:1px solid var(--border2);border-radius:var(--rs);color:var(--muted2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .18s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted2)'">🕓 Historial</button>
-      <button onclick="resetYear()" style="padding:8px 16px;background:var(--rdim);border:1px solid var(--red);border-radius:var(--rs);color:var(--red);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .18s" onmouseover="this.style.background='rgba(240,96,80,.2)'" onmouseout="this.style.background='var(--rdim)'">🗑️ Restablecer año</button>
 
       <div id="save-menu" style="display:none;position:absolute;top:calc(100% + 6px);left:0;background:var(--card2);border:1px solid var(--border2);border-radius:var(--rs);padding:6px;z-index:200;min-width:240px;box-shadow:0 8px 24px rgba(0,0,0,0.4)">
         <button onclick="menuExportPDF()" class="save-menu-item">📄 <div><div style="font-weight:500">Exportar como PDF</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Descarga un reporte profesional</div></div></button>
@@ -1116,7 +1115,7 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 <div id="panel-since" style="display:none">
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1.5rem">
     <div style="font-size:13px;color:var(--text);font-weight:500">Acumulado histórico</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:2px">Suma de todos tus años: el año actual más los años guardados en el historial. Esto no se borra al restablecer un año.</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:2px">Suma de todos tus años: el año actual más los años guardados en el historial. Esto no se borra al cambiar de año.</div>
   </div>
 
   <div id="since-totals" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.5rem"></div>
@@ -1880,7 +1879,11 @@ function renderResumenes(){
   }).join('');
 }
 // En enero, la primera vez que abres la app, avisa que el resumen del año pasado está listo.
-function avisoResumenListo(){
+function avisoResumenListo(intento){
+  // Si todavía está el aviso de "Se archivó el año", esperar a que se cierre
+  if(document.getElementById('archivo-aviso') && (intento||0) < 20){
+    setTimeout(()=>avisoResumenListo((intento||0)+1), 2000); return;
+  }
   try {
     const prev = CURRENT_YEAR - 1;
     if(new Date().getMonth() !== 0) return;
@@ -2536,7 +2539,10 @@ function _calEntries(mi, src){
   return (md && Array.isArray(md.entries)) ? md.entries : [];
 }
 // Año de los datos que se están mostrando (el presente, o el año que abriste en el visor)
+// _yearCtx lo usa el PDF de un año del historial mientras se genera.
+let _yearCtx = null;
 function _curDataYear(){
+  if(_yearCtx) return _yearCtx;
   return (typeof viewerActive !== 'undefined' && viewerActive && viewerYear) ? Number(viewerYear) : CURRENT_YEAR;
 }
 function _catLabel(v, type){
@@ -3935,9 +3941,60 @@ function toggleDebitoMonths(id){
   btn.textContent = visible ? '📅 Ver desglose por mes ▾' : '📅 Ocultar desglose ▴';
 }
 
+// Cuentas de débito cuando estás viendo un año del Historial (solo lectura).
+// Usa las cuentas reales del presente y lee lo que guardaron de ese año
+// (histAnios). No cambia ni guarda nada.
+function renderDebitoVisor(wrap){
+  const tw = document.getElementById('debito-transfer-box');
+  if(tw) tw.style.display = 'none';
+  const cuentas = (_viewerBackup && Array.isArray(_viewerBackup.tarjetasDebito)) ? _viewerBackup.tarjetasDebito : [];
+  const yr = Number(viewerYear);
+  if(!cuentas.length){
+    wrap.innerHTML = `<div class="empty">No tenías cuentas de débito en ${yr}.</div>`;
+    return;
+  }
+  const guardadas = tarjetasDebito;
+  let html = '';
+  try {
+    tarjetasDebito = cuentas;   // solo para leer, se restaura abajo
+    html = cuentas.map(tj=>{
+      const info  = debitoInfoAnio(tj, yr);
+      const meses = (debitoSpentByMonth(tj, yr) || []).filter(m=>(m.gastos||0)>0 || (m.ingresos||0)>0);
+      const dig = tj.digitos ? `•••• ${esc(tj.digitos)}` : '—';
+      const filas = meses.length ? meses.map(m=>`
+        <div class="cc-month-row" style="grid-template-columns:1fr auto auto">
+          <div class="cc-month-name">${esc(m.mName)}</div>
+          <div class="cc-month-amt" style="color:var(--red)">−${fmt(m.gastos||0)}</div>
+          <div class="cc-month-amt" style="color:var(--green)">+${fmt(m.ingresos||0)}</div>
+        </div>`).join('')
+        : `<div style="font-size:12px;color:var(--muted);padding:6px 2px">Sin movimientos en ${yr}.</div>`;
+      return `<div class="cc-card">
+        <div class="cc-card-head"><div>
+          <div class="cc-card-title">💳 ${esc(tj.nombre)}</div>
+          <div class="cc-card-sub">${dig}</div>
+        </div></div>
+        <div class="cc-stats">
+          <div class="cc-stat"><div class="cc-stat-lbl">Gastado (${yr})</div><div class="cc-stat-val" style="color:var(--red)">${fmt(info.gastos||0)}</div></div>
+          <div class="cc-stat"><div class="cc-stat-lbl">Ingresado (${yr})</div><div class="cc-stat-val" style="color:var(--green)">${fmt(info.ingresos||0)}</div></div>
+        </div>
+        <div class="sec-lbl" style="margin:.85rem 0 .4rem">Desglose de ${yr} por mes</div>
+        <div class="cc-months" style="display:block">${filas}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px">El saldo de hoy lo ves al volver al año presente.</div>
+      </div>`;
+    }).join('');
+  } catch(e){
+    console.error('Error mostrando débito del historial:', e);
+    html = `<div class="empty">No se pudo mostrar el débito de ${yr}.</div>`;
+  } finally {
+    tarjetasDebito = guardadas;
+  }
+  wrap.innerHTML = html;
+}
+
 function renderDebito(){
   const wrap = document.getElementById('debito-cards');
   if(!wrap) return;
+  if(typeof viewerActive !== 'undefined' && viewerActive){ renderDebitoVisor(wrap); return; }
   if(!tarjetasDebito.length){
     wrap.innerHTML = '<div class="empty">Aún no has agregado cuentas. Crea una y recibirá todo tu capital actual.</div>';
     const tw = document.getElementById('debito-transfer-box');
@@ -4106,11 +4163,11 @@ function cardYears(tj){
     Object.keys(tj.aniosMeses).forEach(y=>set.add(parseInt(y)));
   }
   if(!tj || tj.cerrada !== true){
-    set.add(CURRENT_YEAR);
+    set.add(_curDataYear());
   }
   const arr = [...set].filter(y=>!isNaN(y)).sort((a,b)=>a-b);
   // Si quedó vacía (tarjeta cerrada sin años guardados), mostrar al menos el actual
-  return arr.length ? arr : [CURRENT_YEAR];
+  return arr.length ? arr : [_curDataYear()];
 }
 
 // Desglose mes a mes de una tarjeta para un año dado: [{mi,mName,gastado}]
@@ -4118,10 +4175,11 @@ function cardYears(tj){
 // - Años pasados: leído de aniosMeses[año] (fotografía guardada al cerrar el año).
 function cardSpentByMonth(arg, year){
   const tj = _resolveCard(arg);
-  const yr = year || CURRENT_YEAR;
+  const cy = _curDataYear();
+  const yr = year || cy;
   const out = [];
 
-  if(yr !== CURRENT_YEAR){
+  if(yr !== cy){
     const guardado = (tj.aniosMeses && tj.aniosMeses[yr]) || {};
     MONTHS.forEach((mName,mi)=>{
       out.push({ mi, mName, gastado: parseFloat(guardado[mi]||0) });
@@ -4428,7 +4486,7 @@ function renderCards(){
           <div class="cc-stat-val" style="color:var(--muted2)">${fmt(inicio)}</div>
         </div>
         <div class="cc-stat">
-          <div class="cc-stat-lbl">Gastado (${CURRENT_YEAR})</div>
+          <div class="cc-stat-lbl">Gastado (${_curDataYear()})</div>
           <div class="cc-stat-val" style="color:var(--red)">${fmt(gastado)}</div>
         </div>
         <div class="cc-stat">
@@ -4444,7 +4502,7 @@ function renderCards(){
       <button class="cc-toggle" style="margin-top:.85rem" onclick="toggleCardMonths(${idx})" id="cc-toggle-${idx}">📅 Ver desglose por mes ▾</button>
       <div class="cc-months" id="cc-months-${idx}" style="display:none">
         ${(()=>{
-          const mesesActuales = cardSpentByMonth(tj, CURRENT_YEAR).filter(m=>m.gastado>0);
+          const mesesActuales = cardSpentByMonth(tj, _curDataYear()).filter(m=>m.gastado>0);
           return mesesActuales.length
             ? mesesActuales.map(m=>{
                 const mUso = inicio>0 ? (m.gastado/inicio*100) : 0;
@@ -4456,7 +4514,7 @@ function renderCards(){
                   <div class="cc-month-pct" style="color:${mColor}">${mUso.toFixed(2)}%</div>
                 </div>`;
               }).join('')
-            : `<div style="font-size:12px;color:var(--muted);padding:6px 2px">Sin gastos en ${CURRENT_YEAR} todavía.</div>`;
+            : `<div style="font-size:12px;color:var(--muted);padding:6px 2px">Sin gastos en ${_curDataYear()} todavía.</div>`;
         })()}
       </div>
       <button class="cc-toggle" onclick="toggleCardHistorial(${idx})" id="cc-hist-toggle-${idx}">🗂️ Ver historial completo</button>
@@ -4908,7 +4966,7 @@ async function rolloverDebitoIfNewYear(){
 // Devuelve el gasto total del año pasado para una tarjeta (o null si no hay)
 function cardLastYearTotal(tj){
   if(!tj) return null;
-  const prev = CURRENT_YEAR - 1;
+  const prev = _curDataYear() - 1;
   if(tj.aniosMeses && tj.aniosMeses[prev]){
     let t = 0;
     Object.values(tj.aniosMeses[prev]).forEach(v=>{ t += (parseFloat(v)||0); });
@@ -4995,7 +5053,7 @@ async function renderHistoryList(){
   el.innerHTML = '<div style="font-size:12px;color:var(--muted)">Cargando…</div>';
   try {
     const snap = await db.collection('users').doc(currentUser.uid).collection('historial').orderBy('year','desc').get();
-    if(snap.empty){ el.innerHTML = '<div style="font-size:12px;color:var(--muted)">Sin historial aún. Usa "📦 Guardar año" antes de restablecer.</div>'; return; }
+    if(snap.empty){ el.innerHTML = '<div style="font-size:12px;color:var(--muted)">Sin historial aún. Cada año se guarda aquí solo en enero.</div>'; return; }
     window._historyCache = {};
     window._historyCardsCache = {};
     el.innerHTML = snap.docs.map(doc=>{
@@ -5140,6 +5198,8 @@ async function deleteYearFromHistory(year){
 }
 
 function resetYear(){
+  // Desactivado por seguridad: el cambio de año es automático y nada se borra.
+  return;
   if(typeof viewerActive !== 'undefined' && viewerActive) return;
   const confirmed = confirm('⚠️ ¿Estás seguro?\n\nEsto borrará TODOS los movimientos de los 12 meses de forma permanente.\n\nTus tarjetas y su historial NO se borran.\n\nEsta acción no se puede deshacer.');
   if(!confirmed) return;
@@ -5837,7 +5897,15 @@ async function menuSaveBoth(){
   } catch(e){ alert('Error: ' + e.message); }
 }
 
+// Envoltura de seguridad: pase lo que pase (por ejemplo, si el navegador
+// bloquea la ventana del PDF), los datos del año presente siempre se restauran.
 function exportPDFPro(historicalData, historicalYear, historicalCards){
+  const _datosPresente = data;
+  try { return _exportPDFProInner(historicalData, historicalYear, historicalCards); }
+  catch(e){ console.error('Error generando PDF:', e); alert('No se pudo abrir el PDF. Si Safari bloqueó la ventana, permite las ventanas emergentes e intenta de nuevo.'); }
+  finally { data = _datosPresente; _yearCtx = null; }
+}
+function _exportPDFProInner(historicalData, historicalYear, historicalCards){
   const isHistorical = !!historicalData;
   const originalData = data;
   if(isHistorical) data = historicalData;
@@ -5845,6 +5913,7 @@ function exportPDFPro(historicalData, historicalYear, historicalCards){
   const pdfTarjetas = isHistorical ? (historicalCards || []) : tarjetas;
 
   const year = historicalYear || CURRENT_YEAR;
+  if(isHistorical) _yearCtx = Number(historicalYear);
   const userName = (currentUser && (currentUser.displayName || currentUser.email)) || 'Usuario';
   const {yInc, yExp, yNet, yCap} = yearTotals();
   const savPctYear = yInc > 0 ? Math.round(yNet / yInc * 100) : 0;
@@ -6347,7 +6416,7 @@ function exportPDFPro(historicalData, historicalYear, historicalCards){
     pdfTarjetas.forEach(tj=>{
       const inicio  = tj.inicio || 0;
       const puntos = (tj.puntos!==undefined && tj.puntos!=='') ? tj.puntos : '—';
-      const gastadoActual = cardSpentForYear(tj, CURRENT_YEAR);
+      const gastadoActual = cardSpentForYear(tj, year);
       const usoAct = inicio>0 ? (gastadoActual/inicio*100) : 0;
       const usoCls = usoAct>=100 ? 'neg' : usoAct>=75 ? 'gold' : 'pos';
       html += `<div class="month-block">
@@ -6356,8 +6425,8 @@ function exportPDFPro(historicalData, historicalYear, historicalCards){
         </div>
         <div class="kpi-grid">
           <div class="kpi"><div class="kpi-lbl">Línea / Inicio</div><div class="kpi-val navy">${fmt(inicio)}</div></div>
-          <div class="kpi"><div class="kpi-lbl">Gastado ${CURRENT_YEAR}</div><div class="kpi-val neg">${fmt(gastadoActual)}</div></div>
-          <div class="kpi"><div class="kpi-lbl">Uso ${CURRENT_YEAR}</div><div class="kpi-val ${usoCls}">${usoAct.toFixed(2)}%</div></div>
+          <div class="kpi"><div class="kpi-lbl">Gastado ${year}</div><div class="kpi-val neg">${fmt(gastadoActual)}</div></div>
+          <div class="kpi"><div class="kpi-lbl">Uso ${year}</div><div class="kpi-val ${usoCls}">${usoAct.toFixed(2)}%</div></div>
           <div class="kpi"><div class="kpi-lbl">Núm. de tarjeta</div><div class="kpi-val gold">${puntos==='—' ? '—' : '•••• '+esc(String(puntos))}</div></div>
         </div>`;
       const years = cardYears(tj);
@@ -6461,6 +6530,7 @@ function exportPDFPro(historicalData, historicalYear, historicalCards){
   setTimeout(()=>win.print(), 700);
 
   if(isHistorical) data = originalData;
+  _yearCtx = null;
 }
 const _origResetYear = resetYear;
 window.resetYear = function(){
@@ -6693,7 +6763,12 @@ async function autoArchivePastYears(){
         if(yearNum < CURRENT_YEAR){
           const finanzasObj = d[key];
           if(finanzasObj && typeof finanzasObj === 'object' && Object.keys(finanzasObj).length > 0){
-            yearsToArchive.push({ year: yearNum, data: finanzasObj, tarjetas: d[`tarjetas_${yearNum}`] || [] });
+            // Para el año que acaba de terminar, usar las tarjetas actuales (tarjetas_v2):
+            // aquí todavía no se ha hecho el cierre de tarjetas, así que tienen todo ese año.
+            const tjAnio = (yearNum === CURRENT_YEAR - 1 && Array.isArray(d[TARJETAS_KEY_V2]))
+              ? d[TARJETAS_KEY_V2]
+              : (d[`tarjetas_${yearNum}`] || []);
+            yearsToArchive.push({ year: yearNum, data: finanzasObj, tarjetas: tjAnio });
           }
         }
       }
@@ -6756,7 +6831,7 @@ function mostrarAvisoArchivado(year){
     border:1px solid var(--gold); border-radius:14px;
     padding:16px 20px; z-index:9200;
     box-shadow:0 10px 34px rgba(0,0,0,0.4), 0 0 0 1px rgba(232,185,106,0.1);
-    display:flex; align-items:center; gap:16px; max-width:92%;
+    display:flex; align-items:center; gap:16px; width:min(92%, 480px); box-sizing:border-box; flex-wrap:wrap;
     opacity:0; transition:all .45s cubic-bezier(.34,1.4,.64,1);
     font-family:'DM Sans',sans-serif;
   `;
