@@ -516,6 +516,7 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 
 /* Etiquetas en mayúsculas más espaciadas (estilo revista de lujo) */
 .ycard-lbl  { font-size:9.5px; letter-spacing:.16em; margin-bottom:13px; }
+@media(max-width:600px){ .ycard.clickable .ycard-lbl { white-space:nowrap; letter-spacing:.06em; font-size:10.5px; } }
 .mcard-lbl  { font-size:9px;  letter-spacing:.14em; margin-bottom:8px; }
 .cat-block h3 { font-size:9px; letter-spacing:.14em; margin-bottom:1.1rem; }
 .sec-lbl    { font-size:9px;  letter-spacing:.16em; margin-bottom:12px; }
@@ -711,8 +712,9 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 .btn-google img { width:20px; height:20px; }
 .user-badge { display:flex; align-items:center; gap:8px; }
 .user-badge span { font-size:12px; color:var(--muted); }
+@media(max-width:600px){ .user-badge { flex-direction:column; align-items:flex-end; gap:5px; } }
 .btn-signout { background:none; border:1px solid var(--border); border-radius:999px;
-  color:var(--muted); font-size:11px; padding:4px 10px; cursor:pointer; transition:all .15s; }
+  color:var(--muted); font-size:11px; padding:4px 10px; cursor:pointer; transition:all .15s; white-space:nowrap; flex-shrink:0; }
 .btn-signout:hover { border-color:var(--red); color:var(--red); }
 #save-indicator { position:fixed; bottom:1rem; right:1rem; font-size:11px;
   color:var(--muted); background:var(--card); border:1px solid var(--border);
@@ -1012,7 +1014,7 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
   </div>
   <div class="user-badge">
     <span id="user-name"></span>
-    <button class="btn-signout" onclick="signOut()">Salir</button>
+    <button class="btn-signout" onclick="signOut()">Cerrar sesión</button>
   </div>
 </header>
 
@@ -1029,8 +1031,8 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 </div>
 
 <div class="year-bar">
-  <div class="ycard inc clickable" id="ycard-inc" onclick="toggleCurrency('inc')"><div class="ycard-lbl">Total ganado</div><span class="ycard-cur" id="cur-inc">DOP</span><div class="ycard-val" id="y-inc">$0.00</div></div>
-  <div class="ycard exp clickable" id="ycard-exp" onclick="toggleCurrency('exp')"><div class="ycard-lbl">Total gastado</div><span class="ycard-cur" id="cur-exp">DOP</span><div class="ycard-val" id="y-exp">$0.00</div></div>
+  <div class="ycard inc clickable" id="ycard-inc" onclick="toggleCurrency('inc')"><div class="ycard-lbl">Total ingresos</div><span class="ycard-cur" id="cur-inc">DOP</span><div class="ycard-val" id="y-inc">$0.00</div></div>
+  <div class="ycard exp clickable" id="ycard-exp" onclick="toggleCurrency('exp')"><div class="ycard-lbl">Total gastos</div><span class="ycard-cur" id="cur-exp">DOP</span><div class="ycard-val" id="y-exp">$0.00</div></div>
   <div class="ycard net clickable" onclick="openAhorroPanel()"><div class="ycard-lbl">% Ahorrado</div><div class="ycard-val" id="y-net">—</div><div class="ycard-hint" id="y-net-hint">mes actual</div></div>
   <div class="ycard sav clickable" id="ycard-cap" onclick="toggleCurrency('cap')"><div class="ycard-lbl">Capital actual</div><span class="ycard-cur" id="cur-cap">DOP</span><div class="ycard-val" id="y-cap">$0.00</div></div>
 </div>
@@ -1080,11 +1082,11 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 
   <div class="cats-grid" style="margin-bottom:1.5rem">
     <div class="cat-block">
-      <h3>En qué he gastado más (todo el año)</h3>
+      <h3>Gastos por categoría (todo el año)</h3>
       <div id="annual-exp-bars"><div style="font-size:12px;color:var(--muted);padding:4px 0">Sin datos</div></div>
     </div>
     <div class="cat-block">
-      <h3>De dónde he ganado más (todo el año)</h3>
+      <h3>Ingresos por categoría (todo el año)</h3>
       <div id="annual-inc-bars"><div style="font-size:12px;color:var(--muted);padding:4px 0">Sin datos</div></div>
     </div>
   </div>
@@ -1094,7 +1096,7 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
   </div>
 
   <div id="annual-trabajos-wrap" style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:1.5rem;display:none">
-    <div class="sec-lbl" style="margin-bottom:1rem">💼 Ganado por trabajo (acumulado)</div>
+    <div class="sec-lbl" style="margin-bottom:1rem">💼 Ingresos por trabajo (acumulado)</div>
     <div id="annual-trabajos-bars"></div>
   </div>
 
@@ -1122,11 +1124,11 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 
   <div class="cats-grid" style="margin-bottom:1.5rem">
     <div class="cat-block">
-      <h3 id="since-exp-title">En qué he gastado más</h3>
+      <h3 id="since-exp-title">Gastos por categoría</h3>
       <div id="since-exp-bars"><div style="font-size:12px;color:var(--muted);padding:4px 0">Sin datos</div></div>
     </div>
     <div class="cat-block">
-      <h3 id="since-inc-title">De dónde he ganado más</h3>
+      <h3 id="since-inc-title">Ingresos por categoría</h3>
       <div id="since-inc-bars"><div style="font-size:12px;color:var(--muted);padding:4px 0">Sin datos</div></div>
     </div>
   </div>
@@ -1573,9 +1575,9 @@ function openAhorroPanel(){
     const exacto = queda / tCur.inc * 100;
     const pct = Math.round(exacto);
     h += `<div class="ah-box"><div class="ah-tit">${MONTHS[mi]}</div>
-      ${row('Ganaste', fmt(tCur.inc), 'var(--green)')}
-      ${row('Gastaste', fmt(tCur.exp), 'var(--red)')}
-      <div class="ah-row tot"><span>Te quedó</span><span style="color:${queda>=0?'var(--green)':'var(--red)'}">${fmtSigned(queda)}</span></div></div>`;
+      ${row('Ingresos', fmt(tCur.inc), 'var(--green)')}
+      ${row('Gastos', fmt(tCur.exp), 'var(--red)')}
+      <div class="ah-row tot"><span>Ahorro</span><span style="color:${queda>=0?'var(--green)':'var(--red)'}">${fmtSigned(queda)}</span></div></div>`;
     let txt;
     if(queda > 0){
       txt = `De cada $100 que ganaste te quedaron unos <b>$${pct}</b>. Por eso llevas <b>${pct}%</b> ahorrado en ${MONTHS[mi]}.`;
@@ -1593,9 +1595,9 @@ function openAhorroPanel(){
       const diff = pct - prevPct;
       const qPrev = tPrev.inc - tPrev.exp;
       h += `<div class="ah-box"><div class="ah-tit">Comparado con ${_ant.nombre}</div>
-        ${row('Ganaste', fmt(tPrev.inc), 'var(--green)')}
-        ${row('Gastaste', fmt(tPrev.exp), 'var(--red)')}
-        <div class="ah-row tot"><span>Te quedó</span><span style="color:${qPrev>=0?'var(--green)':'var(--red)'}">${fmtSigned(qPrev)} (${prevPct}%)</span></div>
+        ${row('Ingresos', fmt(tPrev.inc), 'var(--green)')}
+        ${row('Gastos', fmt(tPrev.exp), 'var(--red)')}
+        <div class="ah-row tot"><span>Ahorro</span><span style="color:${qPrev>=0?'var(--green)':'var(--red)'}">${fmtSigned(qPrev)} (${prevPct}%)</span></div>
         <div class="ah-txt" style="margin-top:8px">`;
       if(diff > 0)      h += `En ${_ant.nombre} tu ahorro fue <b>${prevPct}%</b> y ahora va en <b>${pct}%</b>. Por eso dice <b style="color:var(--green)">▲ +${diff}%</b>: vas mejor que el mes pasado.`;
       else if(diff < 0) h += `En ${_ant.nombre} tu ahorro fue <b>${prevPct}%</b> y ahora va en <b>${pct}%</b>. Por eso dice <b style="color:var(--red)">▼ ${diff}%</b>: vas peor que el mes pasado.`;
@@ -1982,11 +1984,11 @@ function renderMonth(mi){
         </div>
       </div>
       <div class="mcard">
-        <div class="mcard-lbl">Ganado</div>
+        <div class="mcard-lbl">Ingresos</div>
         <div class="mcard-val" style="color:var(--green)"><span class="mcard-num" data-val="${t.inc}">${fmt(t.inc)}</span></div>
       </div>
       <div class="mcard">
-        <div class="mcard-lbl">Gastado</div>
+        <div class="mcard-lbl">Gastos</div>
         <div class="mcard-val" style="color:var(--red)"><span class="mcard-num" data-val="${t.exp}">${fmt(t.exp)}</span></div>
       </div>
       <div class="mcard">
@@ -1999,8 +2001,8 @@ function renderMonth(mi){
 
     <div class="form-wrap">
       <div class="type-row">
-        <button class="tbtn ae" id="tbtn-exp-${mi}" onclick="setType(${mi},'expense')">— Gasté</button>
-        <button class="tbtn"    id="tbtn-inc-${mi}" onclick="setType(${mi},'income')">+ Gané</button>
+        <button class="tbtn ae" id="tbtn-exp-${mi}" onclick="setType(${mi},'expense')">— Gasto</button>
+        <button class="tbtn"    id="tbtn-inc-${mi}" onclick="setType(${mi},'income')">+ Ingreso</button>
       </div>
       <div class="finputs">
         <div>
@@ -2069,12 +2071,12 @@ function renderMonth(mi){
     <div id="inner-cats-${mi}" style="display:none">
       <div class="cats-grid">
         <div class="cat-block">
-          <h3>En qué gasté más</h3>
+          <h3>Gastos por categoría</h3>
           ${donutSVGLive(expData)}
           ${barsHTML(expData,'var(--red)')}
         </div>
         <div class="cat-block">
-          <h3>De dónde gané</h3>
+          <h3>Ingresos por categoría</h3>
           ${donutSVGLive(incData)}
           ${barsHTML(incData,'var(--green)')}
         </div>
@@ -3289,14 +3291,14 @@ function renderSince(){
 
   const expTitle = document.getElementById('since-exp-title');
   const incTitle = document.getElementById('since-inc-title');
-  if(expTitle) expTitle.textContent = `En qué he gastado más (${rango})`;
-  if(incTitle) incTitle.textContent = `De dónde he ganado más (${rango})`;
+  if(expTitle) expTitle.textContent = `Gastos por categoría (${rango})`;
+  if(incTitle) incTitle.textContent = `Ingresos por categoría (${rango})`;
 
   const totEl = document.getElementById('since-totals');
   if(totEl){
     totEl.innerHTML = `
-      <div class="ycard inc"><div class="ycard-lbl">Total ganado (histórico)</div><div class="ycard-val">${fmt(totalInc)}</div></div>
-      <div class="ycard exp"><div class="ycard-lbl">Total gastado (histórico)</div><div class="ycard-val">${fmt(totalExp)}</div></div>
+      <div class="ycard inc"><div class="ycard-lbl">Total ingresos (histórico)</div><div class="ycard-val">${fmt(totalInc)}</div></div>
+      <div class="ycard exp"><div class="ycard-lbl">Total gastos (histórico)</div><div class="ycard-val">${fmt(totalExp)}</div></div>
     `;
   }
 
@@ -4347,7 +4349,7 @@ function renderTrabajos(){
       <div class="cc-head">
         <div>
           <div class="cc-name">💼 ${esc(tr.nombre)}</div>
-          <div class="cc-sub">Total ganado</div>
+          <div class="cc-sub">Total ingresos</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <button class="cc-del" onclick="delTrabajo(${idx})" title="Eliminar trabajo">×</button>
@@ -7087,6 +7089,7 @@ function dismissSplash(){
 </script>
 </body>
 </html>
+
 
 
 
