@@ -1021,6 +1021,33 @@ body.viewer-mode .eswipe-act { display:none !important; }
 .btn-add.added-pulse { animation:addedPulse .7s ease-out; border-color:var(--green) !important; color:var(--green) !important; }
 @media (prefers-reduced-motion: reduce){ .btn-add.added-pulse{ animation:none; } body.touchui .erow{ transition:none; } }
 
+
+/* ═══ Mejoras (oct 2026, parte 2): titular y vence, animación de tarjetas, mini gráfica, flecha de tasa ═══ */
+.pl-holder { font-family:var(--num); font-weight:600; font-size:12px; letter-spacing:.12em; text-transform:uppercase; opacity:.92; margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pl-right { display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex-shrink:0; }
+.pl-vence { background:none; border:0; padding:0; color:#fff; font-family:var(--num); font-weight:600; font-size:12px; letter-spacing:.06em; cursor:pointer; display:flex; flex-direction:column; align-items:flex-end; line-height:1.1; }
+.pl-vence span { font-size:7.5px; letter-spacing:.16em; opacity:.7; }
+body.viewer-mode .pl-vence { pointer-events:none; }
+
+@keyframes cardIn { from { opacity:0; transform:translateY(16px) scale(.985); } to { opacity:1; transform:none; } }
+.cards-anim .cards-grid > * { animation:cardIn .45s cubic-bezier(.2,.8,.2,1) both; }
+.cards-anim .cards-grid > :nth-child(2) { animation-delay:.07s; }
+.cards-anim .cards-grid > :nth-child(3) { animation-delay:.14s; }
+.cards-anim .cards-grid > :nth-child(4) { animation-delay:.21s; }
+.cards-anim .cards-grid > :nth-child(n+5) { animation-delay:.28s; }
+@media (prefers-reduced-motion: reduce){ .cards-anim .cards-grid > * { animation:none; } }
+
+.mini-chart { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:14px 16px 10px; margin:-1rem 0 1.6rem; }
+.mini-chart:empty { display:none; }
+.mc-head { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px; flex-wrap:wrap; }
+.mc-title { font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+.mc-legend { display:flex; gap:12px; font-size:11px; color:var(--muted2); }
+.mc-legend i { display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:5px; vertical-align:0; }
+.mini-chart svg { display:block; width:100%; height:auto; }
+
+.rate-arrow { margin-left:6px; font-weight:600; }
+.rate-arrow.up { color:var(--green); } .rate-arrow.down { color:var(--red); }
+
 </style>
 </head>
 <body>
@@ -1117,6 +1144,8 @@ body.viewer-mode .eswipe-act { display:none !important; }
   <div class="ycard net clickable" onclick="openAhorroPanel()"><div class="ycard-lbl">% Ahorrado</div><div class="ycard-val" id="y-net">—</div><div class="ycard-hint" id="y-net-hint">mes actual</div></div>
   <div class="ycard sav clickable" id="ycard-cap" onclick="toggleCurrency('cap')"><div class="ycard-lbl">Capital actual</div><span class="ycard-cur" id="cur-cap">DOP</span><div class="ycard-val" id="y-cap">$0.00</div></div>
 </div>
+
+<div class="mini-chart" id="mini-chart"></div>
 
 <div class="insights-bar" id="insights-bar"></div>
 
@@ -1244,6 +1273,11 @@ body.viewer-mode .eswipe-act { display:none !important; }
           <label>Últimos 4 dígitos</label>
           <input type="text" id="cc-new-last4" placeholder="4521" inputmode="numeric" maxlength="4"
             oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')addCard()" />
+        </div>
+        <div>
+          <label>Vence (opcional)</label>
+          <input type="text" id="cc-new-exp" placeholder="MM/AA" inputmode="numeric" maxlength="5"
+            oninput="this.value=_formatoVence(this.value)" onkeydown="if(event.key==='Enter')addCard()" />
         </div>
       </div>
       <button class="btn-add" onclick="addCard()">Agregar tarjeta</button>
@@ -4575,8 +4609,8 @@ function renderCards(){
         </div>
       </div>
       ${plasticHTML({ nombre: tj.nombre, digitos: puntos==='—' ? '' : puntos, tipo:'Crédito',
-          lbl:`Gastado ${_curDataYear()}`, big: fmt(gastado),
-          sub: inicio>0 ? `de ${fmt(inicio)} · ${uso.toFixed(0)}% usado` : '',
+          holder: _titularTarjeta(), lbl:'Límite', big: inicio>0 ? fmt(inicio) : '—',
+          vence: tj.vence || '', venceIdx: idx,
           pct: inicio>0 ? uso : null, barColor: usoColor, closed: cerrada })}
       <div class="cc-stats">
         <div class="cc-stat">
@@ -4741,6 +4775,11 @@ function addCard(){
     puntos: last4,
     desde: new Date().toLocaleDateString('es-DO',{month:'long',year:'numeric'})
   });
+  // Vence (opcional): solo se guarda si es una fecha MM/AA válida
+  const expEl = document.getElementById('cc-new-exp');
+  const exp = expEl ? expEl.value.trim() : '';
+  if(_venceValido(exp)) tarjetas[tarjetas.length-1].vence = exp;
+  if(expEl) expEl.value = '';
   nameEl.value = '';
   startEl.value = '';
   last4El.value = '';
@@ -7028,6 +7067,7 @@ function updateRateBadge(){
     el.innerHTML = `1 USD = <b>${usdRate.toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2})}</b>`;
     el.style.display = '';
     try { refreshUsdLines(); } catch(e){}
+    try { el.innerHTML += _flechaTasa(); } catch(e){}
   } else {
     el.style.display = 'none';
   }
@@ -7074,8 +7114,14 @@ function plasticHTML(o){
     <div class="pl-chip"></div>
     <div class="pl-num">•••• •••• •••• ${dig}</div>
     <div class="pl-bottom">
-      <div style="min-width:0"><div class="pl-lbl">${o.lbl}</div><div class="pl-big">${o.big}</div>${o.sub?`<div class="pl-sub">${o.sub}</div>`:''}</div>
-      ${_plasticBrand(o.nombre)}
+      <div style="min-width:0">
+        ${o.holder ? `<div class="pl-holder">${esc(o.holder)}</div>` : ''}
+        <div class="pl-lbl">${o.lbl}</div><div class="pl-big">${o.big}</div>${o.sub?`<div class="pl-sub">${o.sub}</div>`:''}
+      </div>
+      <div class="pl-right">
+        ${o.venceIdx!=null ? `<button class="pl-vence" onclick="editCardExpiry(${o.venceIdx})" title="Fecha de vencimiento"><span>VENCE</span>${o.vence ? esc(o.vence) : '--/--'}</button>` : ''}
+        ${_plasticBrand(o.nombre)}
+      </div>
     </div>
     ${o.pct!=null ? `<div class="pl-bar"><i style="width:${Math.max(2,Math.min(100,o.pct))}%;background:${o.barColor||'#fff'}"></i></div>` : ''}
   </div>`;
@@ -7175,6 +7221,91 @@ window.swClose = function(){};
     return r;
   };
 })();
+
+
+// ═══ Mejoras (oct 2026, parte 2) ═══
+// Tu nombre en la tarjeta (el de tu cuenta de Google)
+function _titularTarjeta(){
+  let n='';
+  try { if(currentUser && currentUser.displayName) n=currentUser.displayName; } catch(e){}
+  if(!n){ const el=document.getElementById('user-name'); n=el ? el.textContent.trim() : ''; }
+  return (n && !n.includes('@')) ? n.toUpperCase() : '';
+}
+// 40 · Fecha de vencimiento MM/AA (se guarda solo dentro de la tarjeta)
+function _formatoVence(v){ v=String(v||'').replace(/[^0-9]/g,'').slice(0,4); return v.length>2 ? v.slice(0,2)+'/'+v.slice(2) : v; }
+function _venceValido(v){ const m=/^(\d{2})\/(\d{2})$/.exec(v||''); return !!m && +m[1]>=1 && +m[1]<=12; }
+function editCardExpiry(idx){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
+  const tj = tarjetas[idx]; if(!tj) return;
+  const val = prompt(`Fecha de vencimiento de "${tj.nombre}" (MM/AA).\nDéjalo vacío para quitarla.`, tj.vence || '');
+  if(val===null) return;
+  const v = _formatoVence(val.trim());
+  if(!v){ delete tj.vence; }
+  else if(_venceValido(v)){ tj.vence = v; }
+  else { alert('Escribe la fecha así: MM/AA, por ejemplo 08/29.'); return; }
+  saveTarjetas();
+  renderCards();
+}
+// 46 · Animación al abrir Tarjetas
+(function(){
+  const orig = window.switchToCards;
+  if(typeof orig !== 'function') return;
+  window.switchToCards = function(){
+    const r = orig.apply(this, arguments);
+    const pc = document.getElementById('panel-cards');
+    if(pc){ pc.classList.remove('cards-anim'); void pc.offsetWidth; pc.classList.add('cards-anim'); setTimeout(()=>pc.classList.remove('cards-anim'), 1200); }
+    return r;
+  };
+})();
+// 51 · Mini gráfica de ingresos contra gastos (12 meses)
+function renderMiniChart(){
+  const el = document.getElementById('mini-chart'); if(!el) return;
+  const t = MONTHS.map((_,mi)=>{ const md=data[mi]; let inc=0,exp=0;
+    if(md && Array.isArray(md.entries)) md.entries.forEach(e=>{ if(e.type==='income') inc+=e.amount; else if(e.type==='expense') exp+=e.amount; });
+    return {inc,exp}; });
+  const max = Math.max(0, ...t.map(x=>Math.max(x.inc,x.exp)));
+  if(max<=0){ el.innerHTML=''; return; }
+  const W=Math.max(280, Math.round((el.clientWidth||600) - 32)), H=W<500?110:130, top=6, base=H-20, slot=W/12;
+  const bw=Math.max(5, Math.min(16, slot*0.3)), gap=Math.max(2, slot*0.05);
+  const yr = (typeof _curDataYear==='function') ? _curDataYear() : CURRENT_YEAR;
+  const nowM = (yr===new Date().getFullYear()) ? new Date().getMonth() : 11;
+  let bars='';
+  t.forEach((x,i)=>{
+    const cx = slot*i + slot/2, op = i>nowM ? .25 : 1;
+    const hi = (x.inc/max)*(base-top), he = (x.exp/max)*(base-top);
+    bars += `<rect x="${(cx-bw-gap/2).toFixed(1)}" y="${(base-hi).toFixed(1)}" width="${bw}" height="${Math.max(hi,x.inc>0?2:0).toFixed(1)}" rx="3" fill="var(--green)" opacity="${op}"><title>${MONTHS[i]}: ingresos ${fmt(x.inc)}</title></rect>`;
+    bars += `<rect x="${(cx+gap/2).toFixed(1)}" y="${(base-he).toFixed(1)}" width="${bw}" height="${Math.max(he,x.exp>0?2:0).toFixed(1)}" rx="3" fill="var(--red)" opacity="${op}"><title>${MONTHS[i]}: gastos ${fmt(x.exp)}</title></rect>`;
+    bars += `<text x="${cx.toFixed(1)}" y="${H-5}" text-anchor="middle" font-size="11" font-family="DM Sans, sans-serif" fill="${i===nowM?'var(--text)':'var(--muted)'}" font-weight="${i===nowM?600:400}">${MONTHS[i].slice(0,3)}</text>`;
+  });
+  el.innerHTML = `<div class="mc-head"><span class="mc-title">${yr} mes a mes</span>
+    <span class="mc-legend"><span><i style="background:var(--green)"></i>Ingresos</span><span><i style="background:var(--red)"></i>Gastos</span></span></div>
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ingresos y gastos por mes"><line x1="0" y1="${base}" x2="${W}" y2="${base}" stroke="var(--border2)" stroke-width="1"/>${bars}</svg>`;
+}
+(function(){
+  const orig = window.renderYear;
+  if(typeof orig !== 'function') return;
+  window.renderYear = function(){ const r = orig.apply(this, arguments); try { renderMiniChart(); } catch(e){} return r; };
+})();
+(function(){
+  const el=document.getElementById('mini-chart'); if(!el) return;
+  let lastW=0;
+  const again=()=>{ const w=el.clientWidth; if(w && Math.abs(w-lastW)>2){ lastW=w; try{ renderMiniChart(); }catch(e){} } };
+  if('ResizeObserver' in window) new ResizeObserver(again).observe(el);
+  else addEventListener('resize', again);
+})();
+// 61 · Flechita de la tasa: sube o baja respecto al último cambio (se recuerda en este dispositivo)
+function _flechaTasa(){
+  if(!(typeof usdRateReady!=='undefined' && usdRateReady && usdRate>0)) return '';
+  let h={};
+  try { h = JSON.parse(localStorage.getItem('jb_tasa_hist')||'{}') || {}; } catch(e){ h={}; }
+  if(typeof h.last!=='number'){ h={ last:usdRate }; }
+  else if(Math.abs(usdRate - h.last) >= 0.005){ h={ prev:h.last, last:usdRate }; }
+  try { localStorage.setItem('jb_tasa_hist', JSON.stringify(h)); } catch(e){}
+  if(typeof h.prev!=='number') return '';
+  const d = usdRate - h.prev; if(Math.abs(d) < 0.005) return '';
+  const up = d>0;
+  return `<span class="rate-arrow ${up?'up':'down'}" title="${up?'Subió':'Bajó'} desde ${h.prev.toFixed(2)}">${up?'▲':'▼'} ${Math.abs(d).toFixed(2)}</span>`;
+}
 
 // Alterna una tarjeta entre pesos y dólares
 function toggleCurrency(which){
