@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>JB Marte Finance</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=Manrope:wght@500;600;700&display=swap" rel="stylesheet" />
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -941,6 +941,86 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
   #best-worst-bar { grid-template-columns:1fr !important; }
 }
 
+
+/* ═══ Mejoras visuales (oct 2026): saludo, tarjetas, dólares, categorías, números, deslizar, pulso ═══ */
+:root { --num:'Manrope','DM Sans',system-ui,sans-serif; }
+.ycard-val, .mcard-val, .eamt, .cc-stat-val, .bs-val, .cc-month-amt, .cc-month-pct,
+.debito-total b, .tr-desglose-row span:last-child {
+  font-family:var(--num) !important; font-weight:600; letter-spacing:-0.01em; font-variant-numeric:tabular-nums;
+}
+.ycard-val { font-weight:700; }
+
+/* 4 · Saludo */
+.greet { font-size:12px; color:var(--muted2); letter-spacing:.02em; margin-top:-3px; }
+.greet:empty { display:none; }
+@media(max-width:600px){ .greet .g2 { display:block; } .greet .gdot { display:none; } }
+
+/* 7 y 15 · Tarjetas como plástico real */
+.plastic {
+  position:relative; overflow:hidden; width:100%; max-width:360px; aspect-ratio:1.586/1;
+  border-radius:16px; padding:16px 18px; margin:0 0 1rem; box-sizing:border-box;
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(255,255,255,.18), transparent 55%),
+    linear-gradient(135deg, var(--pl1), var(--pl2));
+  color:#fff; box-shadow:0 14px 34px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.18);
+  display:flex; flex-direction:column; justify-content:space-between; gap:6px;
+}
+.plastic::after { content:""; position:absolute; inset:auto -30% -55% auto; width:90%; height:90%; border-radius:50%;
+  background:rgba(255,255,255,.06); pointer-events:none; }
+.plastic.closed { filter:grayscale(1) brightness(.8); }
+.pl-top { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+.pl-bank { font-weight:600; font-size:14px; letter-spacing:.02em; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pl-type { font-size:10px; letter-spacing:.14em; text-transform:uppercase; opacity:.8; flex-shrink:0; }
+.pl-chip { width:38px; height:28px; border-radius:6px; background:linear-gradient(135deg,#f3d58a,#b8913e);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.18); position:relative; }
+.pl-chip::before { content:""; position:absolute; inset:8px 0; border-top:1px solid rgba(0,0,0,.25); border-bottom:1px solid rgba(0,0,0,.25); }
+.pl-num { font-family:var(--num); font-weight:600; font-size:clamp(14px,4.2vw,17px); letter-spacing:.14em; opacity:.92; font-variant-numeric:tabular-nums; }
+.pl-bottom { display:flex; justify-content:space-between; align-items:flex-end; gap:10px; }
+.pl-lbl { font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; opacity:.75; }
+.pl-big { font-family:var(--num); font-weight:700; font-size:clamp(18px,5.4vw,22px); font-variant-numeric:tabular-nums; line-height:1.15; }
+.pl-sub { font-size:11px; opacity:.8; margin-top:1px; }
+.pl-visa { font-family:var(--num); font-weight:800; font-style:italic; font-size:18px; letter-spacing:.04em; }
+.pl-mc { display:inline-flex; } .pl-mc i { width:22px; height:22px; border-radius:50%; display:block; }
+.pl-mc i:first-child { background:#eb001b; } .pl-mc i:last-child { background:#f79e1b; margin-left:-9px; opacity:.92; }
+.pl-bar { height:5px; border-radius:3px; background:rgba(255,255,255,.22); overflow:hidden; }
+.pl-bar i { display:block; height:100%; border-radius:3px; }
+
+/* 24 · Dólares debajo del monto */
+.eamt-col { display:flex; flex-direction:column; align-items:flex-end; line-height:1.2; }
+.eusd { font-size:10.5px; color:var(--muted); font-family:var(--num); font-variant-numeric:tabular-nums; margin-top:1px; }
+
+/* 26 · Categorías con barras e íconos */
+.cb-list { display:flex; flex-direction:column; gap:12px; }
+.cb-row { display:flex; align-items:center; gap:10px; }
+.cb-ic { width:34px; height:34px; border-radius:10px; background:var(--surf); border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; color:var(--muted2); font-weight:600; }
+.cb-main { flex:1; min-width:0; }
+.cb-top { display:flex; justify-content:space-between; gap:8px; font-size:12.5px; margin-bottom:5px; }
+.cb-name { color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.cb-amt { font-family:var(--num); font-weight:600; color:var(--muted2); font-variant-numeric:tabular-nums; flex-shrink:0; }
+.cb-track { height:6px; border-radius:3px; background:var(--surf); overflow:hidden; }
+.cb-fill { height:100%; border-radius:3px; transition:width .45s cubic-bezier(.4,0,.2,1); }
+.cb-pct { width:40px; text-align:right; font-family:var(--num); font-weight:700; font-size:12px; color:var(--text); flex-shrink:0; font-variant-numeric:tabular-nums; }
+
+/* 30 · Deslizar para editar o borrar (solo pantallas táctiles) */
+.erow { display:contents; }
+.eswipe-act { display:none; }
+body.touchui .entry { position:relative; overflow:hidden; padding:0; display:block; }
+body.touchui .entry:hover { transform:none; }
+body.touchui .erow { display:flex; align-items:center; padding:13px 17px; background:inherit; position:relative; z-index:1;
+  transition:transform .22s ease; touch-action:pan-y; border-radius:inherit; }
+body.touchui .entry .bdel { display:none; }
+body.touchui .eswipe-act { display:flex; position:absolute; top:0; right:0; bottom:0; width:150px; z-index:0; }
+.eswipe-act button { flex:1; border:0; color:#fff; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; cursor:pointer; }
+.eswipe-act .sw-edit { background:#4a6fb3; }
+.eswipe-act .sw-del { background:var(--red); }
+body.viewer-mode .eswipe-act { display:none !important; }
+
+/* 35 · Pulso al guardar */
+@keyframes addedPulse { 0%{ box-shadow:0 0 0 0 rgba(78,201,154,.55); } 100%{ box-shadow:0 0 0 14px rgba(78,201,154,0); } }
+.btn-add.added-pulse { animation:addedPulse .7s ease-out; border-color:var(--green) !important; color:var(--green) !important; }
+@media (prefers-reduced-motion: reduce){ .btn-add.added-pulse{ animation:none; } body.touchui .erow{ transition:none; } }
+
 </style>
 </head>
 <body>
@@ -1010,6 +1090,7 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 <header>
   <div class="header-left">
     <h1>JB Marte Finance</h1>
+    <div class="greet" id="greet"></div>
     <span id="rate-badge" class="rate-badge" style="display:none" title="Tasa de cambio actual"></span>
   </div>
   <div class="user-badge">
@@ -1919,16 +2000,22 @@ function entryHTML(e, mi){
   const color = e.type==='income'?'var(--green)':'var(--red)';
   const sign  = e.type==='income'?'+':'−';
   return `<div class="entry">
+    <div class="eswipe-act">
+      <button class="sw-edit" onclick="swClose();editEntryStart(${mi},${e.id})">Editar</button>
+      <button class="sw-del" onclick="swClose();delEntry(${mi},${e.id})">Borrar</button>
+    </div>
+    <div class="erow">
     <div class="edot" style="background:${color}"></div>
     <div class="einfo">
       <div class="edesc">${esc(e.desc)}</div>
       <div class="ecat">${esc(e.cat)}</div>
     </div>
     <div class="eright">
-      <span class="eamt" style="color:${color}">${sign}${fmt(e.amount)}</span>
+      <span class="eamt-col"><span class="eamt" style="color:${color}">${sign}${fmt(e.amount)}</span>${usdLine(e.amount)}</span>
       <span class="edate">${e.date}</span>
       <button class="bdel" onclick="editEntryStart(${mi},${e.id})" title="Editar" style="color:var(--muted2)">✏️</button>
       <button class="bdel" onclick="delEntry(${mi},${e.id})" title="Eliminar">×</button>
+    </div>
     </div>
   </div>`;
 }
@@ -2072,13 +2159,11 @@ function renderMonth(mi){
       <div class="cats-grid">
         <div class="cat-block">
           <h3>Gastos por categoría</h3>
-          ${donutSVGLive(expData)}
-          ${barsHTML(expData,'var(--red)')}
+          ${catBarsHTML(expData,'expense')}
         </div>
         <div class="cat-block">
           <h3>Ingresos por categoría</h3>
-          ${donutSVGLive(incData)}
-          ${barsHTML(incData,'var(--green)')}
+          ${catBarsHTML(incData,'income')}
         </div>
       </div>
       <div class="cat-manage">
@@ -3062,7 +3147,7 @@ function renderAnnual(){
           <div style="font-size:13px;color:var(--text)">${esc(label)}</div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px">${count} movimiento${count!==1?'s':''}</div>
         </div>
-        <div style="font-family:'DM Serif Display',serif;font-size:1rem;color:${color}">${sign}${fmt(d.v)}</div>
+        <div style="font-family:var(--num);font-weight:600;font-size:1rem;color:${color}">${sign}${fmt(d.v)}</div>
       </div>`;
     }).join('');
 
@@ -3108,11 +3193,11 @@ function renderAnnual(){
           <div style="display:flex;justify-content:space-between;gap:10px;padding-top:8px;border-top:1px solid var(--border)">
             <div style="flex:1;min-width:0">
               <div style="font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:3px">${verb}</div>
-              <div style="font-family:'DM Serif Display',serif;font-size:1.05rem;color:${isPositive?'var(--green)':'var(--red)'};white-space:nowrap">${fmtSigned(m.t.net)}</div>
+              <div style="font-family:var(--num);font-weight:600;font-size:1.05rem;color:${isPositive?'var(--green)':'var(--red)'};white-space:nowrap">${fmtSigned(m.t.net)}</div>
             </div>
             <div style="flex:1;min-width:0;text-align:right">
               <div style="font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Eficiencia</div>
-              <div style="font-family:'DM Serif Display',serif;font-size:1.05rem;color:${m.pct>=0?'var(--green)':'var(--red)'};white-space:nowrap">${m.pct>=0?'+':''}${m.pct}%</div>
+              <div style="font-family:var(--num);font-weight:600;font-size:1.05rem;color:${m.pct>=0?'var(--green)':'var(--red)'};white-space:nowrap">${m.pct>=0?'+':''}${m.pct}%</div>
             </div>
           </div>
           <div style="font-size:10px;color:var(--muted);margin-top:8px;line-height:1.4">
@@ -3171,7 +3256,7 @@ function renderAnnual(){
         return `<div style="margin-bottom:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
             <span style="font-size:13px;color:var(--text)">💼 ${esc(f.nombre)}</span>
-            <span style="font-family:'DM Serif Display',serif;font-size:1rem;color:var(--green)">+${fmt(f.total)}</span>
+            <span style="font-family:var(--num);font-weight:600;font-size:1rem;color:var(--green)">+${fmt(f.total)}</span>
           </div>
           <div style="height:10px;background:var(--surf);border-radius:3px;overflow:hidden">
             <div style="width:${pct}%;height:100%;background:var(--green);border-radius:3px"></div>
@@ -3204,7 +3289,7 @@ function renderAnnual(){
         return `<div style="margin-bottom:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
             <span style="font-size:13px;color:var(--text)">🏦 ${esc(f.nombre)}${f.digitos?` <span style="color:var(--muted);font-size:11px">•••• ${esc(f.digitos)}</span>`:''}${f.esResto?` <span style="color:var(--muted);font-size:10px">· principal</span>`:''}</span>
-            <span style="font-family:'DM Serif Display',serif;font-size:1rem;color:${col}">${fmtSigned(f.saldo)}</span>
+            <span style="font-family:var(--num);font-weight:600;font-size:1rem;color:${col}">${fmtSigned(f.saldo)}</span>
           </div>
           <div style="height:10px;background:var(--surf);border-radius:3px;overflow:hidden">
             <div style="width:${pct}%;height:100%;background:${col};border-radius:3px"></div>
@@ -3212,7 +3297,7 @@ function renderAnnual(){
         </div>`;
       }).join('') + `<div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;margin-top:4px;border-top:1px solid var(--border)">
           <span style="font-size:12px;color:var(--muted2)">Total en cuentas</span>
-          <span style="font-family:'DM Serif Display',serif;font-size:1.05rem;color:var(--green)">${fmtSigned(totalDb)}</span>
+          <span style="font-family:var(--num);font-weight:600;font-size:1.05rem;color:var(--green)">${fmtSigned(totalDb)}</span>
         </div>`;
       dbWrap.style.display = 'block';
     } else {
@@ -4026,6 +4111,9 @@ function renderDebito(){
           <button class="cc-close-x" onclick="delDebito('${tj.id}')" title="Eliminar">×</button>
         </div>
       </div>
+      ${plasticHTML({ nombre: tj.nombre, digitos: tj.digitos || '', tipo:'Débito',
+          lbl:'Saldo actual', big: (saldo<0?'-':'') + fmt(saldo),
+          sub: `${selYear}: +${fmt(info.ingresos)} · −${fmt(info.gastos)}`, pct:null })}
       <div class="cc-stats">
         <div class="cc-stat">
           <div class="cc-stat-lbl">Gastado (${selYear})</div>
@@ -4086,9 +4174,9 @@ function renderDebito(){
         <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
           <span style="font-size:12px;color:var(--muted2)">Total todos los años</span>
           <div style="text-align:right">
-            <span style="font-family:'DM Serif Display',serif;color:var(--red);font-size:1rem">${fmt(years.reduce((s,y)=>s+debitoInfoAnio(tj,y).gastos,0))}</span>
+            <span style="font-family:var(--num);font-weight:600;color:var(--red);font-size:1rem">${fmt(years.reduce((s,y)=>s+debitoInfoAnio(tj,y).gastos,0))}</span>
             <span style="color:var(--muted);font-size:11px;margin:0 4px">/</span>
-            <span style="font-family:'DM Serif Display',serif;color:var(--green);font-size:1rem">${fmt(years.reduce((s,y)=>s+debitoInfoAnio(tj,y).ingresos,0))}</span>
+            <span style="font-family:var(--num);font-weight:600;color:var(--green);font-size:1rem">${fmt(years.reduce((s,y)=>s+debitoInfoAnio(tj,y).ingresos,0))}</span>
           </div>
         </div>
       </div>
@@ -4486,6 +4574,10 @@ function renderCards(){
           <button class="cc-del" onclick="delCard(${idx})" title="Eliminar tarjeta">×</button>
         </div>
       </div>
+      ${plasticHTML({ nombre: tj.nombre, digitos: puntos==='—' ? '' : puntos, tipo:'Crédito',
+          lbl:`Gastado ${_curDataYear()}`, big: fmt(gastado),
+          sub: inicio>0 ? `de ${fmt(inicio)} · ${uso.toFixed(0)}% usado` : '',
+          pct: inicio>0 ? uso : null, barColor: usoColor, closed: cerrada })}
       <div class="cc-stats">
         <div class="cc-stat">
           <div class="cc-stat-lbl">Inicio</div>
@@ -4504,7 +4596,6 @@ function renderCards(){
           <div class="cc-stat-val" style="color:var(--gold)">${puntos==='—' ? '—' : '•••• '+esc(String(puntos))}</div>
         </div>
       </div>
-      <div class="cc-track"><div class="cc-fill" style="width:${fillW}%;background:${usoColor}"></div></div>
       <button class="cc-toggle" style="margin-top:.85rem" onclick="toggleCardMonths(${idx})" id="cc-toggle-${idx}">📅 Ver desglose por mes ▾</button>
       <div class="cc-months" id="cc-months-${idx}" style="display:none">
         ${(()=>{
@@ -4552,7 +4643,7 @@ function renderCards(){
           }).join('')}
         <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
           <span style="font-size:12px;color:var(--muted2)">Total de todos los años</span>
-          <b style="font-family:'DM Serif Display',serif;color:var(--gold);font-size:1.05rem">${fmt(years.reduce((s,y)=>s+cardSpent(tj,y),0))}</b>
+          <b style="font-family:var(--num);font-weight:600;color:var(--gold);font-size:1.05rem">${fmt(years.reduce((s,y)=>s+cardSpent(tj,y),0))}</b>
         </div>
       </div>
     </div>`;
@@ -6936,10 +7027,154 @@ function updateRateBadge(){
   if(usdRate && usdRate > 0){
     el.innerHTML = `1 USD = <b>${usdRate.toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2})}</b>`;
     el.style.display = '';
+    try { refreshUsdLines(); } catch(e){}
   } else {
     el.style.display = 'none';
   }
 }
+
+
+// ═══ Mejoras visuales (oct 2026) — solo dibujan, no guardan nada ═══
+// 24 · Dólares debajo del monto (con la tasa de hoy)
+function _fmtUsd(v){ const a=Math.abs(v); return 'US$' + a.toLocaleString('en-US',{minimumFractionDigits:a<100?2:0, maximumFractionDigits:a<100?2:0}); }
+function usdLine(amount){
+  if(!(typeof usdRate==='number' && usdRate>0)) return '';
+  return `<span class="eusd" data-dop="${amount}">≈ ${_fmtUsd(amount/usdRate)}</span>`;
+}
+function refreshUsdLines(){
+  if(!(typeof usdRate==='number' && usdRate>0)) return;
+  document.querySelectorAll('.eusd[data-dop]').forEach(el=>{ const v=parseFloat(el.dataset.dop); if(!isNaN(v)) el.textContent='≈ '+_fmtUsd(v/usdRate); });
+}
+
+// 7 y 15 · Tarjeta con diseño de plástico
+function _plasticTheme(nombre){
+  const n=(nombre||'').toLowerCase();
+  if(/popular/.test(n)) return ['#1d56b0','#0a2a66'];
+  if(/reserva/.test(n)) return ['#0f7484','#063a46'];
+  if(/bhd/.test(n)) return ['#1f8f4f','#0b4626'];
+  if(/scotia/.test(n)) return ['#cc2232','#650c16'];
+  if(/promerica/.test(n)) return ['#2a9d8f','#124a44'];
+  if(/caribe/.test(n)) return ['#d9770a','#6e3a02'];
+  if(/santa ?cruz/.test(n)) return ['#123f7d','#06203f'];
+  const pal=[['#343a55','#10121c'],['#5d3c92','#25154a'],['#866524','#3a2a0a'],['#275a78','#0c2433'],['#73305a','#2e0f22']];
+  let h=0; for(const ch of n) h=(h*31+ch.charCodeAt(0))>>>0; return pal[h%pal.length];
+}
+function _plasticBrand(nombre){
+  const n=(nombre||'').toLowerCase();
+  if(/visa/.test(n)) return '<span class="pl-visa">VISA</span>';
+  if(/master/.test(n)) return '<span class="pl-mc"><i></i><i></i></span>';
+  if(/amex|american/.test(n)) return '<span class="pl-visa">AMEX</span>';
+  return '';
+}
+function plasticHTML(o){
+  const [c1,c2]=_plasticTheme(o.nombre);
+  const dig = o.digitos ? esc(String(o.digitos)) : '····';
+  return `<div class="plastic ${o.closed?'closed':''}" style="--pl1:${c1};--pl2:${c2}">
+    <div class="pl-top"><span class="pl-bank">${esc(o.nombre||'')}</span><span class="pl-type">${o.tipo}</span></div>
+    <div class="pl-chip"></div>
+    <div class="pl-num">•••• •••• •••• ${dig}</div>
+    <div class="pl-bottom">
+      <div style="min-width:0"><div class="pl-lbl">${o.lbl}</div><div class="pl-big">${o.big}</div>${o.sub?`<div class="pl-sub">${o.sub}</div>`:''}</div>
+      ${_plasticBrand(o.nombre)}
+    </div>
+    ${o.pct!=null ? `<div class="pl-bar"><i style="width:${Math.max(2,Math.min(100,o.pct))}%;background:${o.barColor||'#fff'}"></i></div>` : ''}
+  </div>`;
+}
+
+// 26 · Categorías con barras, ícono y %
+function catBarsHTML(list, type){
+  if(!list || !list.length) return '<div style="font-size:12px;color:var(--muted);padding:4px 0">Sin datos</div>';
+  const total = list.reduce((s,d)=>s+d.v,0) || 1;
+  const color = type==='expense' ? 'var(--red)' : 'var(--green)';
+  const cats = type==='expense' ? EXPENSE_CATS : INCOME_CATS;
+  return '<div class="cb-list">' + list.map(d=>{
+    const def = (cats||[]).find(c=>c.v===d.k);
+    const label = (def && (def.l||def.v)) || d.k || '';
+    const m = label.match(/^(\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic})*)\s*/u);
+    const icon = m ? m[1] : (label.trim()[0]||'·').toUpperCase();
+    const name = m ? label.slice(m[0].length) : label;
+    const pct = d.v/total*100;
+    return `<div class="cb-row">
+      <div class="cb-ic">${esc(icon)}</div>
+      <div class="cb-main">
+        <div class="cb-top"><span class="cb-name">${esc(name)}</span><span class="cb-amt">${fmt(d.v)}</span></div>
+        <div class="cb-track"><div class="cb-fill" style="width:${Math.max(2,pct).toFixed(1)}%;background:${color}"></div></div>
+      </div>
+      <div class="cb-pct">${pct>=10?pct.toFixed(0):pct.toFixed(1)}%</div>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+// 4 · Saludo con la hora, tu nombre y la fecha
+function updateGreeting(){
+  const el=document.getElementById('greet'); if(!el) return;
+  const now=new Date(), h=now.getHours();
+  const saludo = (h>=5 && h<12) ? 'Buenos días' : (h>=12 && h<19) ? 'Buenas tardes' : 'Buenas noches';
+  const full=((document.getElementById('user-name')||{}).textContent||'').trim();
+  const first = (!full || full.includes('@')) ? '' : full.split(/\s+/)[0];
+  let fecha = now.toLocaleDateString('es-DO',{weekday:'long', day:'numeric', month:'long'}).replace(',', '');
+  el.innerHTML = `<span>${esc(saludo)}${first?', '+esc(first):''}</span><span class="g2"><span class="gdot"> · </span>${esc(fecha)}</span>`;
+}
+(function(){
+  updateGreeting(); setInterval(updateGreeting, 30000);
+  const un=document.getElementById('user-name');
+  if(un && 'MutationObserver' in window) new MutationObserver(updateGreeting).observe(un,{childList:true,characterData:true,subtree:true});
+})();
+
+// 30 · Deslizar un movimiento a la izquierda para Editar / Borrar (solo táctil)
+window.swClose = function(){};
+(function(){
+  const coarse = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+  if(!coarse) return;
+  document.body.classList.add('touchui');
+  const W = 150;
+  let cur=null, sx=0, sy=0, dx=0, drag=false, open=null;
+  const setX=(row,x)=>{ row.style.transform = x ? `translateX(${x}px)` : ''; };
+  window.swClose = function(){ if(open){ setX(open,0); open=null; } };
+  document.addEventListener('touchstart', e=>{
+    const row = e.target.closest && e.target.closest('.erow');
+    if(open && row!==open && !(e.target.closest && e.target.closest('.eswipe-act'))) window.swClose();
+    if(!row || (typeof viewerActive!=='undefined' && viewerActive)){ cur=null; return; }
+    cur=row; sx=e.touches[0].clientX; sy=e.touches[0].clientY; dx=(open===row)?-W:0; drag=false; row.style.transition='none';
+  }, {passive:true});
+  document.addEventListener('touchmove', e=>{
+    if(!cur) return;
+    const t=e.touches[0], mx=t.clientX-sx, my=t.clientY-sy;
+    if(!drag){
+      if(Math.abs(mx)>8 && Math.abs(mx)>Math.abs(my)) drag=true;
+      else if(Math.abs(my)>8){ cur.style.transition=''; cur=null; return; }
+      else return;
+    }
+    const base=(open===cur)?-W:0; dx=Math.max(-W-24, Math.min(0, base+mx)); setX(cur,dx);
+  }, {passive:true});
+  const end=()=>{
+    if(!cur) return; cur.style.transition='';
+    if(drag){ if(dx < -W/2){ setX(cur,-W); open=cur; } else { setX(cur,0); if(open===cur) open=null; } }
+    else if(open===cur){ window.swClose(); }
+    cur=null;
+  };
+  document.addEventListener('touchend', end); document.addEventListener('touchcancel', end);
+})();
+
+// 35 · Pulso con ✓ cuando un movimiento se guarda de verdad
+(function(){
+  const orig = window.addEntry;
+  if(typeof orig !== 'function') return;
+  window.addEntry = function(mi){
+    const antes = JSON.stringify((data[mi]||{}).entries||[]);
+    const r = orig.apply(this, arguments);
+    const despues = JSON.stringify((data[mi]||{}).entries||[]);
+    if(antes !== despues){
+      const btn = document.getElementById('addbtn-'+mi);
+      if(btn){
+        btn.classList.remove('added-pulse'); void btn.offsetWidth; btn.classList.add('added-pulse');
+        btn.textContent = '✓ Guardado';
+        setTimeout(()=>{ if(btn.isConnected && btn.textContent==='✓ Guardado') btn.textContent='Agregar movimiento'; }, 1400);
+      }
+    }
+    return r;
+  };
+})();
 
 // Alterna una tarjeta entre pesos y dólares
 function toggleCurrency(which){
