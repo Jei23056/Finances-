@@ -1005,11 +1005,11 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 /* 30 · Deslizar para editar o borrar (solo pantallas táctiles) */
 .erow { display:contents; }
 .eswipe-act { display:none; }
-body.touchui .entry { position:relative; overflow:hidden; padding:0; display:block; }
-body.touchui .entry:hover { transform:none; }
+body.touchui .entry.swipeable { position:relative; overflow:hidden; padding:0; display:block; }
+body.touchui .entry.swipeable:hover { transform:none; }
 body.touchui .erow { display:flex; align-items:center; padding:13px 17px; background:inherit; position:relative; z-index:1;
   transition:transform .22s ease; touch-action:pan-y; border-radius:inherit; }
-body.touchui .entry .bdel { display:none; }
+body.touchui .entry.swipeable .bdel { display:none; }
 body.touchui .eswipe-act { display:flex; position:absolute; top:0; right:0; bottom:0; width:150px; z-index:0; }
 .eswipe-act button { flex:1; border:0; color:#fff; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; cursor:pointer; }
 .eswipe-act .sw-edit { background:#4a6fb3; }
@@ -1047,6 +1047,63 @@ body.viewer-mode .pl-vence { pointer-events:none; }
 
 .rate-arrow { margin-left:6px; font-weight:600; }
 .rate-arrow.up { color:var(--green); } .rate-arrow.down { color:var(--red); }
+
+
+/* ═══ Diseño (oct 2026, parte 3): esquinas y sombras, pestañas cápsula, botones que se hunden,
+       barra fija al bajar, bienvenida corta, dos columnas en Mac ═══ */
+/* 101 */
+:root { --r:16px; --rs:12px; --rxs:8px;
+  --shadow-sm:0 1px 2px rgba(0,0,0,0.22);
+  --shadow-md:0 8px 26px rgba(0,0,0,0.26), 0 1px 2px rgba(0,0,0,0.28); }
+.ycard, .mcard, .form-wrap, .cat-block, .bycat-picker, .bycat-summary, .credit-card, .cc-card, .mini-chart, .cal-wrap, .cal-stat { border-radius:var(--r); }
+.entry { border-radius:var(--rs); }
+
+/* 106 · Pestañas tipo cápsula: el mes activo relleno de color */
+.mtab { border-radius:999px; }
+.mtab.active, .mtab.month-positive.active, .mtab.month-negative.active {
+  background:var(--gold) !important; background-image:none !important; border-color:transparent !important;
+  color:#fff !important; font-weight:600; animation:none;
+  box-shadow:0 6px 18px rgba(91,143,214,0.35) !important;
+}
+.mtab.active::after { background:#fff !important; box-shadow:none !important; }
+
+/* 108 · Botones que se hunden al tocarlos */
+button, .mtab, .itab, .ycard.clickable, .tbtn { transition:transform .09s ease, background-color .18s, border-color .18s, color .18s, box-shadow .18s; }
+button:not(:disabled):active, .mtab:active, .itab:active, .ycard.clickable:active { transform:scale(.96) !important; }
+@media (prefers-reduced-motion: reduce){ button:not(:disabled):active, .mtab:active, .itab:active, .ycard.clickable:active { transform:none !important; } }
+
+/* 121 · Barra fija con sombra al bajar */
+#topbar { position:fixed; top:0; left:0; right:0; z-index:60; pointer-events:none;
+  padding-top:env(safe-area-inset-top, 0px);
+  background:rgba(7,10,16,0.82); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border); box-shadow:0 8px 24px rgba(0,0,0,0.35);
+  transform:translateY(-110%); transition:transform .25s ease; }
+#topbar.show { transform:none; pointer-events:auto; }
+#topbar .tb-in { max-width:1200px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); }
+@media (min-width:768px){ #topbar .tb-in { padding-left:2rem; padding-right:2rem; } }
+.tb-title { font-family:'DM Serif Display',serif; font-size:1.15rem; color:var(--text); }
+.tb-cap { font-size:12px; color:var(--muted2); white-space:nowrap; }
+.tb-cap b { font-family:var(--num); font-weight:700; color:var(--green); font-size:14px; margin-left:4px; }
+
+/* 125 · Bienvenida corta con logo JB */
+.splash-jb { width:84px; height:84px; border-radius:24px; display:flex; align-items:center; justify-content:center;
+  font-family:'DM Serif Display',serif; font-size:2.3rem; color:#fff; position:relative; overflow:hidden;
+  background:linear-gradient(135deg, var(--gold2), var(--gold) 55%, #2c4f86);
+  box-shadow:0 14px 40px rgba(91,143,214,0.35), inset 0 1px 0 rgba(255,255,255,0.35); }
+.splash-jb::after { content:""; position:absolute; top:-40%; left:-80%; width:50%; height:180%; transform:rotate(20deg);
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent); animation:jbShine 1s ease .45s both; }
+@keyframes jbShine { from { left:-80%; } to { left:140%; } }
+.splash-logo { animation-delay:.05s !important; animation-duration:.5s !important; }
+.splash-title { animation-delay:.3s !important; }
+.splash-name { animation:splash-fade-up .45s ease .42s both, shimmer 2.5s linear .9s infinite !important; margin-bottom:1.6rem; }
+.splash-bar-wrap { animation-delay:.5s !important; }
+.splash-bar-fill { animation-duration:1s !important; animation-delay:.5s !important; }
+.splash-tagline { animation-delay:.6s !important; }
+#splash-screen { transition:opacity .4s ease !important; }
+
+/* 94 · Movimientos en dos columnas en pantallas grandes */
+@media (min-width:1024px){ .entries { display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; } }
 
 </style>
 </head>
@@ -1091,7 +1148,7 @@ body.viewer-mode .pl-vence { pointer-events:none; }
 
 <div id="splash-screen">
   <div class="splash-particles" id="splash-particles"></div>
-  <div class="splash-logo">💰</div>
+  <div class="splash-logo"><div class="splash-jb">JB</div></div>
   <div class="splash-title" id="splash-greeting">Bienvenido</div>
   <div class="splash-name">Sr. Jeiron</div>
   <div class="splash-bar-wrap">
@@ -1116,7 +1173,7 @@ body.viewer-mode .pl-vence { pointer-events:none; }
 
 <header>
   <div class="header-left">
-    <h1>JB Marte Finance</h1>
+    <h1>JB Marte</h1>
     <div class="greet" id="greet"></div>
     <span id="rate-badge" class="rate-badge" style="display:none" title="Tasa de cambio actual"></span>
   </div>
@@ -1125,6 +1182,8 @@ body.viewer-mode .pl-vence { pointer-events:none; }
     <button class="btn-signout" onclick="signOut()">Cerrar sesión</button>
   </div>
 </header>
+
+<div id="topbar" aria-hidden="true"><div class="tb-in"><span class="tb-title">JB Marte</span><span class="tb-cap"><span class="tb-lbl">Capital</span> <b id="tb-cap"></b></span></div></div>
 
 <!-- Barra de "viendo año anterior" (solo lectura) -->
 <div id="viewer-banner" style="display:none;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--gldim);border:1px solid var(--gold);border-radius:var(--r);padding:.85rem 1.1rem;margin-bottom:1.5rem">
@@ -2033,7 +2092,7 @@ function avisoResumenListo(intento){
 function entryHTML(e, mi){
   const color = e.type==='income'?'var(--green)':'var(--red)';
   const sign  = e.type==='income'?'+':'−';
-  return `<div class="entry">
+  return `<div class="entry swipeable">
     <div class="eswipe-act">
       <button class="sw-edit" onclick="swClose();editEntryStart(${mi},${e.id})">Editar</button>
       <button class="sw-del" onclick="swClose();delEntry(${mi},${e.id})">Borrar</button>
@@ -2765,7 +2824,7 @@ function _renderCalDay(mi){
     return `<div class="entry">
       <div class="edot" style="background:${inc?'var(--green)':'var(--red)'}"></div>
       <div class="einfo"><div class="edesc">${esc(e.desc||'')}</div><div class="ecat">${esc(_catLabel(e.cat, e.type))}</div></div>
-      <div class="eright"><span class="eamt" style="color:${inc?'var(--green)':'var(--red)'}">${inc?'+':'−'}${fmt(Number(e.amount)||0)}</span></div>
+      <div class="eright"><span class="eamt-col"><span class="eamt" style="color:${inc?'var(--green)':'var(--red)'}">${inc?'+':'−'}${fmt(Number(e.amount)||0)}</span>${usdLine(Number(e.amount)||0)}</span></div>
     </div>`;
   }).join('') : '<div class="empty">No hubo movimientos este día 🎉</div>';
   box.innerHTML = `<div class="sec-lbl" style="margin-top:1rem">${dow.charAt(0).toUpperCase()+dow.slice(1)} ${d} de ${MONTHS[mi].toLowerCase()}${sub.length?' · '+sub.join(' · '):''}</div>
@@ -7307,6 +7366,22 @@ function _flechaTasa(){
   return `<span class="rate-arrow ${up?'up':'down'}" title="${up?'Subió':'Bajó'} desde ${h.prev.toFixed(2)}">${up?'▲':'▼'} ${Math.abs(d).toFixed(2)}</span>`;
 }
 
+
+// 121 · Barra fija arriba al bajar (solo se dibuja; copia el Capital actual de la tarjeta)
+(function(){
+  const bar=document.getElementById('topbar'); if(!bar) return;
+  let ticking=false;
+  const check=()=>{
+    ticking=false;
+    const h=document.querySelector('header'); const yc=document.getElementById('y-cap'); const tc=document.getElementById('tb-cap');
+    const appVisible = h && h.offsetParent !== null;
+    const past = appVisible && h.getBoundingClientRect().bottom < 0;
+    if(past && tc && yc){ tc.textContent = yc.textContent; tc.style.color = getComputedStyle(yc).color; }
+    bar.classList.toggle('show', !!past);
+  };
+  addEventListener('scroll', ()=>{ if(!ticking){ ticking=true; requestAnimationFrame(check); } }, {passive:true});
+})();
+
 // Alterna una tarjeta entre pesos y dólares
 function toggleCurrency(which){
   _curMode[which] = !_curMode[which];
@@ -7442,7 +7517,7 @@ function save(){
     container.appendChild(p);
   }
 
-  setTimeout(()=>{ dismissSplash(); }, 2800);
+  setTimeout(()=>{ dismissSplash(); }, 1600);
 })();
 
 function dismissSplash(){
