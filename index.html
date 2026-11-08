@@ -7494,6 +7494,18 @@ function _dcCreditEntries(year){
     if(!md || !Array.isArray(md.entries)) return;
     md.entries.forEach(e=>{ if(e.type==='expense' && e.cat==='Crédito') out.push({ mi, e }); });
   });
+  // Lo que falta: montos que la tarjeta tiene puestos a mano y que no son
+  // movimientos. Se suma en Enero para que el total sea igual al de la tarjeta.
+  // Solo se lee; no se guarda ni se cambia nada de la tarjeta.
+  try {
+    (tarjetas||[]).forEach(tj=>{
+      if(!tj || !tj.nombre) return;
+      const mov = out.filter(x=>x.e.tarjeta===tj.nombre).reduce((s,x)=>s+(x.e.amount||0),0);
+      const falta = parseFloat((cardSpent(tj, year) - mov).toFixed(2));
+      if(falta > 0.004) out.push({ mi:0, e:{ id:'aj'+String(tj.id||tj.nombre).replace(/[^A-Za-z0-9]/g,''), type:'expense', cat:'Crédito',
+        tarjeta: tj.nombre, amount: falta, desc:'Montos puestos a mano', date:'Meses que escribiste a mano, sumados', _ajuste:true } });
+    });
+  } catch(err){ console.warn('Desglose: no se pudo calcular lo puesto a mano', err); }
   return out;
 }
 // Años disponibles: el que estás viendo, los del Historial y los que tengan desglose guardado
@@ -7593,7 +7605,7 @@ function renderDesglose(){
       ${r.cats.length ? `<div class="dc-block" style="background:var(--surf)"><h3>En qué gastaste con esta tarjeta</h3>${catBarsHTML(r.cats,'expense')}</div>` : ''}
 `;
     let mesActual = -1;
-    grupo.slice().sort((a,b)=> b.mi - a.mi || b.e.id - a.e.id).forEach(({mi, e})=>{
+    grupo.slice().sort((a,b)=> b.mi - a.mi || (Number(b.e.id)||0) - (Number(a.e.id)||0)).forEach(({mi, e})=>{
       if(mi !== mesActual){ mesActual = mi; html += `<div class="dc-month">${MONTHS[mi]}</div>`; }
       const key = _dcKey(year, e.id);
       const items = _dc[key] || [];
