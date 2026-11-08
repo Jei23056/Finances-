@@ -1105,6 +1105,47 @@ button:not(:disabled):active, .mtab:active, .itab:active, .ycard.clickable:activ
 /* 94 · Movimientos en dos columnas en pantallas grandes */
 @media (min-width:1024px){ .entries { display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; } }
 
+
+/* ═══ Desglose de crédito (nov 2026): libreta aparte, no se suma a nada ═══ */
+.dc-intro { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:1rem 1.1rem; margin-bottom:1rem; }
+.dc-intro .t { font-size:14px; color:var(--text); font-weight:600; }
+.dc-intro .s { font-size:12px; color:var(--muted); margin-top:3px; line-height:1.5; }
+.dc-sum { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:1rem; }
+.dc-sum .b { background:var(--card); border:1px solid var(--border); border-radius:var(--rs); padding:10px 12px; min-width:0; }
+.dc-sum .l { font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+.dc-sum .v { font-family:var(--num); font-weight:700; font-size:15px; margin-top:3px; font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dc-block { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:1rem 1.1rem; margin-bottom:1rem; }
+.dc-block h3 { font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:.9rem; font-weight:500; }
+.dc-month { font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin:1.1rem 0 .5rem; }
+.dc-item { background:var(--card); border:1px solid var(--border); border-radius:var(--rs); margin-bottom:8px; overflow:hidden; }
+.dc-head { width:100%; display:flex; align-items:center; gap:10px; padding:12px 14px; background:none; border:0; color:inherit; text-align:left; cursor:pointer; font-family:'DM Sans',sans-serif; }
+.dc-head .m { flex:1; min-width:0; }
+.dc-head .d { font-size:13px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dc-head .c { font-size:11px; color:var(--muted); margin-top:2px; }
+.dc-head .a { font-family:var(--num); font-weight:700; font-size:15px; color:var(--red); white-space:nowrap; font-variant-numeric:tabular-nums; }
+.dc-prog { padding:0 14px 12px; }
+.dc-bar { height:5px; border-radius:3px; background:var(--surf); overflow:hidden; }
+.dc-bar i { display:block; height:100%; border-radius:3px; background:var(--gold); }
+.dc-bar i.full { background:var(--green); }
+.dc-ptxt { font-size:11px; color:var(--muted2); margin-top:5px; }
+.dc-ptxt b { font-family:var(--num); font-weight:600; }
+.dc-body { border-top:1px solid var(--border); padding:10px 14px 14px; display:none; }
+.dc-item.open .dc-body { display:block; }
+.dc-row { display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid var(--border); }
+.dc-row:last-of-type { border-bottom:0; }
+.dc-row .ic { width:28px; height:28px; border-radius:8px; background:var(--surf); display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+.dc-row .n { flex:1; min-width:0; font-size:12.5px; color:var(--text); }
+.dc-row .n small { display:block; font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dc-row .v { font-family:var(--num); font-weight:600; font-size:13px; color:var(--muted2); white-space:nowrap; }
+.dc-row .x { background:none; border:0; color:var(--muted); font-size:17px; cursor:pointer; padding:2px 4px; }
+.dc-form { display:grid; grid-template-columns:1fr 1.3fr; gap:8px; margin-top:10px; }
+.dc-form input, .dc-form select { width:100%; box-sizing:border-box; background:var(--surf); border:1px solid var(--border); border-radius:var(--rxs); color:var(--text); padding:9px 10px; font-family:'DM Sans',sans-serif; font-size:13px; }
+.dc-form .full { grid-column:1 / -1; }
+.dc-form button { grid-column:1 / -1; padding:10px; border-radius:var(--rxs); border:1px solid var(--gold); background:var(--gldim); color:var(--gold2); font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; cursor:pointer; }
+.dc-msg { font-size:11.5px; margin-top:6px; min-height:14px; }
+.dc-empty { font-size:12.5px; color:var(--muted); text-align:center; padding:1.5rem .5rem; }
+@media(max-width:600px){ .dc-sum .v { font-size:13px; } }
+
 </style>
 </head>
 <body>
@@ -1282,6 +1323,8 @@ button:not(:disabled):active, .mtab:active, .itab:active, .ycard.clickable:activ
     </div>
   </div>
 </div>
+
+<div id="panel-desglose" style="display:none"></div>
 
 <div id="panel-since" style="display:none">
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1.5rem">
@@ -7380,6 +7423,210 @@ function _flechaTasa(){
     bar.classList.toggle('show', !!past);
   };
   addEventListener('scroll', ()=>{ if(!ticking){ ticking=true; requestAnimationFrame(check); } }, {passive:true});
+})();
+
+
+// ══════════════════════════════════════════════════════════════════════════
+// DESGLOSE DE CRÉDITO — libreta aparte para anotar en qué se fue cada gasto
+// de crédito. Se guarda en su propio campo (desglose_credito_v1) y NO se suma
+// a ningún total, categoría ni capital. Tus movimientos no se tocan.
+// ══════════════════════════════════════════════════════════════════════════
+let _dc = null;            // { "y2026_<idMovimiento>": [ {id, amount, cat, desc} ] }
+let _dcOpen = {};          // qué gastos están abiertos
+const DC_FIELD = 'desglose_credito_v1';
+const _dcKey = (year, id) => `y${year}_${id}`;
+
+async function _dcLoad(){
+  try {
+    if(!currentUser) { _dc = _dc || {}; return; }
+    const doc = await db.collection('users').doc(currentUser.uid).get();
+    const d = doc.exists ? (doc.data()||{}) : {};
+    _dc = (d[DC_FIELD] && typeof d[DC_FIELD]==='object') ? d[DC_FIELD] : {};
+  } catch(e){ console.warn('No se pudo cargar el desglose de crédito', e); _dc = _dc || {}; }
+}
+async function _dcSaveKey(key){
+  if(!currentUser) return false;
+  const ref = db.collection('users').doc(currentUser.uid);
+  const val = (_dc[key] || []);
+  try { await ref.update({ [`${DC_FIELD}.${key}`]: val }); return true; }
+  catch(e){
+    try { await ref.set({ [DC_FIELD]: { [key]: val } }, { merge:true }); return true; }
+    catch(e2){ console.error('No se pudo guardar el desglose', e2); return false; }
+  }
+}
+function _dcCreditEntries(){
+  const out = [];
+  MONTHS.forEach((_, mi)=>{
+    const md = data[mi];
+    if(!md || !Array.isArray(md.entries)) return;
+    md.entries.forEach(e=>{ if(e.type==='expense' && e.cat==='Crédito') out.push({ mi, e }); });
+  });
+  return out;
+}
+function _dcIcon(cat){
+  const def = (EXPENSE_CATS||[]).find(c=>c.v===cat);
+  const label = (def && (def.l||def.v)) || cat || '';
+  const m = label.match(/^(\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic})*)\s*/u);
+  return { icon: m ? m[1] : (label.trim()[0]||'·').toUpperCase(), name: m ? label.slice(m[0].length) : label };
+}
+
+function switchToDesglose(){
+  annualActive = false;
+  document.querySelectorAll('.month-panel').forEach(p=>{ p.className = 'month-panel'; });
+  const presentMonth = new Date().getMonth();
+  document.querySelectorAll('.mtab').forEach((t,i)=>{
+    if(i < 12){
+      let cls = 'mtab' + (hasData(i)?' has-data':'');
+      cls += (i === presentMonth) ? ' present-month' : ' hideable';
+      t.className = cls;
+    }
+  });
+  ['mtab-annual','mtab-since','mtab-cards','mtab-trabajos'].forEach(id=>{ const t=document.getElementById(id); if(t) t.className='mtab'; });
+  ['panel-annual','panel-since','panel-cards','panel-trabajos'].forEach(id=>{ const p=document.getElementById(id); if(p) p.style.display='none'; });
+  const tab = document.getElementById('mtab-desglose'); if(tab) tab.className = 'mtab active';
+  const panel = document.getElementById('panel-desglose'); if(panel) panel.style.display = 'block';
+  if(typeof applyMonthsCollapsed === 'function') applyMonthsCollapsed();
+  if(panel) panel.innerHTML = '<div class="dc-empty">Cargando…</div>';
+  _dcLoad().then(renderDesglose);
+}
+function _dcHide(){
+  const p = document.getElementById('panel-desglose'); if(p) p.style.display = 'none';
+  const t = document.getElementById('mtab-desglose'); if(t) t.className = 'mtab';
+}
+
+function renderDesglose(){
+  const panel = document.getElementById('panel-desglose'); if(!panel) return;
+  if(!_dc) _dc = {};
+  const year = _curDataYear();
+  const soloLectura = (typeof viewerActive !== 'undefined' && viewerActive);
+  const lista = _dcCreditEntries();
+  let total = 0, desg = 0; const porCat = {};
+  lista.forEach(({e})=>{
+    total += e.amount;
+    (_dc[_dcKey(year, e.id)] || []).forEach(it=>{ desg += it.amount; porCat[it.cat] = (porCat[it.cat]||0) + it.amount; });
+  });
+  const sinDet = Math.max(0, total - desg);
+  const catData = Object.entries(porCat).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
+
+  let html = `<div class="dc-intro"><div class="t">🧾 Desglose de crédito · ${year}</div>
+    <div class="s">Aquí aparecen solos tus gastos de crédito. Toca uno para anotar en qué se fue ese dinero. Esto es solo un detalle aparte: no se suma a tus totales, categorías ni capital.</div></div>`;
+
+  if(!lista.length){
+    panel.innerHTML = html + `<div class="dc-empty">Todavía no tienes gastos de crédito en ${year}.<br>Cuando agregues uno con la categoría Crédito, aparecerá aquí.</div>`;
+    return;
+  }
+  html += `<div class="dc-sum">
+    <div class="b"><div class="l">Gastado con crédito</div><div class="v" style="color:var(--red)">${fmt(total)}</div></div>
+    <div class="b"><div class="l">Desglosado</div><div class="v" style="color:var(--green)">${fmt(desg)}</div></div>
+    <div class="b"><div class="l">Sin detallar</div><div class="v" style="color:var(--gold2)">${fmt(sinDet)}</div></div>
+  </div>`;
+  if(catData.length){
+    html += `<div class="dc-block"><h3>En qué gastaste con crédito</h3>${catBarsHTML(catData,'expense')}</div>`;
+  }
+
+  const opts = (EXPENSE_CATS||[]).filter(c=>c.v!=='Crédito').map(c=>`<option value="${esc(c.v)}">${esc(c.l||c.v)}</option>`).join('');
+  let mesActual = -1;
+  lista.slice().sort((a,b)=> b.mi - a.mi || b.e.id - a.e.id).forEach(({mi, e})=>{
+    if(mi !== mesActual){ mesActual = mi; html += `<div class="dc-month">${MONTHS[mi]}</div>`; }
+    const key = _dcKey(year, e.id);
+    const items = _dc[key] || [];
+    const hecho = items.reduce((s,it)=>s+it.amount,0);
+    const falta = Math.max(0, parseFloat((e.amount - hecho).toFixed(2)));
+    const pct = e.amount>0 ? Math.min(100, hecho/e.amount*100) : 0;
+    const completo = falta <= 0.004;
+    const rows = items.map(it=>{ const ic=_dcIcon(it.cat); return `<div class="dc-row">
+        <div class="ic">${esc(ic.icon)}</div>
+        <div class="n">${esc(ic.name)}${it.desc?`<small>${esc(it.desc)}</small>`:''}</div>
+        <div class="v">${fmt(it.amount)}</div>
+        ${soloLectura ? '' : `<button class="x" onclick="dcDelItem('${key}',${it.id})" title="Quitar">×</button>`}
+      </div>`; }).join('');
+    html += `<div class="dc-item ${_dcOpen[key]?'open':''}" id="dc-${key}">
+      <button class="dc-head" onclick="dcToggle('${key}')">
+        <div class="m"><div class="d">${esc(e.desc||'Crédito')}</div><div class="c">💳 ${esc(e.tarjeta||'Tarjeta')} · ${esc(e.date||'')}</div></div>
+        <div class="a">${fmt(e.amount)}</div>
+      </button>
+      <div class="dc-prog"><div class="dc-bar"><i class="${completo?'full':''}" style="width:${pct.toFixed(1)}%"></i></div>
+        <div class="dc-ptxt">${completo ? '✓ Completo' : `Desglosado <b>${fmt(hecho)}</b> de <b>${fmt(e.amount)}</b> · faltan <b>${fmt(falta)}</b>`}</div></div>
+      <div class="dc-body">
+        ${rows || '<div style="font-size:12px;color:var(--muted);padding:4px 0">Todavía no has anotado nada en este gasto.</div>'}
+        ${(soloLectura || completo) ? '' : `<div class="dc-form">
+          <input id="dca-${key}" type="text" inputmode="decimal" placeholder="Monto" oninput="this.value=this.value.replace(/[^0-9.]/g,'')">
+          <select id="dcc-${key}"><option value="">Categoría…</option>${opts}</select>
+          <input id="dcd-${key}" class="full" type="text" placeholder="Descripción (opcional)" maxlength="60">
+          <button onclick="dcAddItem('${key}',${e.amount})">Agregar</button>
+        </div>`}
+        <div class="dc-msg" id="dcm-${key}"></div>
+      </div>
+    </div>`;
+  });
+  panel.innerHTML = html;
+}
+function dcToggle(key){
+  _dcOpen[key] = !_dcOpen[key];
+  const el = document.getElementById('dc-' + key);
+  if(el) el.classList.toggle('open', !!_dcOpen[key]);
+}
+async function dcAddItem(key, totalGasto){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
+  const aEl = document.getElementById('dca-' + key), cEl = document.getElementById('dcc-' + key), dEl = document.getElementById('dcd-' + key);
+  const msg = document.getElementById('dcm-' + key);
+  const amount = parseFloat(String(aEl.value).replace(/,/g,''));
+  const cat = cEl.value, desc = dEl.value.trim();
+  const items = (_dc[key] || []);
+  const falta = parseFloat((totalGasto - items.reduce((s,it)=>s+it.amount,0)).toFixed(2));
+  const say = (t, ok)=>{ if(msg){ msg.textContent=t; msg.style.color = ok ? 'var(--green)' : 'var(--red)'; } };
+  if(!(amount > 0)){ say('Escribe el monto.'); aEl.focus(); return; }
+  if(!cat){ say('Elige la categoría.'); cEl.focus(); return; }
+  if(amount > falta + 0.004){ say(`Ese monto es más de lo que falta por desglosar (${fmt(falta)}).`); aEl.focus(); return; }
+  const nuevo = { id: Date.now(), amount: parseFloat(amount.toFixed(2)), cat, desc };
+  _dc[key] = items.concat([nuevo]);
+  _dcOpen[key] = true;
+  renderDesglose();
+  const ok = await _dcSaveKey(key);
+  const m2 = document.getElementById('dcm-' + key);
+  if(m2){ m2.textContent = ok ? 'Guardado ✓' : 'No se pudo guardar. Revisa tu internet e intenta de nuevo.'; m2.style.color = ok ? 'var(--green)' : 'var(--red)'; }
+  if(!ok){ _dc[key] = items; renderDesglose(); }
+}
+async function dcDelItem(key, itemId){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
+  const antes = (_dc[key] || []);
+  _dc[key] = antes.filter(it=>it.id !== itemId);
+  _dcOpen[key] = true;
+  renderDesglose();
+  const ok = await _dcSaveKey(key);
+  if(!ok){ _dc[key] = antes; renderDesglose(); const m=document.getElementById('dcm-'+key); if(m){ m.textContent='No se pudo quitar. Revisa tu internet.'; m.style.color='var(--red)'; } }
+}
+
+// Conectar la pestaña sin modificar las funciones existentes
+(function(){
+  const ob = window.buildSkeleton;
+  if(typeof ob === 'function'){
+    window.buildSkeleton = function(){
+      const r = ob.apply(this, arguments);
+      const tabsEl = document.getElementById('mtab-since') && document.getElementById('mtab-since').parentElement;
+      if(tabsEl && !document.getElementById('mtab-desglose')){
+        const b = document.createElement('button');
+        b.id = 'mtab-desglose'; b.className = 'mtab'; b.textContent = '🧾 Desglose crédito';
+        b.onclick = ()=>switchToDesglose();
+        tabsEl.appendChild(b);
+      }
+      return r;
+    };
+  }
+  ['switchMonth','switchToAnnual','switchToCards','switchToTrabajos','switchToSince'].forEach(name=>{
+    const f = window[name];
+    if(typeof f !== 'function') return;
+    window[name] = function(){ _dcHide(); return f.apply(this, arguments); };
+  });
+  const ra = window.renderAll;
+  if(typeof ra === 'function'){
+    window.renderAll = function(){
+      const r = ra.apply(this, arguments);
+      const p = document.getElementById('panel-desglose');
+      if(p && p.style.display === 'block'){ try { renderDesglose(); } catch(e){} }
+      return r;
+    };
+  }
 })();
 
 // Alterna una tarjeta entre pesos y dólares
