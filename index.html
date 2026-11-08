@@ -1143,6 +1143,8 @@ button:not(:disabled):active, .mtab:active, .itab:active, .ycard.clickable:activ
 .dc-form .full { grid-column:1 / -1; }
 .dc-form button { grid-column:1 / -1; padding:10px; border-radius:var(--rxs); border:1px solid var(--gold); background:var(--gldim); color:var(--gold2); font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; cursor:pointer; }
 .dc-msg { font-size:11.5px; margin-top:6px; min-height:14px; }
+.dc-cats:not(.all) .cb-row:nth-child(n+4) { display:none; }
+.dc-more { display:block; width:100%; margin-top:.7rem; padding:.55rem; background:transparent; border:1px solid var(--border); border-radius:var(--rs); color:var(--gold); font:inherit; font-size:12px; font-weight:600; cursor:pointer; }
 .dc-empty { font-size:12.5px; color:var(--muted); text-align:center; padding:1.5rem .5rem; }
 @media(max-width:600px){ .dc-sum .v { font-size:13px; } }
 
@@ -7602,7 +7604,7 @@ function renderDesglose(){
         <div class="dc-card-amt">${fmt(r.total)}</div>
       </div>
       <div style="padding-top:12px">${resumenHTML(r).replace('Gastado con crédito','Gastado')}</div>
-      ${r.cats.length ? `<div class="dc-block" style="background:var(--surf)"><h3>En qué gastaste con esta tarjeta</h3>${catBarsHTML(r.cats,'expense')}</div>` : ''}
+      ${r.cats.length ? `<div class="dc-block" style="background:var(--surf)"><h3>En qué gastaste con esta tarjeta</h3><div class="dc-cats${_dcCatsAll?' all':''}">${catBarsHTML(r.cats,'expense')}</div>${r.cats.length>3 ? `<button class="dc-more" onclick="dcToggleCats()">${_dcCatsAll ? 'Ver menos' : `Ver todas (${r.cats.length})`}</button>` : ''}</div>` : ''}
 `;
     let mesActual = -1;
     grupo.slice().sort((a,b)=> b.mi - a.mi || (Number(b.e.id)||0) - (Number(a.e.id)||0)).forEach(({mi, e})=>{
@@ -7642,6 +7644,8 @@ function renderDesglose(){
   });
   panel.innerHTML = html;
 }
+let _dcCatsAll = false;
+function dcToggleCats(){ _dcCatsAll = !_dcCatsAll; renderDesglose(); }
 function dcToggle(key){
   _dcOpen[key] = !_dcOpen[key];
   const el = document.getElementById('dc-' + key);
@@ -7671,6 +7675,10 @@ async function dcAddItem(key, totalGasto){
 async function dcDelItem(key, itemId){
   if(typeof viewerActive !== 'undefined' && viewerActive) return;
   const antes = (_dc[key] || []);
+  const it0 = antes.find(it=>it.id === itemId);
+  if(!it0) return;
+  const nomCat = _dcIcon(it0.cat).name || it0.cat || '';
+  if(!confirm(`¿Quitar ${fmt(it0.amount)} de ${nomCat}${it0.desc ? ' ('+it0.desc+')' : ''} del desglose?`)) return;
   _dc[key] = antes.filter(it=>it.id !== itemId);
   _dcOpen[key] = true;
   renderDesglose();
