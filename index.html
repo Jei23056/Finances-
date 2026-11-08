@@ -1146,6 +1146,18 @@ button:not(:disabled):active, .mtab:active, .itab:active, .ycard.clickable:activ
 .dc-empty { font-size:12.5px; color:var(--muted); text-align:center; padding:1.5rem .5rem; }
 @media(max-width:600px){ .dc-sum .v { font-size:13px; } }
 
+
+.dc-years { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:1rem; }
+.dc-ytitle { font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin:0 0 .5rem; }
+.dc-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:0 12px 6px; margin-bottom:1rem; overflow:hidden; }
+.dc-card-head { margin:0 -12px; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; gap:10px; color:#fff;
+  background:radial-gradient(120% 120% at 100% 0%, rgba(255,255,255,.16), transparent 55%), linear-gradient(135deg, var(--pl1), var(--pl2)); }
+.dc-card-name { font-weight:600; font-size:14.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dc-card-sub { font-size:11px; opacity:.8; margin-top:2px; }
+.dc-card-amt { font-family:var(--num); font-weight:700; font-size:17px; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.dc-card-prog { padding:10px 2px 2px; }
+.dc-card .dc-item { background:var(--surf); }
+
 </style>
 </head>
 <body>
@@ -7454,15 +7466,32 @@ async function _dcSaveKey(key){
     catch(e2){ console.error('No se pudo guardar el desglose', e2); return false; }
   }
 }
-function _dcCreditEntries(){
+// Gastos de crédito de un año: el presente sale de tus datos; los años
+// anteriores, de la copia del Historial (solo se leen).
+function _dcFuente(year){
+  if(year === _curDataYear()) return data;
+  const h = (typeof historialFinanzasCache !== 'undefined' && historialFinanzasCache) ? historialFinanzasCache[year] : null;
+  return h || {};
+}
+function _dcCreditEntries(year){
+  const src = _dcFuente(year);
   const out = [];
   MONTHS.forEach((_, mi)=>{
-    const md = data[mi];
+    const md = src[mi];
     if(!md || !Array.isArray(md.entries)) return;
     md.entries.forEach(e=>{ if(e.type==='expense' && e.cat==='Crédito') out.push({ mi, e }); });
   });
   return out;
 }
+// Años disponibles: el que estás viendo, los del Historial y los que tengan desglose guardado
+function _dcAnios(){
+  const set = new Set([_curDataYear()]);
+  if(typeof historialFinanzasCache !== 'undefined' && historialFinanzasCache) Object.keys(historialFinanzasCache).forEach(y=>{ const n=Number(y); if(n) set.add(n); });
+  Object.keys(_dc||{}).forEach(k=>{ const m=/^y(\d{4})_/.exec(k); if(m) set.add(Number(m[1])); });
+  return [...set].filter(y=> y===_curDataYear() || _dcCreditEntries(y).length).sort((x,y)=>y-x);
+}
+let _dcYear = null;
+function dcSetYear(y){ _dcYear = y; renderDesglose(); }
 function _dcIcon(cat){
   const def = (EXPENSE_CATS||[]).find(c=>c.v===cat);
   const label = (def && (def.l||def.v)) || cat || '';
@@ -7487,6 +7516,7 @@ function switchToDesglose(){
   const panel = document.getElementById('panel-desglose'); if(panel) panel.style.display = 'block';
   if(typeof applyMonthsCollapsed === 'function') applyMonthsCollapsed();
   if(panel) panel.innerHTML = '<div class="dc-empty">Cargando…</div>';
+  _dcYear = _curDataYear();
   _dcLoad().then(renderDesglose);
 }
 function _dcHide(){
@@ -7497,67 +7527,88 @@ function _dcHide(){
 function renderDesglose(){
   const panel = document.getElementById('panel-desglose'); if(!panel) return;
   if(!_dc) _dc = {};
-  const year = _curDataYear();
+  const anios = _dcAnios();
+  if(!_dcYear || !anios.includes(_dcYear)) _dcYear = _curDataYear();
+  const year = _dcYear;
   const soloLectura = (typeof viewerActive !== 'undefined' && viewerActive);
-  const lista = _dcCreditEntries();
-  let total = 0, desg = 0; const porCat = {};
-  lista.forEach(({e})=>{
-    total += e.amount;
-    (_dc[_dcKey(year, e.id)] || []).forEach(it=>{ desg += it.amount; porCat[it.cat] = (porCat[it.cat]||0) + it.amount; });
-  });
-  const sinDet = Math.max(0, total - desg);
-  const catData = Object.entries(porCat).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
+  const lista = _dcCreditEntries(year);
+  const sumar = (arr)=>{ let total=0, desg=0; const porCat={};
+    arr.forEach(({e})=>{ total+=e.amount; (_dc[_dcKey(year,e.id)]||[]).forEach(it=>{ desg+=it.amount; porCat[it.cat]=(porCat[it.cat]||0)+it.amount; }); });
+    return { total, desg, sinDet: Math.max(0,total-desg), cats: Object.entries(porCat).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v) }; };
+  const resumenHTML = (r)=>`<div class="dc-sum">
+    <div class="b"><div class="l">Gastado con crédito</div><div class="v" style="color:var(--red)">${fmt(r.total)}</div></div>
+    <div class="b"><div class="l">Desglosado</div><div class="v" style="color:var(--green)">${fmt(r.desg)}</div></div>
+    <div class="b"><div class="l">Sin detallar</div><div class="v" style="color:var(--gold2)">${fmt(r.sinDet)}</div></div>
+  </div>`;
 
-  let html = `<div class="dc-intro"><div class="t">🧾 Desglose de crédito · ${year}</div>
-    <div class="s">Aquí aparecen solos tus gastos de crédito. Toca uno para anotar en qué se fue ese dinero. Esto es solo un detalle aparte: no se suma a tus totales, categorías ni capital.</div></div>`;
-
+  let html = `<div class="dc-intro"><div class="t">🧾 Desglose de crédito</div>
+    <div class="s">Aquí aparecen solos tus gastos de crédito, separados por tarjeta. Toca uno para anotar en qué se fue ese dinero. Es solo un detalle aparte: no se suma a tus totales, categorías ni capital, y no se borra al cambiar de año.</div></div>`;
+  if(anios.length > 1){
+    html += `<div class="dc-years">${anios.map(y=>`<button class="mtab${y===year?' active':''}" onclick="dcSetYear(${y})">${y}</button>`).join('')}</div>`;
+  }
   if(!lista.length){
-    panel.innerHTML = html + `<div class="dc-empty">Todavía no tienes gastos de crédito en ${year}.<br>Cuando agregues uno con la categoría Crédito, aparecerá aquí.</div>`;
+    panel.innerHTML = html + `<div class="dc-empty">No tienes gastos de crédito en ${year}.<br>Cuando agregues uno con la categoría Crédito, aparecerá aquí.</div>`;
     return;
   }
-  html += `<div class="dc-sum">
-    <div class="b"><div class="l">Gastado con crédito</div><div class="v" style="color:var(--red)">${fmt(total)}</div></div>
-    <div class="b"><div class="l">Desglosado</div><div class="v" style="color:var(--green)">${fmt(desg)}</div></div>
-    <div class="b"><div class="l">Sin detallar</div><div class="v" style="color:var(--gold2)">${fmt(sinDet)}</div></div>
-  </div>`;
-  if(catData.length){
-    html += `<div class="dc-block"><h3>En qué gastaste con crédito</h3>${catBarsHTML(catData,'expense')}</div>`;
-  }
+  const general = sumar(lista);
+  html += `<div class="dc-ytitle">${year} · todas las tarjetas</div>` + resumenHTML(general);
+  if(general.cats.length) html += `<div class="dc-block"><h3>En qué gastaste con crédito en ${year}</h3>${catBarsHTML(general.cats,'expense')}</div>`;
 
+  // Agrupar por tarjeta
+  const porTarjeta = {};
+  lista.forEach(x=>{ const t = x.e.tarjeta || 'Sin tarjeta'; (porTarjeta[t] = porTarjeta[t] || []).push(x); });
+  const nombres = Object.keys(porTarjeta).sort((a,b)=> sumar(porTarjeta[b]).total - sumar(porTarjeta[a]).total);
   const opts = (EXPENSE_CATS||[]).filter(c=>c.v!=='Crédito').map(c=>`<option value="${esc(c.v)}">${esc(c.l||c.v)}</option>`).join('');
-  let mesActual = -1;
-  lista.slice().sort((a,b)=> b.mi - a.mi || b.e.id - a.e.id).forEach(({mi, e})=>{
-    if(mi !== mesActual){ mesActual = mi; html += `<div class="dc-month">${MONTHS[mi]}</div>`; }
-    const key = _dcKey(year, e.id);
-    const items = _dc[key] || [];
-    const hecho = items.reduce((s,it)=>s+it.amount,0);
-    const falta = Math.max(0, parseFloat((e.amount - hecho).toFixed(2)));
-    const pct = e.amount>0 ? Math.min(100, hecho/e.amount*100) : 0;
-    const completo = falta <= 0.004;
-    const rows = items.map(it=>{ const ic=_dcIcon(it.cat); return `<div class="dc-row">
-        <div class="ic">${esc(ic.icon)}</div>
-        <div class="n">${esc(ic.name)}${it.desc?`<small>${esc(it.desc)}</small>`:''}</div>
-        <div class="v">${fmt(it.amount)}</div>
-        ${soloLectura ? '' : `<button class="x" onclick="dcDelItem('${key}',${it.id})" title="Quitar">×</button>`}
-      </div>`; }).join('');
-    html += `<div class="dc-item ${_dcOpen[key]?'open':''}" id="dc-${key}">
-      <button class="dc-head" onclick="dcToggle('${key}')">
-        <div class="m"><div class="d">${esc(e.desc||'Crédito')}</div><div class="c">💳 ${esc(e.tarjeta||'Tarjeta')} · ${esc(e.date||'')}</div></div>
-        <div class="a">${fmt(e.amount)}</div>
-      </button>
-      <div class="dc-prog"><div class="dc-bar"><i class="${completo?'full':''}" style="width:${pct.toFixed(1)}%"></i></div>
-        <div class="dc-ptxt">${completo ? '✓ Completo' : `Desglosado <b>${fmt(hecho)}</b> de <b>${fmt(e.amount)}</b> · faltan <b>${fmt(falta)}</b>`}</div></div>
-      <div class="dc-body">
-        ${rows || '<div style="font-size:12px;color:var(--muted);padding:4px 0">Todavía no has anotado nada en este gasto.</div>'}
-        ${(soloLectura || completo) ? '' : `<div class="dc-form">
-          <input id="dca-${key}" type="text" inputmode="decimal" placeholder="Monto" oninput="this.value=this.value.replace(/[^0-9.]/g,'')">
-          <select id="dcc-${key}"><option value="">Categoría…</option>${opts}</select>
-          <input id="dcd-${key}" class="full" type="text" placeholder="Descripción (opcional)" maxlength="60">
-          <button onclick="dcAddItem('${key}',${e.amount})">Agregar</button>
-        </div>`}
-        <div class="dc-msg" id="dcm-${key}"></div>
+
+  nombres.forEach(nombre=>{
+    const grupo = porTarjeta[nombre];
+    const r = sumar(grupo);
+    const tj = (tarjetas||[]).find(t=>t.nombre===nombre);
+    const dig = tj && tj.puntos ? ` · •••• ${esc(String(tj.puntos))}` : '';
+    const [c1,c2] = _plasticTheme(nombre);
+    const pctT = r.total>0 ? Math.min(100, r.desg/r.total*100) : 0;
+    html += `<div class="dc-card">
+      <div class="dc-card-head" style="--pl1:${c1};--pl2:${c2}">
+        <div style="min-width:0"><div class="dc-card-name">💳 ${esc(nombre)}</div><div class="dc-card-sub">${grupo.length} ${grupo.length===1?'gasto':'gastos'}${dig}</div></div>
+        <div class="dc-card-amt">${fmt(r.total)}</div>
       </div>
-    </div>`;
+      <div class="dc-card-prog"><div class="dc-bar"><i class="${r.sinDet<=0.004?'full':''}" style="width:${pctT.toFixed(1)}%"></i></div>
+        <div class="dc-ptxt">${r.sinDet<=0.004 ? '✓ Todo desglosado' : `Desglosado <b>${fmt(r.desg)}</b> · sin detallar <b>${fmt(r.sinDet)}</b>`}</div></div>`;
+    let mesActual = -1;
+    grupo.slice().sort((a,b)=> b.mi - a.mi || b.e.id - a.e.id).forEach(({mi, e})=>{
+      if(mi !== mesActual){ mesActual = mi; html += `<div class="dc-month">${MONTHS[mi]}</div>`; }
+      const key = _dcKey(year, e.id);
+      const items = _dc[key] || [];
+      const hecho = items.reduce((s,it)=>s+it.amount,0);
+      const falta = Math.max(0, parseFloat((e.amount - hecho).toFixed(2)));
+      const pct = e.amount>0 ? Math.min(100, hecho/e.amount*100) : 0;
+      const completo = falta <= 0.004;
+      const rows = items.map(it=>{ const ic=_dcIcon(it.cat); return `<div class="dc-row">
+          <div class="ic">${esc(ic.icon)}</div>
+          <div class="n">${esc(ic.name)}${it.desc?`<small>${esc(it.desc)}</small>`:''}</div>
+          <div class="v">${fmt(it.amount)}</div>
+          ${soloLectura ? '' : `<button class="x" onclick="dcDelItem('${key}',${it.id})" title="Quitar">×</button>`}
+        </div>`; }).join('');
+      html += `<div class="dc-item ${_dcOpen[key]?'open':''}" id="dc-${key}">
+        <button class="dc-head" onclick="dcToggle('${key}')">
+          <div class="m"><div class="d">${esc(e.desc||'Crédito')}</div><div class="c">${esc(e.date||'')}</div></div>
+          <div class="a">${fmt(e.amount)}</div>
+        </button>
+        <div class="dc-prog"><div class="dc-bar"><i class="${completo?'full':''}" style="width:${pct.toFixed(1)}%"></i></div>
+          <div class="dc-ptxt">${completo ? '✓ Completo' : `Desglosado <b>${fmt(hecho)}</b> de <b>${fmt(e.amount)}</b> · faltan <b>${fmt(falta)}</b>`}</div></div>
+        <div class="dc-body">
+          ${rows || '<div style="font-size:12px;color:var(--muted);padding:4px 0">Todavía no has anotado nada en este gasto.</div>'}
+          ${(soloLectura || completo) ? '' : `<div class="dc-form">
+            <input id="dca-${key}" type="text" inputmode="decimal" placeholder="Monto" oninput="this.value=this.value.replace(/[^0-9.]/g,'')">
+            <select id="dcc-${key}"><option value="">Categoría…</option>${opts}</select>
+            <input id="dcd-${key}" class="full" type="text" placeholder="Descripción (opcional)" maxlength="60">
+            <button onclick="dcAddItem('${key}',${e.amount})">Agregar</button>
+          </div>`}
+          <div class="dc-msg" id="dcm-${key}"></div>
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
   });
   panel.innerHTML = html;
 }
