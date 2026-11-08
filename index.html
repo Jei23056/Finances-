@@ -7521,7 +7521,7 @@ let _dcYear = null;
 let _dcCard = null;
 let _dcCardsList = [];
 function dcSetYear(y){ _dcYear = y; _dcCard = null; renderDesglose(); }
-function dcSetCard(i){ _dcCard = (_dcCardsList||[])[i] || null; renderDesglose(); }
+function dcSetCard(i){ _dcCard = (i === -1) ? '__todas__' : ((_dcCardsList||[])[i] || null); renderDesglose(); }
 function _dcIcon(cat){
   const def = (EXPENSE_CATS||[]).find(c=>c.v===cat);
   const label = (def && (def.l||def.v)) || cat || '';
@@ -7585,14 +7585,36 @@ function renderDesglose(){
   lista.forEach(x=>{ const t = x.e.tarjeta || 'Sin tarjeta'; (porTarjeta[t] = porTarjeta[t] || []).push(x); });
   const nombres = Object.keys(porTarjeta).sort((a,b)=> sumar(porTarjeta[b]).total - sumar(porTarjeta[a]).total);
   _dcCardsList = nombres;
-  if(!_dcCard || !nombres.includes(_dcCard)) _dcCard = nombres[0];
-  html += `<div class="dc-cards-pick">${nombres.map((n,i)=>{
+  const DC_ALL = '__todas__';
+  const hayVarias = nombres.length > 1;
+  if(!_dcCard || !(nombres.includes(_dcCard) || (_dcCard===DC_ALL && hayVarias))) _dcCard = nombres[0];
+  html += `<div class="dc-cards-pick">${hayVarias ? `<button class="dc-pick${_dcCard===DC_ALL?' active':''}" style="--pl1:#866524;--pl2:#3a2a0a" onclick="dcSetCard(-1)">
+        <span class="nm">🧮 Todas</span><span class="am">${fmt(sumar(lista).total)}</span></button>` : ''}${nombres.map((n,i)=>{
       const [c1,c2] = _plasticTheme(n); const tot = sumar(porTarjeta[n]).total;
       return `<button class="dc-pick${n===_dcCard?' active':''}" style="--pl1:${c1};--pl2:${c2}" onclick="dcSetCard(${i})">
         <span class="nm">💳 ${esc(n)}</span><span class="am">${fmt(tot)}</span></button>`; }).join('')}</div>`;
 
   const opts = (EXPENSE_CATS||[]).filter(c=>c.v!=='Crédito').map(c=>`<option value="${esc(c.v)}">${esc(c.l||c.v)}</option>`).join('');
-  [_dcCard].forEach(nombre=>{
+  // Vista "Todas": todas las tarjetas de crédito juntas (solo para ver)
+  if(_dcCard === DC_ALL){
+    const r = sumar(lista);
+    html += `<div class="dc-card">
+      <div class="dc-card-head" style="--pl1:#866524;--pl2:#3a2a0a">
+        <div style="min-width:0"><div class="dc-card-name">🧮 Todas las tarjetas</div><div class="dc-card-sub">${year} · ${nombres.length} tarjetas · ${lista.length} gastos</div></div>
+        <div class="dc-card-amt">${fmt(r.total)}</div>
+      </div>
+      <div style="padding-top:12px">${resumenHTML(r).replace('Gastado con crédito','Gastado')}</div>
+      ${r.cats.length ? `<div class="dc-block" style="background:var(--surf)"><h3>En qué gastaste con todas tus tarjetas</h3><div class="dc-cats${_dcCatsAll?' all':''}">${catBarsHTML(r.cats,'expense')}</div>${r.cats.length>3 ? `<button class="dc-more" onclick="dcToggleCats()">${_dcCatsAll ? 'Ver menos' : `Ver todas (${r.cats.length})`}</button>` : ''}</div>` : ''}
+      <div class="dc-month">Por tarjeta</div>
+      ${nombres.map((n,i)=>{ const rt = sumar(porTarjeta[n]); const pct = rt.total>0 ? Math.min(100, rt.desg/rt.total*100) : 0;
+        return `<div class="dc-item"><button class="dc-head" onclick="dcSetCard(${i})">
+          <div class="m"><div class="d">💳 ${esc(n)}</div><div class="c">${porTarjeta[n].length} ${porTarjeta[n].length===1?'gasto':'gastos'} · toca para ver</div></div>
+          <div class="a">${fmt(rt.total)}</div></button>
+          <div class="dc-prog"><div class="dc-bar"><i class="${pct>=99.99?'full':''}" style="width:${pct.toFixed(1)}%"></i></div>
+          <div class="dc-ptxt">Desglosado <b>${fmt(rt.desg)}</b> de <b>${fmt(rt.total)}</b></div></div></div>`; }).join('')}
+    </div>`;
+  }
+  [_dcCard].filter(n=>n!==DC_ALL).forEach(nombre=>{
     const grupo = porTarjeta[nombre];
     const r = sumar(grupo);
     const tj = (tarjetas||[]).find(t=>t.nombre===nombre);
