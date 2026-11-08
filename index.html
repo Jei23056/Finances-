@@ -1158,6 +1158,19 @@ button:not(:disabled):active, .mtab:active, .itab:active, .ycard.clickable:activ
 .dc-card-prog { padding:10px 2px 2px; }
 .dc-card .dc-item { background:var(--surf); }
 
+
+.dc-card .dc-sum { gap:6px; }
+.dc-card .dc-sum .b { padding:9px 8px; }
+.dc-card .dc-sum .v { font-size:clamp(11.5px, 3.4vw, 15px); overflow:visible; text-overflow:clip; letter-spacing:-0.02em; }
+.dc-cards-pick { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:1rem; scrollbar-width:none; }
+.dc-cards-pick::-webkit-scrollbar { display:none; }
+.dc-pick { flex-shrink:0; min-width:150px; display:flex; flex-direction:column; align-items:flex-start; gap:4px; text-align:left;
+  padding:12px 14px; border-radius:var(--rs); border:1px solid var(--border); background:var(--card); color:var(--muted2); cursor:pointer; font-family:'DM Sans',sans-serif; }
+.dc-pick .nm { font-size:13px; font-weight:600; white-space:nowrap; }
+.dc-pick .am { font-family:var(--num); font-weight:700; font-size:14px; font-variant-numeric:tabular-nums; }
+.dc-pick.active { color:#fff; border-color:transparent; box-shadow:0 8px 22px rgba(0,0,0,.35);
+  background:radial-gradient(120% 120% at 100% 0%, rgba(255,255,255,.16), transparent 55%), linear-gradient(135deg, var(--pl1), var(--pl2)); }
+
 </style>
 </head>
 <body>
@@ -7491,7 +7504,10 @@ function _dcAnios(){
   return [...set].filter(y=> y===_curDataYear() || _dcCreditEntries(y).length).sort((x,y)=>y-x);
 }
 let _dcYear = null;
-function dcSetYear(y){ _dcYear = y; renderDesglose(); }
+let _dcCard = null;
+let _dcCardsList = [];
+function dcSetYear(y){ _dcYear = y; _dcCard = null; renderDesglose(); }
+function dcSetCard(i){ _dcCard = (_dcCardsList||[])[i] || null; renderDesglose(); }
 function _dcIcon(cat){
   const def = (EXPENSE_CATS||[]).find(c=>c.v===cat);
   const label = (def && (def.l||def.v)) || cat || '';
@@ -7550,30 +7566,32 @@ function renderDesglose(){
     panel.innerHTML = html + `<div class="dc-empty">No tienes gastos de crédito en ${year}.<br>Cuando agregues uno con la categoría Crédito, aparecerá aquí.</div>`;
     return;
   }
-  const general = sumar(lista);
-  html += `<div class="dc-ytitle">${year} · todas las tarjetas</div>` + resumenHTML(general);
-  if(general.cats.length) html += `<div class="dc-block"><h3>En qué gastaste con crédito en ${year}</h3>${catBarsHTML(general.cats,'expense')}</div>`;
-
-  // Agrupar por tarjeta
+  // Agrupar por tarjeta y mostrar solo la tarjeta elegida
   const porTarjeta = {};
   lista.forEach(x=>{ const t = x.e.tarjeta || 'Sin tarjeta'; (porTarjeta[t] = porTarjeta[t] || []).push(x); });
   const nombres = Object.keys(porTarjeta).sort((a,b)=> sumar(porTarjeta[b]).total - sumar(porTarjeta[a]).total);
-  const opts = (EXPENSE_CATS||[]).filter(c=>c.v!=='Crédito').map(c=>`<option value="${esc(c.v)}">${esc(c.l||c.v)}</option>`).join('');
+  _dcCardsList = nombres;
+  if(!_dcCard || !nombres.includes(_dcCard)) _dcCard = nombres[0];
+  html += `<div class="dc-cards-pick">${nombres.map((n,i)=>{
+      const [c1,c2] = _plasticTheme(n); const tot = sumar(porTarjeta[n]).total;
+      return `<button class="dc-pick${n===_dcCard?' active':''}" style="--pl1:${c1};--pl2:${c2}" onclick="dcSetCard(${i})">
+        <span class="nm">💳 ${esc(n)}</span><span class="am">${fmt(tot)}</span></button>`; }).join('')}</div>`;
 
-  nombres.forEach(nombre=>{
+  const opts = (EXPENSE_CATS||[]).filter(c=>c.v!=='Crédito').map(c=>`<option value="${esc(c.v)}">${esc(c.l||c.v)}</option>`).join('');
+  [_dcCard].forEach(nombre=>{
     const grupo = porTarjeta[nombre];
     const r = sumar(grupo);
     const tj = (tarjetas||[]).find(t=>t.nombre===nombre);
     const dig = tj && tj.puntos ? ` · •••• ${esc(String(tj.puntos))}` : '';
     const [c1,c2] = _plasticTheme(nombre);
-    const pctT = r.total>0 ? Math.min(100, r.desg/r.total*100) : 0;
     html += `<div class="dc-card">
       <div class="dc-card-head" style="--pl1:${c1};--pl2:${c2}">
-        <div style="min-width:0"><div class="dc-card-name">💳 ${esc(nombre)}</div><div class="dc-card-sub">${grupo.length} ${grupo.length===1?'gasto':'gastos'}${dig}</div></div>
+        <div style="min-width:0"><div class="dc-card-name">💳 ${esc(nombre)}</div><div class="dc-card-sub">${year} · ${grupo.length} ${grupo.length===1?'gasto':'gastos'}${dig}</div></div>
         <div class="dc-card-amt">${fmt(r.total)}</div>
       </div>
-      <div class="dc-card-prog"><div class="dc-bar"><i class="${r.sinDet<=0.004?'full':''}" style="width:${pctT.toFixed(1)}%"></i></div>
-        <div class="dc-ptxt">${r.sinDet<=0.004 ? '✓ Todo desglosado' : `Desglosado <b>${fmt(r.desg)}</b> · sin detallar <b>${fmt(r.sinDet)}</b>`}</div></div>`;
+      <div style="padding-top:12px">${resumenHTML(r).replace('Gastado con crédito','Gastado')}</div>
+      ${r.cats.length ? `<div class="dc-block" style="background:var(--surf)"><h3>En qué gastaste con esta tarjeta</h3>${catBarsHTML(r.cats,'expense')}</div>` : ''}
+`;
     let mesActual = -1;
     grupo.slice().sort((a,b)=> b.mi - a.mi || b.e.id - a.e.id).forEach(({mi, e})=>{
       if(mi !== mesActual){ mesActual = mi; html += `<div class="dc-month">${MONTHS[mi]}</div>`; }
