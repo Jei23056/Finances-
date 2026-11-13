@@ -1291,6 +1291,14 @@ body {
 .gr-kpi .s { font-size:11px; color:var(--muted2); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .gr-proj { display:flex; gap:10px; align-items:flex-start; margin-top:12px; padding:10px 12px; border-radius:var(--rs); background:var(--gldim); border:1px dashed var(--border2); font-size:13px; color:var(--muted2); }
 .gr-proj b { color:var(--text); }
+
+/* Gráficas: selector de año y comparar */
+.gr-top { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+.gr-years { display:flex; gap:6px; flex-wrap:wrap; }
+.gr-year { padding:6px 14px; border-radius:999px; border:1px solid var(--border2); background:transparent; color:var(--muted2); font:600 13px 'DM Sans',sans-serif; cursor:pointer; font-variant-numeric:tabular-nums; }
+.gr-year.on { background:var(--card2); color:var(--text); border-color:var(--gold); }
+.gr-cmp { padding:7px 14px; border-radius:999px; border:1px dashed var(--border2); background:var(--card); color:var(--muted2); font:500 13px 'DM Sans',sans-serif; cursor:pointer; }
+.gr-cmp.on { border-style:solid; border-color:var(--gold2); color:var(--text); background:var(--gldim); }
 </style>
 </head>
 <body>
@@ -8209,15 +8217,58 @@ const GR_TIPOS = [
   ['semana',    '📅 Día de la semana']
 ];
 let _grTipo = 'capital';
-function _grK(n){ const a = Math.abs(n), sg = n<0?'-':''; if(a>=1e6) return sg+(a/1e6).toFixed(1).replace('.0','')+'M'; if(a>=1e3) return sg+Math.round(a/1e3)+'k'; return sg+Math.round(a); }
-// Meses que cuentan: en el año actual, hasta el mes de hoy; en años pasados, los 12
-function _grMeses(){
-  const hasta = (_curDataYear() === CURRENT_YEAR) ? new Date().getMonth() : 11;
-  const out = []; for(let m=0; m<=hasta; m++) out.push(m); return out;
-}
+let _grYear = null;      // año que estás viendo en Gráficas (null = el de la app)
+let _grComp = false;     // comparar con el año anterior
+const GR_PREV_OP = 0.55; // qué tan suave se ve el año anterior
+
+function _grK(n){ const a = Math.abs(n), sg = n<0?'-':''; if(a>=1e6) return sg+(a/1e6).toFixed(1).replace('.0','')+'M'; if(a>=1e4) return sg+Math.round(a/1e3)+'k'; if(a>=1e3) return sg+(a/1e3).toFixed(1).replace('.0','')+'k'; return sg+Math.round(a); }
+const _grPlata = v => (v<0?'−':'') + '$' + _grK(Math.abs(v));
 function _grCatNombre(cat){ try { return _catNombre(cat); } catch(e){ return cat; } }
+
+// ── De dónde salen los datos de cada año ───────────────────────────────────
+// El año que muestra la app sale de tus datos en vivo; los años anteriores,
+// del Historial (lo que la app guarda sola al cambiar de año). Solo se leen.
+function _grFuentes(){
+  const out = {}, cur = _curDataYear();
+  out[cur] = data;
+  const h = (typeof historialFinanzasCache !== 'undefined' && historialFinanzasCache) ? historialFinanzasCache : {};
+  Object.keys(h).forEach(y=>{ const n = Number(y); if(n && n !== cur && h[y] && typeof h[y] === 'object') out[n] = h[y]; });
+  return out;
+}
+const _grE = (src, m) => (src && src[m] && Array.isArray(src[m].entries)) ? src[m].entries : [];
+function _grTieneDatos(src){ for(let m=0;m<12;m++) if(_grE(src,m).length) return true; return false; }
+function _grAnios(){ const f = _grFuentes(), cur = _curDataYear(); return Object.keys(f).map(Number).filter(y=> y===cur || _grTieneDatos(f[y])).sort((a,b)=>b-a); }
+// Totales de los 12 meses de un año, con el capital encadenado igual que la app
+function _grTotales(src){
+  const out = []; let prevEnd = 0;
+  for(let m=0;m<12;m++){
+    const md = (src && src[m]) || {}, e = _grE(src, m);
+    const inc = parseFloat(e.filter(x=>x.type==='income').reduce((s,x)=>s+(x.amount||0),0).toFixed(2));
+    const exp = parseFloat(e.filter(x=>x.type==='expense').reduce((s,x)=>s+(x.amount||0),0).toFixed(2));
+    const net = parseFloat((inc-exp).toFixed(2));
+    let start;
+    if(m === 0) start = (typeof md.startCapital === 'number') ? md.startCapital : 0;
+    else start = (md._autoCapital === false && typeof md.startCapital === 'number') ? md.startCapital : prevEnd;
+    const end = parseFloat((start + net).toFixed(2));
+    out.push({ m, inc, exp, net, start, end }); prevEnd = end;
+  }
+  return out;
+}
+// Contexto de la gráfica: el año elegido y (si se pidió) el anterior
+function _grCtx(){
+  const f = _grFuentes(), anios = _grAnios();
+  if(!_grYear || !f[_grYear]) _grYear = _curDataYear();
+  const year = _grYear, src = f[year];
+  const hasta = (year === CURRENT_YEAR) ? new Date().getMonth() : 11;
+  const meses = []; for(let m=0;m<=hasta;m++) meses.push(m);
+  const py = year - 1, hayPrev = !!(f[py] && _grTieneDatos(f[py]));
+  const prev = (_grComp && hayPrev) ? { year:py, src:f[py], T:_grTotales(f[py]) } : null;
+  return { year, src, T:_grTotales(src), meses, restan: (year === CURRENT_YEAR) ? 11 - hasta : 0, prev, hayPrev, py, anios,
+           periodo: (year === CURRENT_YEAR && hasta < 11) ? `ene–${GR_MES[hasta].toLowerCase()}` : 'todo el año' };
+}
+
+// ── Piezas de dibujo ────────────────────────────────────────────────────────
 function _grEje(max, min){
-  // Escala "redonda" para el eje
   const span = Math.max(1, max - Math.min(0, min));
   const pot = Math.pow(10, Math.floor(Math.log10(span/4)));
   const paso = [1,2,2.5,5,10].map(x=>x*pot).find(x=> span/x <= 5) || pot*10;
@@ -8226,64 +8277,20 @@ function _grEje(max, min){
   return { top, bot, ticks };
 }
 let _grW = 640; const _grH = 260, _grL = 46, _grR = 12, _grT = 14, _grB = 30;   // el ancho se ajusta a la pantalla
-function _grFrame(eje){
-  const y = v => _grT + (eje.top - v) / (eje.top - eje.bot || 1) * (_grH - _grT - _grB);
-  const grid = eje.ticks.map(v=>`<line x1="${_grL}" x2="${_grW-_grR}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="var(--border2)" stroke-width="${v===0?1.2:0.6}" ${v===0?'':'stroke-dasharray="3 4"'}/>
-    <text x="${_grL-8}" y="${(y(v)+4).toFixed(1)}" text-anchor="end" font-size="11" fill="var(--muted)">${_grK(v)}</text>`).join('');
+function _grFrame(eje, H, fmtV){
+  H = H || _grH; fmtV = fmtV || _grK;
+  const y = v => _grT + (eje.top - v) / (eje.top - eje.bot || 1) * (H - _grT - _grB);
+  const grid = eje.ticks.map(v=>`<line x1="${_grL}" x2="${_grW-_grR}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="var(--border2)" stroke-width="${v===0?1.2:0.5}" ${v===0?'':'stroke-dasharray="2 5"'}/>
+    <text x="${_grL-8}" y="${(y(v)+4).toFixed(1)}" text-anchor="end" font-size="11" fill="var(--muted)">${fmtV(v)}</text>`).join('');
   return { y, grid };
 }
-function _grMesLbl(meses, x){ return meses.map(m=>`<text x="${x(m).toFixed(1)}" y="${_grH-9}" text-anchor="middle" font-size="11.5" fill="var(--muted2)">${GR_MES[m]}</text>`).join(''); }
-
-function _grCapital(meses){
-  const t = meses.map(m=>({m, ...monthTotals(m)}));
-  const vals = t.map(d=>d.end), ini = t.length ? t[0].start : 0;
-  const eje = _grEje(Math.max(1, ...vals, ini), Math.min(0, ...vals, ini)); const f = _grFrame(eje);
-  const x = m => _grL + (meses.length>1 ? meses.indexOf(m)/(meses.length-1) : 0.5)*(_grW-_grL-_grR-16) + 8;
-  const pts = t.map(d=>`${x(d.m).toFixed(1)},${f.y(d.end).toFixed(1)}`).join(' ');
-  const area = t.length ? `${x(t[0].m).toFixed(1)},${f.y(Math.max(eje.bot,0)).toFixed(1)} ${pts} ${x(t[t.length-1].m).toFixed(1)},${f.y(Math.max(eje.bot,0)).toFixed(1)}` : '';
-  const maxD = t.slice().sort((a,b)=>b.end-a.end)[0];
-  const dots = t.map(d=>`<g data-tip="${MONTHS[d.m]}: capital al cerrar <b>${fmt(d.end)}</b> (${d.net>=0?'+':''}${fmt(d.net)} ese mes)"><circle cx="${x(d.m).toFixed(1)}" cy="${f.y(d.end).toFixed(1)}" r="14" fill="transparent"/><circle cx="${x(d.m).toFixed(1)}" cy="${f.y(d.end).toFixed(1)}" r="${d===t[t.length-1]?5:3.5}" fill="${d===t[t.length-1]?'var(--gold2)':'var(--card)'}" stroke="var(--gold2)" stroke-width="2"/></g>`).join('');
-  const fin = t.length ? t[t.length-1].end : 0, cambio = fin - ini;
-  return { titulo:'Cómo ha cambiado tu capital', sub:'Lo que tenías al cerrar cada mes',
-    svg: f.grid + (area?`<polygon points="${area}" fill="var(--gold)" opacity="0.10"/>`:'') + `<polyline points="${pts}" fill="none" stroke="var(--gold2)" stroke-width="2.5" stroke-linejoin="round"/>` + dots + _grMesLbl(meses, x),
-    leyenda:[['var(--gold2)','Capital al final del mes']],
-    que:'La línea muestra <b>cuánto dinero tenías</b> al terminar cada mes. Si sube, ese mes ahorraste; si baja, ese mes saliste con menos de lo que entraste.',
-    dice: !t.length ? 'Todavía no hay datos.' : `Empezaste el año con <b>${fmt(ini)}</b> y vas en <b>${fmt(fin)}</b>: ${cambio>=0?'subiste':'bajaste'} <b>${fmt(Math.abs(cambio))}</b>. Tu punto más alto fue <b>${MONTHS[maxD.m]}</b> con <b>${fmt(maxD.end)}</b>.` };
-}
-function _grDona(meses){
-  const por = {}; let tot = 0;
-  meses.forEach(m=> getMonth(m).entries.forEach(e=>{ if(e.type==='expense'){ por[e.cat]=(por[e.cat]||0)+e.amount; tot+=e.amount; } }));
-  let arr = Object.entries(por).sort((a,b)=>b[1]-a[1]);
-  if(arr.length > 7){ const resto = arr.slice(6).reduce((s,x)=>s+x[1],0); arr = arr.slice(0,6).concat([['__otras', resto]]); }
-  const cols = (typeof DONUT_COLORS_LIVE !== 'undefined') ? DONUT_COLORS_LIVE : ['#5b8fd6','#4ec99a','#e8695d','#c9a15a','#8f7fd6','#5ac9c9','#d68f5b'];
-  const angosto = _grW < 560;   // en el celular la lista va debajo del círculo
-  const cx = angosto ? _grW/2 : 150, cy = 128, R = 104, r = 64; let a0 = -Math.PI/2;
-  const lx = angosto ? 16 : 300, ly = angosto ? 250 : 30, rx = _grW - 15;
-  const seg = arr.map(([k,v],i)=>{
-    const a1 = a0 + (tot? v/tot : 0)*Math.PI*2, big = (a1-a0)>Math.PI?1:0;
-    const P = (a, rr)=>`${(cx+rr*Math.cos(a)).toFixed(2)},${(cy+rr*Math.sin(a)).toFixed(2)}`;
-    const d = (a1-a0) >= Math.PI*2-1e-6
-      ? `M${P(a0,R)} A${R},${R} 0 1 1 ${P(a0+Math.PI,R)} A${R},${R} 0 1 1 ${P(a0,R)} M${P(a0,r)} A${r},${r} 0 1 0 ${P(a0+Math.PI,r)} A${r},${r} 0 1 0 ${P(a0,r)}Z`
-      : `M${P(a0,R)} A${R},${R} 0 ${big} 1 ${P(a1,R)} L${P(a1,r)} A${r},${r} 0 ${big} 0 ${P(a0,r)}Z`;
-    a0 = a1;
-    const nom = k==='__otras' ? 'Otras' : _grCatNombre(k);
-    return { path:`<path d="${d}" fill="${cols[i%cols.length]}" stroke="var(--card)" stroke-width="2" data-tip="${esc(nom)}: <b>${fmt(v)}</b> · ${(v/tot*100).toFixed(1)}% de tus gastos"/>`, nom, v, col:cols[i%cols.length] };
-  });
-  const lista = seg.map((x,i)=>`<g data-tip="${esc(x.nom)}: <b>${fmt(x.v)}</b> · ${(x.v/tot*100).toFixed(1)}% de tus gastos"><rect x="${lx}" y="${ly+i*30}" width="${rx-lx}" height="26" fill="transparent"/><rect x="${lx}" y="${ly+8+i*30}" width="12" height="12" rx="3" fill="${x.col}"/>
-    <text x="${lx+20}" y="${ly+18+i*30}" font-size="13" fill="var(--text)">${esc(x.nom.length>24?x.nom.slice(0,23)+'…':x.nom)} · ${fmt(x.v)}</text>
-    <text x="${rx}" y="${ly+18+i*30}" font-size="13" fill="var(--muted2)" text-anchor="end">${(x.v/tot*100).toFixed(0)}%</text></g>`).join('');
-  const top = seg[0];
-  return { titulo:'En qué se va tu dinero', sub:'Tus gastos del año repartidos por categoría', alto: angosto ? ly + seg.length*30 + 6 : _grH,
-    svg: tot ? seg.map(x=>x.path).join('') + `<text x="${cx}" y="${cy-4}" text-anchor="middle" font-size="12" fill="var(--muted)">Total</text><text x="${cx}" y="${cy+16}" text-anchor="middle" font-size="17" font-weight="700" fill="var(--text)">${_grK(tot)}</text>` + lista : '',
-    leyenda:[],
-    que:'El círculo completo son <b>todos tus gastos del año</b>. Cada pedazo es una categoría: mientras más grande, más dinero se fue ahí.',
-    dice: !tot ? 'Todavía no hay gastos este año.' : `Lo que más pagas es <b>${esc(top.nom)}</b>: <b>${fmt(top.v)}</b>, el <b>${(top.v/tot*100).toFixed(0)}%</b> de todo lo que gastaste.` + (seg[1] ? ` Le sigue <b>${esc(seg[1].nom)}</b> con ${(seg[1].v/tot*100).toFixed(0)}%.` : '') };
-}
-// Curva suave que no se pasa de los puntos (monótona), para líneas acumuladas
+function _grMesLbl(meses, x, H){ const corto = meses.length > 1 && (x(meses[1]) - x(meses[0])) < 30;
+  return meses.map(m=>`<text x="${x(m).toFixed(1)}" y="${(H||_grH)-9}" text-anchor="middle" font-size="11" fill="var(--muted2)">${corto ? GR_MES[m][0] : GR_MES[m]}</text>`).join(''); }
+// Curva suave que no se pasa de los puntos (monótona)
 function _grCurva(pts){
   if(pts.length < 3) return pts.map((p,i)=>`${i?'L':'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
-  const n = pts.length, dx = [], dy = [], m = [], t = [];
-  for(let i=0;i<n-1;i++){ dx[i] = pts[i+1][0]-pts[i][0]; dy[i] = pts[i+1][1]-pts[i][1]; m[i] = dy[i]/(dx[i]||1); }
+  const n = pts.length, dx = [], m = [], t = [];
+  for(let i=0;i<n-1;i++){ dx[i] = pts[i+1][0]-pts[i][0]; m[i] = (pts[i+1][1]-pts[i][1])/(dx[i]||1); }
   t[0] = m[0]; t[n-1] = m[n-2];
   for(let i=1;i<n-1;i++) t[i] = (m[i-1]*m[i] <= 0) ? 0 : 3*(dx[i-1]+dx[i]) / ((2*dx[i]+dx[i-1])/m[i-1] + (dx[i]+2*dx[i-1])/m[i]);
   let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
@@ -8291,77 +8298,197 @@ function _grCurva(pts){
     d += ` C${(pts[i][0]+h).toFixed(1)},${(pts[i][1]+t[i]*h).toFixed(1)} ${(pts[i+1][0]-h).toFixed(1)},${(pts[i+1][1]-t[i+1]*h).toFixed(1)} ${pts[i+1][0].toFixed(1)},${pts[i+1][1].toFixed(1)}`; }
   return d;
 }
-const _grPlata = v => '$' + _grK(v);
-// ¿Cuántos meses faltan para cerrar el año? (solo en el año actual)
-function _grRestan(meses){ return (_curDataYear() === CURRENT_YEAR) ? 11 - meses[meses.length-1] : 0; }
+const _grPill = (x, y, txt, stroke) => { const w = Math.max(48, txt.length*7.2+16);
+  return `<rect x="${(x-w/2).toFixed(1)}" y="${(y-11).toFixed(1)}" width="${w.toFixed(1)}" height="22" rx="11" fill="var(--card2)" stroke="${stroke||'var(--gold2)'}" stroke-width="1"/>
+    <text x="${x.toFixed(1)}" y="${(y+4).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--text)">${txt}</text>`; };
+const _grDiff = (a, b, fmtF) => { const d = a - b; return `${d>=0?'▲':'▼'} ${(fmtF||_grPlata)(Math.abs(d))}`; };
 
-function _grAhorro(meses){
-  const t = meses.map(m=>{ const d = monthTotals(m); return { m, inc:d.inc, exp:d.exp, net:d.inc-d.exp, pct: d.inc>0 ? (d.inc-d.exp)/d.inc*100 : null }; });
-  const con = t.filter(d=>d.pct!==null);
-  const vacio = { titulo:'Qué parte de lo que ganas ahorras', sub:'', svg:'', leyenda:[], que:'', dice:'Todavía no hay meses con ingresos.' };
-  if(!con.length) return vacio;
+// ── 📈 Tu capital ───────────────────────────────────────────────────────────
+function _grCapital(C){
+  const t = C.meses.map(m=>C.T[m]);
+  if(!t.length) return { titulo:'Cómo ha cambiado tu capital', svg:'', dice:'Todavía no hay datos.' };
+  const ini = t[0].start, fin = t[t.length-1].end, cambio = fin - ini;
+  const prom = t.reduce((s,d)=>s+d.net,0)/t.length;
+  const proj = []; for(let k=1;k<=C.restan;k++) proj.push({ m:t[t.length-1].m+k, end: fin + prom*k });
+  const P = C.prev ? C.prev.T : null;
+  const vals = [...t.map(d=>d.end), ini, ...proj.map(d=>d.end), ...(P ? P.map(d=>d.end).concat(P[0].start) : [])];
+  // Arriba la línea del capital, en medio los meses y abajo lo que sumó/restó cada mes
+  const H = 312, yMes = 240, yb0 = 268, bh = 36;
+  const eje = _grEje(Math.max(1, ...vals), Math.min(0, ...vals)); const f = _grFrame(eje, 222 + _grB);
+  const Rx = _grW - _grR - 54;
+  const x = m => _grL + 10 + m/11*(Rx-_grL-10);
+  const pts = t.map(d=>[x(d.m), f.y(d.end)]);
+  const base = f.y(Math.max(eje.bot, 0));
+  let svg = `<defs><linearGradient id="grCapG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--gold2)" stop-opacity="0.30"/><stop offset="1" stop-color="var(--gold2)" stop-opacity="0"/></linearGradient></defs>` + f.grid;
+  if(proj.length){ const xa = x(t[t.length-1].m), xb = x(11);
+    svg += `<rect x="${xa.toFixed(1)}" y="${_grT}" width="${(xb-xa).toFixed(1)}" height="${(base-_grT).toFixed(1)}" fill="var(--gold)" opacity="0.045"/>
+      <text x="${((xa+xb)/2).toFixed(1)}" y="${_grT+12}" text-anchor="middle" font-size="10" letter-spacing="1.2" fill="var(--muted)">PROYECCIÓN</text>`; }
+  // Año anterior (para comparar)
+  if(P){ const pp = P.map(d=>[x(d.m), f.y(d.end)]);
+    svg += `<path d="${_grCurva(pp)}" fill="none" stroke="var(--muted2)" stroke-width="2" stroke-dasharray="4 4" opacity="${GR_PREV_OP}"/>
+      <text x="${(x(11)+8).toFixed(1)}" y="${(f.y(P[11].end)+4).toFixed(1)}" font-size="10.5" fill="var(--muted2)">${C.prev.year}</text>`; }
+  if(pts.length >= 2) svg += `<path d="${_grCurva(pts)} L${pts[pts.length-1][0].toFixed(1)},${base.toFixed(1)} L${pts[0][0].toFixed(1)},${base.toFixed(1)}Z" fill="url(#grCapG)"/>`;
+  svg += `<path d="${_grCurva(pts)}" fill="none" stroke="var(--gold2)" stroke-width="2.8" stroke-linecap="round"/>`;
+  if(proj.length){ const q = [[x(t[t.length-1].m), f.y(fin)], ...proj.map(d=>[x(d.m), f.y(d.end)])];
+    svg += `<path d="${_grCurva(q)}" fill="none" stroke="var(--gold2)" stroke-width="2" stroke-dasharray="5 5" opacity="0.7"/>
+      <text x="${(x(11)+8).toFixed(1)}" y="${(f.y(proj[proj.length-1].end)+4).toFixed(1)}" font-size="11" font-weight="600" fill="var(--gold2)">≈ ${_grPlata(proj[proj.length-1].end)}</text>`; }
+  const xu = x(t[t.length-1].m), yu = f.y(fin);
+  svg += `<circle cx="${xu.toFixed(1)}" cy="${yu.toFixed(1)}" r="6" fill="var(--gold2)" stroke="var(--card)" stroke-width="2.5"/>` + _grPill(xu, Math.max(_grT+12, yu-22), _grPlata(fin));
+  // Banda de abajo: lo que sumó o restó cada mes
+  const mxN = Math.max(1, ...t.map(d=>Math.abs(d.net)));
+  const bw = Math.min(16, (Rx-_grL)/14);
+  svg += `<text x="${_grL}" y="${yb0-6}" font-size="9.5" letter-spacing="1" fill="var(--muted)">LO QUE SUMÓ O RESTÓ CADA MES</text>
+    <line x1="${_grL}" x2="${Rx}" y1="${(yb0+bh/2).toFixed(1)}" y2="${(yb0+bh/2).toFixed(1)}" stroke="var(--border2)"/>`;
+  svg += t.map(d=>{ const hgt = Math.abs(d.net)/mxN*(bh/2), yy = d.net>=0 ? yb0+bh/2-hgt : yb0+bh/2;
+    return `<rect x="${(x(d.m)-bw/2).toFixed(1)}" y="${yy.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,hgt).toFixed(1)}" rx="2" fill="${d.net>=0?'var(--green)':'var(--red)'}" opacity="0.85"/>`; }).join('');
+  // Toques
+  svg += t.map(d=>`<rect x="${(x(d.m)-(Rx-_grL)/22).toFixed(1)}" y="${_grT}" width="${((Rx-_grL)/11).toFixed(1)}" height="${H-_grT-_grB}" fill="transparent"
+      data-tip="${MONTHS[d.m]}: cerraste con <b>${fmt(d.end)}</b> · ${d.net>=0?'sumaste':'restaste'} <b>${fmt(Math.abs(d.net))}</b>${P?` · en ${C.prev.year}: ${fmt(P[d.m].end)}`:''}"/>`).join('');
+  const corto = (Rx-_grL)/11 < 32, ultimo = t[t.length-1].m;
+  svg += GR_MES.map((l,m)=>`<text x="${x(m).toFixed(1)}" y="${yMes}" text-anchor="middle" font-size="11" fill="${m<=ultimo?'var(--muted2)':'var(--muted)'}" opacity="${m<=ultimo?1:0.6}">${corto ? l[0] : l}</text>`).join('');
+  const mejor = t.slice().sort((a,b)=>b.net-a.net)[0], peor = t.slice().sort((a,b)=>a.net-b.net)[0];
+  const pct = ini ? Math.round(cambio/Math.abs(ini)*100) : null;
+  let kp3 = ['Mejor mes', _grPlata(mejor.net), MONTHS[mejor.m], 'var(--green)'];
+  let comp = '';
+  if(P){ const pfin = P[t[t.length-1].m].end, pc = P[t[t.length-1].m].end - P[0].start;
+    kp3 = [`vs ${C.prev.year}`, _grDiff(fin, pfin), `a esta altura`, fin>=pfin?'var(--green)':'var(--red)'];
+    comp = ` Comparado con ${C.prev.year}, a esta altura tienes <b>${fmt(Math.abs(fin-pfin))} ${fin>=pfin?'más':'menos'}</b> (en ${C.prev.year} ${pc>=0?'subiste':'bajaste'} ${fmt(Math.abs(pc))} en el mismo periodo).`; }
+  return { titulo:'Cómo ha cambiado tu capital', sub:`Lo que tenías al cerrar cada mes · ${C.year}`, alto:H,
+    kpis:[ [C.year===CURRENT_YEAR?'Capital hoy':'Al cierre', _grPlata(fin), `empezaste con ${_grPlata(ini)}`, 'var(--gold2)'],
+           ['Cambio', `${cambio>=0?'+':'−'}${_grPlata(Math.abs(cambio)).replace('−','')}`, pct!==null?`${pct>=0?'+':''}${pct}% en el año`:C.periodo, cambio>=0?'var(--green)':'var(--red)'], kp3 ],
+    svg,
+    proj: proj.length ? `🔮 <span>Si sigues sumando lo de tu promedio (<b>${fmt(prom)}</b> al mes), cerrarías diciembre con unos <b>${fmt(proj[proj.length-1].end)}</b>.</span>` : '',
+    leyenda: [['var(--gold2)','Tu capital'],['var(--green)','Mes que sumó'],['var(--red)','Mes que restó']].concat(P?[['var(--muted2)',`${C.prev.year} (punteado)`]]:[]),
+    que:'La línea es <b>cuánto dinero tenías</b> al cerrar cada mes. Las barritas de abajo muestran <b>cuánto sumó (verde) o restó (rojo)</b> cada mes. La parte punteada es hacia dónde vas si sigues igual.',
+    dice: `Empezaste ${C.year} con <b>${fmt(ini)}</b> y ${C.year===CURRENT_YEAR?'vas en':'cerraste con'} <b>${fmt(fin)}</b>: ${cambio>=0?'subiste':'bajaste'} <b>${fmt(Math.abs(cambio))}</b>. Tu mejor mes fue <b>${MONTHS[mejor.m]}</b> (+${fmt(mejor.net)})` +
+      (peor.net < 0 ? ` y el más difícil <b>${MONTHS[peor.m]}</b> (−${fmt(Math.abs(peor.net))}).` : '.') + comp };
+}
+
+// ── 🍩 En qué gastas ────────────────────────────────────────────────────────
+function _grDona(C){
+  const sumar = (src)=>{ const o = {}; let tot = 0; C.meses.forEach(m=> _grE(src,m).forEach(e=>{ if(e.type==='expense'){ o[e.cat]=(o[e.cat]||0)+(e.amount||0); tot += e.amount||0; } })); return { o, tot }; };
+  const A = sumar(C.src), B = C.prev ? sumar(C.prev.src) : null;
+  if(!A.tot) return { titulo:'En qué se va tu dinero', svg:'', dice:'Todavía no hay gastos en este año.' };
+  let arr = Object.entries(A.o).sort((a,b)=>b[1]-a[1]);
+  const MAXC = 7;
+  if(arr.length > MAXC){ const resto = arr.slice(MAXC-1); arr = arr.slice(0,MAXC-1).concat([['__otras', resto.reduce((s,x)=>s+x[1],0), resto.map(x=>x[0])]]); }
+  const cols = (typeof DONUT_COLORS_LIVE !== 'undefined') ? DONUT_COLORS_LIVE : ['#5b8fd6','#4ec99a','#e8695d','#c9a15a','#8f7fd6','#5ac9c9','#d68f5b'];
+  const items = arr.map(([k,v,grp],i)=>{ const nom = k==='__otras' ? 'Otras' : _grCatNombre(k);
+    const pv = !B ? null : (k==='__otras' ? (grp||[]).reduce((s,c)=>s+(B.o[c]||0),0) : (B.o[k]||0));
+    return { k, v, nom, col: cols[i%cols.length], pct: v/A.tot*100, pv }; });
+  const angosto = _grW < 560;
+  const R = 96, r = 62, cx = angosto ? _grW/2 : R + 22, cy = R + 14;
+  let a0 = -Math.PI/2, svg = '';
+  const Pt = (a, rr)=>`${(cx+rr*Math.cos(a)).toFixed(2)},${(cy+rr*Math.sin(a)).toFixed(2)}`;
+  items.forEach(it=>{
+    const a1 = a0 + it.v/A.tot*Math.PI*2, big = (a1-a0)>Math.PI?1:0, gap = items.length>1 ? 0.012 : 0;
+    const s0 = a0+gap, s1 = a1-gap;
+    const d = (a1-a0) >= Math.PI*2-1e-6
+      ? `M${Pt(a0,R)} A${R},${R} 0 1 1 ${Pt(a0+Math.PI,R)} A${R},${R} 0 1 1 ${Pt(a0,R)} M${Pt(a0,r)} A${r},${r} 0 1 0 ${Pt(a0+Math.PI,r)} A${r},${r} 0 1 0 ${Pt(a0,r)}Z`
+      : `M${Pt(s0,R)} A${R},${R} 0 ${big} 1 ${Pt(s1,R)} L${Pt(s1,r)} A${r},${r} 0 ${big} 0 ${Pt(s0,r)}Z`;
+    svg += `<path d="${d}" fill="${it.col}" data-tip="${esc(it.nom)}: <b>${fmt(it.v)}</b> · ${it.pct.toFixed(1)}% de tus gastos${it.pv!==null?` · en ${C.prev.year}: ${fmt(it.pv)}`:''}"/>`;
+    a0 = a1;
+  });
+  svg += `<text x="${cx}" y="${cy-8}" text-anchor="middle" font-size="11" letter-spacing="1" fill="var(--muted)">GASTADO</text>
+    <text x="${cx}" y="${cy+14}" text-anchor="middle" font-size="20" font-weight="700" fill="var(--text)">${_grPlata(A.tot)}</text>
+    ${B ? `<text x="${cx}" y="${cy+32}" text-anchor="middle" font-size="11" fill="${A.tot<=B.tot?'var(--green)':'var(--red)'}">${_grDiff(A.tot,B.tot)} vs ${C.prev.year}</text>` : ''}`;
+  // Lista con barras de participación (y, si comparas, el año anterior debajo)
+  const lx = angosto ? 14 : cx + R + 34, ly = angosto ? cy + R + 26 : 14, rx = _grW - 12, rowH = B ? 44 : 36;
+  const mxV = Math.max(...items.map(it=>Math.max(it.v, it.pv||0)));
+  items.forEach((it,i)=>{
+    const y0 = ly + i*rowH, bwMax = rx - lx - 22 - (B ? 96 : 0);   // si comparas, queda espacio para el % de cambio
+    svg += `<g data-tip="${esc(it.nom)}: <b>${fmt(it.v)}</b> · ${it.pct.toFixed(1)}% de tus gastos${it.pv!==null?` · en ${C.prev.year}: ${fmt(it.pv)}`:''}">
+      <rect x="${lx}" y="${y0}" width="${rx-lx}" height="${rowH-4}" fill="transparent"/>
+      <circle cx="${lx+5}" cy="${y0+9}" r="5" fill="${it.col}"/>
+      <text x="${lx+16}" y="${y0+13}" font-size="12.5" fill="var(--text)">${esc(it.nom.length>22?it.nom.slice(0,21)+'…':it.nom)}</text>
+      <text x="${rx}" y="${y0+13}" text-anchor="end" font-size="12" fill="var(--muted2)">${_grPlata(it.v)} · <tspan font-weight="700" fill="var(--text)">${Math.round(it.pct)}%</tspan></text>
+      <rect x="${lx+16}" y="${y0+20}" width="${bwMax}" height="5" rx="2.5" fill="var(--surf)"/>
+      <rect x="${lx+16}" y="${y0+20}" width="${(bwMax*it.v/mxV).toFixed(1)}" height="5" rx="2.5" fill="${it.col}"/>
+      ${it.pv!==null ? `<rect x="${lx+16}" y="${y0+29}" width="${(bwMax*it.pv/mxV).toFixed(1)}" height="4" rx="2" fill="var(--muted2)" opacity="${GR_PREV_OP}"/>
+        <text x="${rx}" y="${y0+36}" text-anchor="end" font-size="10.5" fill="${it.v<=it.pv?'var(--green)':'var(--red)'}">${it.pv ? `${it.v<=it.pv?'▼':'▲'} ${Math.abs(Math.round((it.v-it.pv)/it.pv*100))}% vs ${C.prev.year}` : `nuevo en ${C.year}`}</text>` : ''}
+    </g>`;
+  });
+  const alto = angosto ? ly + items.length*rowH + 4 : Math.max(cy + R + 16, ly + items.length*rowH + 4);
+  const top = items[0], top3 = items.slice(0,3).reduce((s,it)=>s+it.pct,0);
+  const nMeses = C.meses.length;
+  let comp = '';
+  if(B){ const subio = items.filter(it=>it.pv!==null && it.pv>0).map(it=>({ ...it, d: it.v-it.pv })).sort((a,b)=>b.d-a.d);
+    comp = ` Contra ${C.prev.year} (${C.periodo}) gastaste <b>${fmt(Math.abs(A.tot-B.tot))} ${A.tot<=B.tot?'menos':'más'}</b>.` +
+      (subio[0] && subio[0].d>0 ? ` Lo que más subió: <b>${esc(subio[0].nom)}</b> (+${fmt(subio[0].d)}).` : '') +
+      (subio.length && subio[subio.length-1].d<0 ? ` Lo que más bajó: <b>${esc(subio[subio.length-1].nom)}</b> (−${fmt(Math.abs(subio[subio.length-1].d))}).` : ''); }
+  return { titulo:'En qué se va tu dinero', sub:`Tus gastos repartidos por categoría · ${C.year} (${C.periodo})`, alto,
+    kpis:[ ['Gastado', _grPlata(A.tot), C.periodo, 'var(--red)'],
+           ['Al mes', _grPlata(A.tot/nMeses), 'en promedio', 'var(--text)'],
+           ['Top 3', `${Math.round(top3)}%`, 'de todo tu gasto', 'var(--gold2)'] ],
+    svg, leyenda: B ? [['var(--muted2)',`Barra gris: ${C.prev.year}, mismo periodo`]] : [],
+    que:'El círculo completo son <b>todos tus gastos</b> del periodo y cada pedazo es una categoría. La lista de al lado ordena las categorías de mayor a menor, con su monto y su porcentaje.' + (B ? ` La barrita gris es lo que gastaste en esa categoría en ${C.prev.year}, en los mismos meses.` : ''),
+    dice: `Lo que más pagas es <b>${esc(top.nom)}</b>: <b>${fmt(top.v)}</b>, el <b>${Math.round(top.pct)}%</b> de tus gastos. Tus 3 categorías principales suman el <b>${Math.round(top3)}%</b>` + (top3>=70 ? ', así que ahí está la mayor oportunidad para ahorrar.' : '.') + comp };
+}
+
+// ── 💰 % ahorrado ───────────────────────────────────────────────────────────
+function _grAhorro(C){
+  const fila = (T, m)=>{ const d = T[m]; return { m, inc:d.inc, net:d.net, pct: d.inc>0 ? d.net/d.inc*100 : null }; };
+  const t = C.meses.map(m=>fila(C.T, m)), con = t.filter(d=>d.pct!==null);
+  const pt = C.prev ? C.meses.map(m=>fila(C.prev.T, m)) : null, pcon = pt ? pt.filter(d=>d.pct!==null) : [];
+  if(!con.length) return { titulo:'Qué parte de lo que ganas ahorras', svg:'', dice:'Todavía no hay meses con ingresos.' };
   const META = 20;
-  const sumInc = con.reduce((s,d)=>s+d.inc,0), sumNet = con.reduce((s,d)=>s+d.net,0);
-  const prom = sumInc ? sumNet/sumInc*100 : 0;           // promedio real: lo ahorrado entre lo ganado
-  const mejor = con.slice().sort((a,b)=>b.pct-a.pct)[0];
-  const enMeta = con.filter(d=>d.pct>=META).length;
+  const sumInc = con.reduce((s,d)=>s+d.inc,0), sumNet = con.reduce((s,d)=>s+d.net,0), prom = sumInc ? sumNet/sumInc*100 : 0;
+  const pInc = pcon.reduce((s,d)=>s+d.inc,0), pNet = pcon.reduce((s,d)=>s+d.net,0), pprom = pInc ? pNet/pInc*100 : null;
+  const mejor = con.slice().sort((a,b)=>b.pct-a.pct)[0], enMeta = con.filter(d=>d.pct>=META).length;
   const zona = p => p>=META ? 'var(--green)' : p>=0 ? '#e3b04f' : 'var(--red)';
-  const lo = Math.max(-60, Math.min(0, ...con.map(d=>d.pct))), hi = Math.max(40, ...con.map(d=>d.pct));
-  const eje = _grEje(hi, lo); const f = _grFrame(eje);
+  const todos = con.map(d=>d.pct).concat(pcon.map(d=>d.pct));
+  const eje = _grEje(Math.max(40, ...todos), Math.max(-60, Math.min(0, ...todos))); const f = _grFrame(eje, null, v=>`${Math.round(v)}%`);
   const L = _grL, R = _grW-_grR, Y0 = f.y(0), Ym = f.y(META), Ytop = f.y(eje.top), Ybot = f.y(eje.bot);
-  // Zonas de fondo: meta, cerca, en rojo
   let svg = `<rect x="${L}" y="${Ytop}" width="${R-L}" height="${Math.max(0,Ym-Ytop)}" fill="var(--green)" opacity="0.07"/>
     <rect x="${L}" y="${Ym}" width="${R-L}" height="${Math.max(0,Y0-Ym)}" fill="#e3b04f" opacity="0.05"/>
     ${eje.bot<0?`<rect x="${L}" y="${Y0}" width="${R-L}" height="${Math.max(0,Ybot-Y0)}" fill="var(--red)" opacity="0.06"/>`:''}
-    <text x="${L+8}" y="${Ytop+14}" font-size="10" letter-spacing="1.2" fill="var(--green)" opacity="0.9">ZONA DE META</text>`;
-  svg += eje.ticks.map(v=>`<line x1="${L}" x2="${R}" y1="${f.y(v).toFixed(1)}" y2="${f.y(v).toFixed(1)}" stroke="var(--border2)" stroke-width="${v===0?1.2:0.5}" ${v===0?'':'stroke-dasharray="2 5"'}/>
-    <text x="${L-8}" y="${(f.y(v)+4).toFixed(1)}" text-anchor="end" font-size="11" fill="var(--muted)">${Math.round(v)}%</text>`).join('');
-  svg += `<line x1="${L}" x2="${R}" y1="${Ym.toFixed(1)}" y2="${Ym.toFixed(1)}" stroke="var(--green)" stroke-width="1.4" stroke-dasharray="6 4"/>`;
-  const Yp = f.y(Math.max(prom, eje.bot));
-  svg += `<line x1="${L}" x2="${R}" y1="${Yp.toFixed(1)}" y2="${Yp.toFixed(1)}" stroke="var(--gold2)" stroke-width="1" opacity="0.7"/>`;
-  // Paletas: palo desde 0 y bolita con el porcentaje
-  const slot = (R-L)/meses.length, x = m => L + slot*(meses.indexOf(m)+0.5);
-  svg += t.map(d=>{
-    if(d.pct===null) return `<circle cx="${x(d.m).toFixed(1)}" cy="${Y0.toFixed(1)}" r="3" fill="var(--border2)"/>`;
-    const v = Math.max(d.pct, eje.bot), yy = f.y(v), c = zona(d.pct), arriba = d.pct >= 0;
-    return `<g data-tip="${MONTHS[d.m]}: ahorraste el <b>${d.pct.toFixed(0)}%</b> · ${d.net>=0?'te sobraron':'te faltaron'} <b>${fmt(Math.abs(d.net))}</b> de ${fmt(d.inc)}">
+    <text x="${L+8}" y="${Ytop+14}" font-size="10" letter-spacing="1.2" fill="var(--green)" opacity="0.9">ZONA DE META</text>` + f.grid;
+  svg += `<line x1="${L}" x2="${R}" y1="${Ym.toFixed(1)}" y2="${Ym.toFixed(1)}" stroke="var(--green)" stroke-width="1.4" stroke-dasharray="6 4"/>
+    <line x1="${L}" x2="${R}" y1="${f.y(Math.max(prom,eje.bot)).toFixed(1)}" y2="${f.y(Math.max(prom,eje.bot)).toFixed(1)}" stroke="var(--gold2)" stroke-width="1" opacity="0.7"/>`;
+  const slot = (R-L)/C.meses.length, x = m => L + slot*(C.meses.indexOf(m)+0.5), off = pt ? Math.min(7, slot*0.16) : 0;
+  // Año anterior: bolitas huecas al lado
+  if(pt) svg += pt.map(d=> d.pct===null ? '' : `<line x1="${(x(d.m)-off).toFixed(1)}" x2="${(x(d.m)-off).toFixed(1)}" y1="${Y0.toFixed(1)}" y2="${f.y(Math.max(d.pct,eje.bot)).toFixed(1)}" stroke="var(--muted2)" stroke-width="1.5" opacity="${GR_PREV_OP}"/>
+      <circle cx="${(x(d.m)-off).toFixed(1)}" cy="${f.y(Math.max(d.pct,eje.bot)).toFixed(1)}" r="4.5" fill="var(--card)" stroke="var(--muted2)" stroke-width="1.8" opacity="${GR_PREV_OP+0.15}"/>`).join('');
+  svg += t.map((d,i)=>{
+    if(d.pct===null) return `<circle cx="${(x(d.m)+off).toFixed(1)}" cy="${Y0.toFixed(1)}" r="3" fill="var(--border2)"/>`;
+    const yy = f.y(Math.max(d.pct, eje.bot)), c = zona(d.pct), xx = x(d.m)+off;
+    const p = pt && pt[i] && pt[i].pct!==null ? pt[i].pct : null;
+    return `<g data-tip="${MONTHS[d.m]}: ahorraste el <b>${d.pct.toFixed(0)}%</b> · ${d.net>=0?'te sobraron':'te faltaron'} <b>${fmt(Math.abs(d.net))}</b> de ${fmt(d.inc)}${p!==null?` · en ${C.prev.year}: ${p.toFixed(0)}%`:''}">
       <rect x="${(x(d.m)-slot/2).toFixed(1)}" y="${Ytop}" width="${slot.toFixed(1)}" height="${Math.max(0,Ybot-Ytop)}" fill="transparent"/>
-      <line x1="${x(d.m).toFixed(1)}" x2="${x(d.m).toFixed(1)}" y1="${Y0.toFixed(1)}" y2="${yy.toFixed(1)}" stroke="${c}" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
-      <circle cx="${x(d.m).toFixed(1)}" cy="${yy.toFixed(1)}" r="${d===mejor?8:6.5}" fill="${c}" stroke="var(--card)" stroke-width="2.5"/>
-      <text x="${x(d.m).toFixed(1)}" y="${(arriba ? yy-13 : yy+20).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--text)">${Math.round(d.pct)}%</text></g>`;
+      <line x1="${xx.toFixed(1)}" x2="${xx.toFixed(1)}" y1="${Y0.toFixed(1)}" y2="${yy.toFixed(1)}" stroke="${c}" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
+      <circle cx="${xx.toFixed(1)}" cy="${yy.toFixed(1)}" r="${d===mejor?8:6.5}" fill="${c}" stroke="var(--card)" stroke-width="2.5"/>
+      <text x="${xx.toFixed(1)}" y="${(d.pct>=0 ? yy-13 : yy+20).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--text)">${Math.round(d.pct)}%</text></g>`;
   }).join('');
-  svg += _grMesLbl(meses, x);
-  // Proyección: si sigues con tu promedio, cómo cierras el año
-  const restan = _grRestan(meses);
+  svg += _grMesLbl(C.meses, x);
   let proj = '';
-  if(restan > 0 && con.length >= 2){
-    const pInc = sumInc/con.length, pNet = sumNet/con.length;
-    const finInc = sumInc + pInc*restan, finNet = sumNet + pNet*restan;
-    proj = `🔮 <span>Si sigues con tu promedio, cerrarías ${_curDataYear()} ahorrando el <b>${Math.round(finInc? finNet/finInc*100 : 0)}%</b> de lo que ganas: unos <b>${fmt(finNet)}</b> en todo el año.</span>`;
+  if(C.restan > 0 && con.length >= 2){
+    const finInc = sumInc + sumInc/con.length*C.restan, finNet = sumNet + sumNet/con.length*C.restan;
+    proj = `🔮 <span>Si sigues con tu promedio, cerrarías ${C.year} ahorrando el <b>${Math.round(finInc? finNet/finInc*100 : 0)}%</b> de lo que ganas: unos <b>${fmt(finNet)}</b> en todo el año.</span>`;
   }
-  return { titulo:'Qué parte de lo que ganas ahorras', sub:'Porcentaje de tus ingresos que te sobró cada mes',
+  const k3 = pprom!==null ? [`vs ${C.prev.year}`, `${prom>=pprom?'▲':'▼'} ${Math.abs(Math.round(prom-pprom))} pts`, `${C.prev.year}: ${Math.round(pprom)}%`, prom>=pprom?'var(--green)':'var(--red)']
+                         : ['En la meta', `${enMeta} de ${con.length}`, enMeta===1?'mes':'meses', enMeta===con.length?'var(--green)':'var(--text)'];
+  return { titulo:'Qué parte de lo que ganas ahorras', sub:`Porcentaje de tus ingresos que te sobró cada mes · ${C.year}`,
     kpis:[ ['Promedio', `${Math.round(prom)}%`, prom>=META?'en la meta ✓':'meta: 20%', zona(prom)],
-           ['Mejor mes', `${Math.round(mejor.pct)}%`, MONTHS[mejor.m], 'var(--text)'],
-           ['En la meta', `${enMeta} de ${con.length}`, enMeta===1?'mes':'meses', enMeta===con.length?'var(--green)':'var(--text)'] ],
+           ['Mejor mes', `${Math.round(mejor.pct)}%`, MONTHS[mejor.m], 'var(--text)'], k3 ],
     svg, proj,
-    leyenda:[['var(--green)','20% o más'],['#e3b04f','Entre 0 y 20%'],['var(--red)','Gastaste más de lo que entró'],['repeating-linear-gradient(90deg,var(--green) 0 4px,transparent 4px 7px)','Línea de meta (20%)'],['var(--gold2)',`Tu promedio (${Math.round(prom)}%)`]],
-    que:`Cada bolita es el <b>porcentaje de tu sueldo que te sobró</b> ese mes. La franja verde de arriba es la <b>zona de meta</b>: ahorrar al menos el ${META}%, como recomiendan los asesores. La línea clara es tu promedio del año.`,
+    leyenda:[['var(--green)','20% o más'],['#e3b04f','Entre 0 y 20%'],['var(--red)','Gastaste más de lo que entró'],['repeating-linear-gradient(90deg,var(--green) 0 4px,transparent 4px 7px)','Línea de meta (20%)'],['var(--gold2)',`Tu promedio (${Math.round(prom)}%)`]].concat(pt?[['var(--muted2)',`${C.prev.year} (bolita hueca)`]]:[]),
+    que:`Cada bolita es el <b>porcentaje de tu sueldo que te sobró</b> ese mes. La franja verde de arriba es la <b>zona de meta</b>: ahorrar al menos el ${META}%, como recomiendan los asesores. La línea clara es tu promedio.` + (pt ? ` Las bolitas huecas son ${C.prev.year}.` : ''),
     dice: `En promedio ahorras el <b>${Math.round(prom)}%</b> de lo que ganas. Llegaste a la meta en <b>${enMeta} de ${con.length}</b> meses y tu mejor mes fue <b>${MONTHS[mejor.m]}</b> con <b>${Math.round(mejor.pct)}%</b>.` +
+      (pprom!==null ? ` En ${C.prev.year}, en los mismos meses, ahorrabas el <b>${Math.round(pprom)}%</b>: ${prom>=pprom?'vas mejor':'vas un poco peor'}.` : '') +
       (prom < META && sumInc ? ` Para llegar al 20% te faltarían unos <b>${fmt((META/100*sumInc - sumNet)/con.length)}</b> más de ahorro al mes.` : '') };
 }
 
-function _grAcumulado(meses){
-  let ai = 0, ae = 0; const t = meses.map(m=>{ const d = monthTotals(m); ai += d.inc; ae += d.exp; return { m, ai, ae }; });
-  if(!t.length || (!ai && !ae)) return { titulo:'Lo que llevas en el año', sub:'', svg:'', leyenda:[], que:'', dice:'Todavía no hay datos.' };
-  const u = t[t.length-1], n = t.length, restan = _grRestan(meses);
-  // Proyección hasta diciembre con tu promedio mensual
-  const pi = u.ai/n, pe = u.ae/n;
-  const proj = []; for(let k=1;k<=restan;k++) proj.push({ m:u.m+k, ai:u.ai+pi*k, ae:u.ae+pe*k });
+// ── 📉 Acumulado del año ───────────────────────────────────────────────────
+function _grAcumulado(C){
+  const acum = (T)=>{ let ai = 0, ae = 0; return C.meses.map(m=>{ ai += T[m].inc; ae += T[m].exp; return { m, ai, ae }; }); };
+  const t = acum(C.T), pt = C.prev ? (()=>{ let ai=0, ae=0; return GR_MES.map((_,m)=>{ ai += C.prev.T[m].inc; ae += C.prev.T[m].exp; return { m, ai, ae }; }); })() : null;
+  const u = t[t.length-1];
+  if(!u || (!u.ai && !u.ae)) return { titulo:'Lo que llevas en el año', svg:'', dice:'Todavía no hay datos.' };
+  const n = t.length, pi = u.ai/n, pe = u.ae/n;
+  const proj = []; for(let k=1;k<=C.restan;k++) proj.push({ m:u.m+k, ai:u.ai+pi*k, ae:u.ae+pe*k });
   const finI = proj.length ? proj[proj.length-1].ai : u.ai, finE = proj.length ? proj[proj.length-1].ae : u.ae;
-  const eje = _grEje(Math.max(1, finI, finE), 0); const f = _grFrame(eje);
-  const L = _grL, Rx = _grW - _grR - 58;                  // espacio a la derecha para las etiquetas finales
-  const x = m => L + 10 + m/11*(Rx-L-10);
-  const base = f.y(0);
+  const eje = _grEje(Math.max(1, finI, finE, ...(pt ? pt.map(d=>Math.max(d.ai,d.ae)) : [])), 0); const f = _grFrame(eje);
+  const L = _grL, Rx = _grW - _grR - 58, x = m => L + 10 + m/11*(Rx-L-10), base = f.y(0);
   const P = (arr,k)=> arr.map(d=>[x(d.m), f.y(d[k])]);
   const pI = P(t,'ai'), pE = P(t,'ae');
   const area = (pts,id)=>`<path d="${_grCurva(pts)} L${pts[pts.length-1][0].toFixed(1)},${base.toFixed(1)} L${pts[0][0].toFixed(1)},${base.toFixed(1)}Z" fill="url(#${id})"/>`;
@@ -8369,84 +8496,87 @@ function _grAcumulado(meses){
     <linearGradient id="grAcI" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--green)" stop-opacity="0.32"/><stop offset="1" stop-color="var(--green)" stop-opacity="0"/></linearGradient>
     <linearGradient id="grAcE" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--red)" stop-opacity="0.28"/><stop offset="1" stop-color="var(--red)" stop-opacity="0"/></linearGradient>
   </defs>` + f.grid;
-  // Zona de proyección sombreada
   if(proj.length){ const xa = x(u.m), xb = x(11);
     svg += `<rect x="${xa.toFixed(1)}" y="${_grT}" width="${(xb-xa).toFixed(1)}" height="${(base-_grT).toFixed(1)}" fill="var(--gold)" opacity="0.045"/>
       <text x="${((xa+xb)/2).toFixed(1)}" y="${_grT+12}" text-anchor="middle" font-size="10" letter-spacing="1.2" fill="var(--muted)">PROYECCIÓN</text>`; }
-  if(pI.length >= 2){ svg += area(pI,'grAcI') + area(pE,'grAcE'); }
+  if(pt) svg += `<path d="${_grCurva(P(pt,'ai'))}" fill="none" stroke="var(--green)" stroke-width="1.6" stroke-dasharray="2 4" opacity="${GR_PREV_OP}"/>
+      <path d="${_grCurva(P(pt,'ae'))}" fill="none" stroke="var(--red)" stroke-width="1.6" stroke-dasharray="2 4" opacity="${GR_PREV_OP}"/>`;
+  if(pI.length >= 2) svg += area(pI,'grAcI') + area(pE,'grAcE');
   svg += `<path d="${_grCurva(pI)}" fill="none" stroke="var(--green)" stroke-width="2.6" stroke-linecap="round"/>
     <path d="${_grCurva(pE)}" fill="none" stroke="var(--red)" stroke-width="2.6" stroke-linecap="round"/>`;
-  if(proj.length){
-    const q = k => [[x(u.m), f.y(u[k])], ...proj.map(d=>[x(d.m), f.y(d[k])])];
+  if(proj.length){ const q = k => [[x(u.m), f.y(u[k])], ...proj.map(d=>[x(d.m), f.y(d[k])])];
     svg += `<path d="${_grCurva(q('ai'))}" fill="none" stroke="var(--green)" stroke-width="2" stroke-dasharray="5 5" opacity="0.75"/>
-      <path d="${_grCurva(q('ae'))}" fill="none" stroke="var(--red)" stroke-width="2" stroke-dasharray="5 5" opacity="0.75"/>`;
-  }
-  // Corchete de lo ahorrado en el último mes real
+      <path d="${_grCurva(q('ae'))}" fill="none" stroke="var(--red)" stroke-width="2" stroke-dasharray="5 5" opacity="0.75"/>`; }
   const xu = x(u.m), yI = f.y(u.ai), yE = f.y(u.ae), ah = u.ai - u.ae;
   if(Math.abs(yE - yI) > 18){
-    svg += `<line x1="${xu.toFixed(1)}" x2="${xu.toFixed(1)}" y1="${yI.toFixed(1)}" y2="${yE.toFixed(1)}" stroke="var(--gold2)" stroke-width="1.5"/>
-      <line x1="${(xu-4).toFixed(1)}" x2="${(xu+4).toFixed(1)}" y1="${yI.toFixed(1)}" y2="${yI.toFixed(1)}" stroke="var(--gold2)" stroke-width="1.5"/>
-      <line x1="${(xu-4).toFixed(1)}" x2="${(xu+4).toFixed(1)}" y1="${yE.toFixed(1)}" y2="${yE.toFixed(1)}" stroke="var(--gold2)" stroke-width="1.5"/>
-      <rect x="${(xu-36).toFixed(1)}" y="${((yI+yE)/2-11).toFixed(1)}" width="72" height="22" rx="11" fill="var(--card2)" stroke="var(--gold2)" stroke-width="1"/>
-      <text x="${xu.toFixed(1)}" y="${((yI+yE)/2+4).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--text)">${ah>=0?'+':'−'}${_grPlata(Math.abs(ah))}</text>`;
+    svg += `<line x1="${xu.toFixed(1)}" x2="${xu.toFixed(1)}" y1="${yI.toFixed(1)}" y2="${yE.toFixed(1)}" stroke="var(--gold2)" stroke-width="1.5"/>` + _grPill(xu, (yI+yE)/2, `${ah>=0?'+':'−'}${_grPlata(Math.abs(ah)).replace('−','')}`);
   }
   svg += `<circle cx="${xu.toFixed(1)}" cy="${yI.toFixed(1)}" r="4.5" fill="var(--green)" stroke="var(--card)" stroke-width="2"/>
     <circle cx="${xu.toFixed(1)}" cy="${yE.toFixed(1)}" r="4.5" fill="var(--red)" stroke="var(--card)" stroke-width="2"/>`;
-  // Etiquetas al final (diciembre si hay proyección)
-  const xe = x(proj.length ? 11 : u.m), yIe = f.y(finI), yEe = f.y(finE);
-  const sep = Math.abs(yIe - yEe) < 16 ? 8 : 0;
+  const xe = x(proj.length ? 11 : u.m), yIe = f.y(finI), yEe = f.y(finE), sep = Math.abs(yIe - yEe) < 16 ? 8 : 0;
   svg += `<text x="${(xe+8).toFixed(1)}" y="${(yIe+4-sep).toFixed(1)}" font-size="11" font-weight="600" fill="var(--green)">${proj.length?'≈ ':''}${_grPlata(finI)}</text>
     <text x="${(xe+8).toFixed(1)}" y="${(yEe+4+sep).toFixed(1)}" font-size="11" font-weight="600" fill="var(--red)">${proj.length?'≈ ':''}${_grPlata(finE)}</text>`;
-  // Zonas para tocar
   svg += [...t.map(d=>({...d, real:true})), ...proj].map(d=>`<rect x="${(x(d.m)-(Rx-L)/22).toFixed(1)}" y="${_grT}" width="${((Rx-L)/11).toFixed(1)}" height="${(base-_grT).toFixed(1)}" fill="transparent"
-      data-tip="${d.real?'Hasta':'Si sigues así, hasta'} ${MONTHS[d.m]}: entró <b>${fmt(d.ai)}</b> · salió <b>${fmt(d.ae)}</b> · ${d.ai>=d.ae?'ahorrado':'faltante'} <b>${fmt(Math.abs(d.ai-d.ae))}</b>"/>`).join('');
-  const corto = (Rx-L)/11 < 32;   // en el celular: solo la inicial del mes
+      data-tip="${d.real?'Hasta':'Si sigues así, hasta'} ${MONTHS[d.m]}: entró <b>${fmt(d.ai)}</b> · salió <b>${fmt(d.ae)}</b> · ${d.ai>=d.ae?'ahorrado':'faltante'} <b>${fmt(Math.abs(d.ai-d.ae))}</b>${pt?` · en ${C.prev.year} llevabas ${fmt(pt[d.m].ai-pt[d.m].ae)}`:''}"/>`).join('');
+  const corto = (Rx-L)/11 < 32;
   svg += GR_MES.map((l,m)=>`<text x="${x(m).toFixed(1)}" y="${_grH-9}" text-anchor="middle" font-size="11" fill="${m<=u.m?'var(--muted2)':'var(--muted)'}" opacity="${m<=u.m?1:0.6}">${corto ? l[0] : l}</text>`).join('');
   const pctAh = u.ai ? Math.round(ah/u.ai*100) : 0;
-  return { titulo:'Lo que llevas en el año', sub:'Todo lo que ha entrado y salido, sumado mes tras mes',
-    kpis:[ ['Entró', _grPlata(u.ai), 'este año', 'var(--green)'],
-           ['Salió', _grPlata(u.ae), 'este año', 'var(--red)'],
-           [ah>=0?'Ahorrado':'Faltante', _grPlata(Math.abs(ah)), u.ai?`${pctAh}% del ingreso`:'', ah>=0?'var(--gold2)':'var(--red)'] ],
+  const pu = pt ? pt[u.m] : null, pah = pu ? pu.ai - pu.ae : null;
+  return { titulo:'Lo que llevas en el año', sub:`Todo lo que ha entrado y salido, sumado mes tras mes · ${C.year}`,
+    kpis:[ ['Entró', _grPlata(u.ai), pu ? `${C.prev.year}: ${_grPlata(pu.ai)}` : (C.year===CURRENT_YEAR?'este año':'en el año'), 'var(--green)'],
+           ['Salió', _grPlata(u.ae), pu ? `${C.prev.year}: ${_grPlata(pu.ae)}` : (C.year===CURRENT_YEAR?'este año':'en el año'), 'var(--red)'],
+           [ah>=0?'Ahorrado':'Faltante', _grPlata(Math.abs(ah)), pu ? `${_grDiff(ah, pah)} vs ${C.prev.year}` : (u.ai?`${pctAh}% del ingreso`:''), ah>=0?'var(--gold2)':'var(--red)'] ],
     svg,
     proj: proj.length ? `🔮 <span>Si sigues a este ritmo, cerrarías diciembre con unos <b>${fmt(finI)}</b> de ingresos y <b>${fmt(finE)}</b> de gastos: <b>${fmt(finI-finE)}</b> ${finI>=finE?'ahorrados':'de faltante'} en el año.</span>` : '',
-    leyenda:[['var(--green)','Ingresos sumados'],['var(--red)','Gastos sumados'],['var(--gold2)','Lo ahorrado (la diferencia)']],
-    que:'Las dos líneas van <b>sumando</b> mes a mes todo lo que entró (verde) y salió (rojo). El espacio entre ellas es <b>lo que llevas ahorrado</b>. La parte punteada es la <b>proyección</b>: hacia dónde vas si sigues igual.',
-    dice: `En lo que va del año entraron <b>${fmt(u.ai)}</b> y salieron <b>${fmt(u.ae)}</b>. ` + (ah>=0 ? `Llevas <b>${fmt(ah)}</b> ahorrados, el <b>${pctAh}%</b> de lo que entró.` : `Llevas <b>${fmt(-ah)}</b> más en gastos que en ingresos.`) };
+    leyenda:[['var(--green)','Ingresos sumados'],['var(--red)','Gastos sumados'],['var(--gold2)','Lo ahorrado (la diferencia)']].concat(pt?[['var(--muted2)',`${C.prev.year} (líneas de puntitos)`]]:[]),
+    que:'Las dos líneas van <b>sumando</b> mes a mes todo lo que entró (verde) y salió (rojo). El espacio entre ellas es <b>lo que llevas ahorrado</b>. La parte punteada es la <b>proyección</b>: hacia dónde vas si sigues igual.' + (pt ? ` Las líneas de puntitos son ${C.prev.year}.` : ''),
+    dice: `En lo que va del año entraron <b>${fmt(u.ai)}</b> y salieron <b>${fmt(u.ae)}</b>. ` + (ah>=0 ? `Llevas <b>${fmt(ah)}</b> ahorrados, el <b>${pctAh}%</b> de lo que entró.` : `Llevas <b>${fmt(-ah)}</b> más en gastos que en ingresos.`) +
+      (pu ? ` A esta altura de ${C.prev.year} llevabas <b>${fmt(pah)}</b>: ${ah>=pah?`vas <b>${fmt(ah-pah)}</b> por delante`:`vas <b>${fmt(pah-ah)}</b> por detrás`}.` : '') };
 }
-function _grSemana(meses){
-  const yr = _curDataYear(), nom = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'], cor = ['L','M','M','J','V','S','D'];
-  const tot = [0,0,0,0,0,0,0], dias = [0,0,0,0,0,0,0];
-  // Cuántas veces aparece cada día de la semana en los meses que cuentan (para sacar el promedio)
-  const hoy = new Date();
-  meses.forEach(m=>{ const fin = (yr===hoy.getFullYear() && m===hoy.getMonth()) ? hoy.getDate() : new Date(yr, m+1, 0).getDate();
-    for(let d=1; d<=fin; d++) dias[(new Date(yr, m, d).getDay()+6)%7]++;
-    getMonth(m).entries.forEach(e=>{ if(e.type!=='expense') return; const dd = parseDayFromDateStr(e.date); if(!dd) return; tot[(new Date(yr, m, dd).getDay()+6)%7] += e.amount; }); });
-  const prom = tot.map((v,i)=> dias[i] ? v/dias[i] : 0);
-  const eje = _grEje(Math.max(1, ...prom), 0); const f = _grFrame(eje);
-  const slot = (_grW-_grL-_grR)/7, bw = Math.min(46, slot*0.6), x = i => _grL + slot*(i+0.5);
-  const mx = Math.max(...prom);
-  const bars = prom.map((v,i)=>`<g data-tip="${nom[i]}: gastas en promedio <b>${fmt(v)}</b> (en total ${fmt(tot[i])})"><rect x="${x(i)-slot/2}" y="${_grT}" width="${slot}" height="${_grH-_grT-_grB}" fill="transparent"/>
-    <rect x="${(x(i)-bw/2).toFixed(1)}" y="${f.y(v).toFixed(1)}" width="${bw}" height="${Math.max(0,f.y(0)-f.y(v)).toFixed(1)}" rx="6" fill="${v===mx&&v>0?'var(--red)':'var(--gold)'}" fill-opacity="${v===mx?1:0.55}"/></g>`).join('');
+
+// ── 📅 Día de la semana ────────────────────────────────────────────────────
+function _grSemana(C){
+  const nom = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'], cor = ['L','M','M','J','V','S','D'];
+  const calc = (src, yr)=>{ const tot = [0,0,0,0,0,0,0], dias = [0,0,0,0,0,0,0], hoy = new Date();
+    C.meses.forEach(m=>{ const fin = (yr===hoy.getFullYear() && m===hoy.getMonth()) ? hoy.getDate() : new Date(yr, m+1, 0).getDate();
+      for(let d=1; d<=fin; d++) dias[(new Date(yr, m, d).getDay()+6)%7]++;
+      _grE(src,m).forEach(e=>{ if(e.type!=='expense') return; const dd = parseDayFromDateStr(e.date); if(!dd) return; tot[(new Date(yr, m, dd).getDay()+6)%7] += e.amount||0; }); });
+    return { tot, prom: tot.map((v,i)=> dias[i] ? v/dias[i] : 0) }; };
+  const A = calc(C.src, C.year), B = C.prev ? calc(C.prev.src, C.prev.year) : null;
+  const mx = Math.max(...A.prom);
+  const eje = _grEje(Math.max(1, ...A.prom, ...(B?B.prom:[])), 0); const f = _grFrame(eje);
+  const slot = (_grW-_grL-_grR)/7, bw = Math.min(B?30:46, slot*(B?0.38:0.6)), x = i => _grL + slot*(i+0.5);
+  const bars = A.prom.map((v,i)=>{ const xa = B ? x(i)+2 : x(i)-bw/2;
+    return `<g data-tip="${nom[i]}: gastas en promedio <b>${fmt(v)}</b> (en total ${fmt(A.tot[i])})${B?` · en ${C.prev.year}: ${fmt(B.prom[i])}`:''}"><rect x="${x(i)-slot/2}" y="${_grT}" width="${slot}" height="${_grH-_grT-_grB}" fill="transparent"/>
+      ${B ? `<rect x="${(x(i)-bw-2).toFixed(1)}" y="${f.y(B.prom[i]).toFixed(1)}" width="${bw}" height="${Math.max(0,f.y(0)-f.y(B.prom[i])).toFixed(1)}" rx="5" fill="var(--muted2)" opacity="${GR_PREV_OP}"/>` : ''}
+      <rect x="${xa.toFixed(1)}" y="${f.y(v).toFixed(1)}" width="${bw}" height="${Math.max(0,f.y(0)-f.y(v)).toFixed(1)}" rx="6" fill="${v===mx&&v>0?'var(--red)':'var(--gold)'}" fill-opacity="${v===mx?1:0.6}"/></g>`; }).join('');
   const lbl = cor.map((c,i)=>`<text x="${x(i).toFixed(1)}" y="${_grH-9}" text-anchor="middle" font-size="12" fill="var(--muted2)">${c}</text>`).join('');
-  const iMax = prom.indexOf(mx), conV = prom.filter(v=>v>0), iMin = prom.indexOf(Math.min(...(conV.length?conV:[0])));
-  const finde = (prom[5]+prom[6])/2, semana = (prom[0]+prom[1]+prom[2]+prom[3]+prom[4])/5;
-  return { titulo:'Qué días gastas más', sub:'Lo que gastas en promedio cada día de la semana',
-    svg: f.grid + bars + lbl, leyenda:[['var(--red)','El día más caro'],['var(--gold)','Los demás']],
-    que:'Cada barra es <b>cuánto gastas en promedio</b> ese día de la semana. Sirve para descubrir hábitos, por ejemplo si los fines de semana se te va más dinero.',
-    dice: !mx ? 'Todavía no hay gastos con fecha este año.' : `Tu día más caro es el <b>${nom[iMax].toLowerCase()}</b> (<b>${fmt(mx)}</b> en promedio) y el más tranquilo el <b>${nom[iMin].toLowerCase()}</b>. ` + (semana>0 ? (finde > semana*1.15 ? `Los fines de semana gastas <b>${Math.round((finde/semana-1)*100)}% más</b> que entre semana.` : finde < semana*0.85 ? 'Entre semana gastas más que los fines de semana.' : 'Gastas parecido entre semana y los fines de semana.') : '') };
+  const iMax = A.prom.indexOf(mx), conV = A.prom.filter(v=>v>0), iMin = A.prom.indexOf(Math.min(...(conV.length?conV:[0])));
+  const finde = (A.prom[5]+A.prom[6])/2, semana = (A.prom[0]+A.prom[1]+A.prom[2]+A.prom[3]+A.prom[4])/5;
+  const totDia = A.tot.reduce((s,v)=>s+v,0) / Math.max(1, C.meses.reduce((s,m)=> s + ((C.year===new Date().getFullYear() && m===new Date().getMonth()) ? new Date().getDate() : new Date(C.year, m+1, 0).getDate()), 0));
+  return { titulo:'Qué días gastas más', sub:`Lo que gastas en promedio cada día de la semana · ${C.year}`,
+    kpis: mx ? [ ['Día más caro', nom[iMax], _grPlata(mx)+' en promedio', 'var(--red)'], ['Más tranquilo', nom[iMin], _grPlata(A.prom[iMin])+' en promedio', 'var(--green)'], ['Por día', _grPlata(totDia), 'en promedio', 'var(--text)'] ] : null,
+    svg: f.grid + bars + lbl, leyenda:[['var(--red)','El día más caro'],['var(--gold)','Los demás']].concat(B?[['var(--muted2)',`${C.prev.year}`]]:[]),
+    que:'Cada barra es <b>cuánto gastas en promedio</b> ese día de la semana. Sirve para descubrir hábitos, por ejemplo si los fines de semana se te va más dinero.' + (B ? ` La barra gris es ${C.prev.year}.` : ''),
+    dice: !mx ? 'Todavía no hay gastos con fecha en este año.' : `Tu día más caro es el <b>${nom[iMax].toLowerCase()}</b> (<b>${fmt(mx)}</b> en promedio) y el más tranquilo el <b>${nom[iMin].toLowerCase()}</b>. ` + (semana>0 ? (finde > semana*1.15 ? `Los fines de semana gastas <b>${Math.round((finde/semana-1)*100)}% más</b> que entre semana.` : finde < semana*0.85 ? 'Entre semana gastas más que los fines de semana.' : 'Gastas parecido entre semana y los fines de semana.') : '') };
 }
 
 function renderGraficas(){
   const panel = document.getElementById('panel-graficas'); if(!panel) return;
-  const meses = _grMeses(), yr = _curDataYear();
   _grW = Math.round(Math.max(340, Math.min(1100, (panel.clientWidth || 676) - 36)));
+  const C = _grCtx();
   const fn = { capital:_grCapital, dona:_grDona, ahorro:_grAhorro, acumulado:_grAcumulado, semana:_grSemana }[_grTipo] || _grCapital;
-  let g; try { g = fn(meses); } catch(e){ console.error('Gráfica:', e); g = { titulo:'Gráfica', sub:'', svg:'', leyenda:[], que:'', dice:'No se pudo dibujar esta gráfica.' }; }
+  let g; try { g = fn(C); } catch(e){ console.error('Gráfica:', e); g = { titulo:'Gráfica', sub:'', svg:'', dice:'No se pudo dibujar esta gráfica.' }; }
   const alto = g.alto || _grH;
+  const anios = C.anios;
   panel.innerHTML = `
-    <div class="gr-head"><div class="t">Gráficas de ${yr}</div><div class="s">Distintas formas de ver tu año. Elige una gráfica y toca las barras o puntos para ver el detalle.</div></div>
+    <div class="gr-head"><div class="t">Gráficas</div><div class="s">Distintas formas de ver tu año. Elige el año, la gráfica, y toca las barras o puntos para ver el detalle.</div></div>
+    <div class="gr-top">
+      ${anios.length > 1 ? `<div class="gr-years">${anios.map(y=>`<button class="gr-year${y===C.year?' on':''}" onclick="grSetYear(${y})">${y}</button>`).join('')}</div>` : `<div class="gr-years"><span class="gr-year on">${C.year}</span></div>`}
+      ${C.hayPrev ? `<button class="gr-cmp${_grComp?' on':''}" onclick="grToggleComp()">⇄ ${_grComp ? `Comparando con ${C.py}` : `Comparar con ${C.py}`}</button>` : ''}
+    </div>
     <div class="gr-chips">${GR_TIPOS.map(([k,l])=>`<button class="gr-chip${k===_grTipo?' on':''}" onclick="grSetTipo('${k}')">${l}</button>`).join('')}</div>
-    <div class="gr-card"><h3>${g.titulo}</h3><div class="sub">${g.sub}</div>
+    <div class="gr-card"><h3>${g.titulo}</h3><div class="sub">${g.sub||''}</div>
       ${g.kpis && g.svg ? `<div class="gr-kpis">${g.kpis.map(([l,v,sb,c])=>`<div class="gr-kpi"><div class="l">${l}</div><div class="v" style="color:${c}">${v}</div><div class="s">${sb||'&nbsp;'}</div></div>`).join('')}</div>` : ''}
       ${g.svg ? `<svg class="gr-svg" viewBox="0 0 ${_grW} ${alto}" role="img" aria-label="${esc(g.titulo)}" onclick="grTip(event)">${g.svg}</svg>` : `<div class="gr-empty">${g.dice}</div>`}
       ${g.svg ? `<div class="gr-tip" id="gr-tip"></div>` : ''}
@@ -8459,10 +8589,13 @@ function renderGraficas(){
     </div>` : ''}`;
 }
 function grSetTipo(k){ _grTipo = k; renderGraficas(); }
+function grSetYear(y){ _grYear = y; renderGraficas(); }
+function grToggleComp(){ _grComp = !_grComp; renderGraficas(); }
 function grTip(ev){
   const el = ev.target.closest('[data-tip]'); const box = document.getElementById('gr-tip');
   if(!box) return; box.innerHTML = el ? el.getAttribute('data-tip') : '';
 }
+
 function _grHide(){
   const p = document.getElementById('panel-graficas'); if(p) p.style.display = 'none';
   const t = document.getElementById('mtab-graficas'); if(t) t.className = 'mtab';
