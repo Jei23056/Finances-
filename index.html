@@ -1349,35 +1349,6 @@ body {
 .ec-line > span.num { text-align:right; white-space:normal; }
 .ec-pdf { margin-top:14px; padding:10px 16px; border-radius:var(--rs); border:1px solid var(--gold); background:var(--gldim); color:var(--text); font:600 13px 'DM Sans',sans-serif; cursor:pointer; }
 
-/* Imprimir el estado de cuenta dentro de la app: en papel solo sale el estado */
-#ec-print { display:none; }
-@media print {
-  body > *:not(#ec-print) { display:none !important; }
-  body::before, body::after { display:none !important; }
-  html, body { background:#fff !important; padding:0 !important; margin:0 !important; }
-  #ec-print { display:block !important; padding:28px 32px; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; color:#1c2433;
-    -webkit-print-color-adjust:exact; print-color-adjust:exact;
-    --text:#1c2433; --muted:#7a8494; --muted2:#4a5363; --border:#e6e9ef; --border2:#d5dae3; --surf:#f4f6f9; --green:#16916a; --red:#c8443a; --gold2:#3b4250; --gldim:#eef0f4; }
-  #ec-print .ec-h { display:flex; justify-content:space-between; align-items:flex-end; border-bottom:2px solid #1c2433; padding-bottom:12px; }
-  #ec-print .ec-h .k { font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:#7a8494; }
-  #ec-print .ec-h .b { font-family:Georgia,serif; font-size:26px; margin-top:2px; color:#1c2433; }
-  #ec-print .ec-h .r { text-align:right; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#4a5363; line-height:1.6; }
-  #ec-print .gr-kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:14px; }
-  #ec-print .gr-kpi { border:1px solid #e6e9ef; border-radius:10px; padding:10px 12px; background:#fff; }
-  #ec-print .gr-kpi .l { font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:#7a8494; }
-  #ec-print .gr-kpi .v { font-size:22px; font-weight:700; margin-top:3px; }
-  #ec-print .gr-kpi .s { font-size:11px; color:#4a5363; white-space:normal; overflow:visible; }
-  #ec-print .gr-kpi .l, #ec-print .gr-kpi .v { white-space:normal; overflow:visible; }
-  #ec-print .ec-sec { margin-top:20px; }
-  #ec-print .ec-sec > .l { font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:#7a8494; margin-bottom:6px; border-bottom:1px solid #e6e9ef; padding-bottom:4px; }
-  #ec-print .ec-sec p { font-size:13px; line-height:1.6; color:#4a5363; margin:0; }
-  #ec-print .ec-sec p b, #ec-print .sa-tip b { color:#1c2433; }
-  #ec-print .ec-line { display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid #f0f2f5; font-size:13px; color:#1c2433; }
-  #ec-print .ec-line .num { font-weight:600; text-align:right; }
-  #ec-print .sa-tip { display:flex; gap:10px; padding:6px 0; font-size:13px; color:#4a5363; line-height:1.5; }
-  #ec-print .sa-tip i { font-style:normal; flex-shrink:0; width:20px; height:20px; border-radius:50%; background:#eef0f4; color:#1c2433; display:grid; place-items:center; font-weight:700; font-size:11px; }
-  #ec-print .pie { margin-top:28px; font-size:10px; color:#7a8494; display:flex; justify-content:space-between; border-top:1px solid #e6e9ef; padding-top:8px; }
-}
 </style>
 </head>
 <body>
@@ -8958,18 +8929,35 @@ function ecSetMes(m){ _ecMes = m; renderEstado(); }
 function ecSetYear(y){ _ecYear = y; _ecMes = null; renderEstado(); }
 function ecToggleComp(){ _ecComp = !_ecComp; renderEstado(); }
 // PDF: una versión clara para imprimir o guardar como PDF (como el reporte anual)
-// Imprimir: se imprime ahí mismo, dentro de la app (sin abrir otra página).
-// Al cerrar la ventana de imprimir del iPhone sigues en la app.
+// Imprimir: abre el estado de cuenta en una página aparte, igual que el reporte
+// anual, con "← Volver" (y "Imprimir") fijos arriba; esos botones no salen en papel.
 function ecPDF(){
   const D = _ecDatosConComp();
-  let box = document.getElementById('ec-print');
-  if(!box){ box = document.createElement('div'); box.id = 'ec-print'; document.body.appendChild(box); }
-  box.innerHTML = _ecHTML(D, true) + `<div class="pie"><span>JB Marte · Estado de cuenta ${MONTHS[D.m]} ${D.yr}</span><span>Generado el ${new Date().toLocaleDateString('es-DO')} · Documento confidencial</span></div>`;
-  const titulo = document.title;
-  document.title = `Estado de cuenta ${MONTHS[D.m]} ${D.yr}`;      // nombre del archivo si lo guardas como PDF
-  const volver = ()=>{ document.title = titulo; window.removeEventListener('afterprint', volver); };
-  window.addEventListener('afterprint', volver);
-  setTimeout(()=>{ window.print(); setTimeout(volver, 1500); }, 50);
+  const css = `body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#1c2433;margin:0;padding:76px 36px 36px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    :root{--text:#1c2433;--muted:#7a8494;--muted2:#4a5363;--border:#e6e9ef;--border2:#d5dae3;--surf:#f4f6f9;--green:#16916a;--red:#c8443a;--gold2:#3b4250;--gldim:#eef0f4}
+    .ec-h{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #1c2433;padding-bottom:12px}.ec-h .k{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#7a8494}
+    .ec-h .b{font-family:Georgia,serif;font-size:26px;margin-top:2px}.ec-h .r{text-align:right;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#4a5363;line-height:1.6}
+    .gr-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.gr-kpi{border:1px solid #e6e9ef;border-radius:10px;padding:10px 12px}.gr-kpi .l{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#7a8494}
+    .gr-kpi .v{font-size:22px;font-weight:700;margin-top:3px}.gr-kpi .s{font-size:11px;color:#4a5363}
+    .ec-sec{margin-top:20px}.ec-sec>.l{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#7a8494;margin-bottom:6px;border-bottom:1px solid #e6e9ef;padding-bottom:4px}
+    .ec-sec p{font-size:13px;line-height:1.6;color:#4a5363;margin:0}.ec-sec p b{color:#1c2433}
+    .ec-line{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #f0f2f5;font-size:13px}.ec-line .num{font-weight:600;text-align:right}
+    .sa-tip{display:flex;gap:10px;padding:6px 0;font-size:13px;color:#4a5363;line-height:1.5}.sa-tip b{color:#1c2433}.sa-tip i{font-style:normal;flex-shrink:0;width:20px;height:20px;border-radius:50%;background:#eef0f4;display:grid;place-items:center;font-weight:700;font-size:11px}
+    .pie{margin-top:28px;font-size:10px;color:#7a8494;display:flex;justify-content:space-between;border-top:1px solid #e6e9ef;padding-top:8px}
+    .back-btn-float,.print-btn-float{position:fixed;top:16px;z-index:9999;display:flex;align-items:center;gap:8px;padding:10px 18px;background:#1b2a4a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;font-weight:500;box-shadow:0 4px 14px rgba(27,42,74,0.3)}
+    .back-btn-float{left:16px}.print-btn-float{right:16px;background:#fff;color:#1b2a4a;border:1px solid #d5dae3}
+    .back-btn-float:active,.print-btn-float:active{transform:scale(.96)}
+    @media print{.back-btn-float,.print-btn-float{display:none !important}body{padding:36px}}`;
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Estado de cuenta ${MONTHS[D.m]} ${D.yr}</title><style>${css}</style></head><body>
+    <button class="back-btn-float" onclick="window.close(); setTimeout(function(){ history.back(); }, 100);">&larr; Volver</button>
+    <button class="print-btn-float" onclick="window.print()">🖨️ Imprimir</button>
+    ${_ecHTML(D, true)}
+    <div class="pie"><span>JB Marte · Estado de cuenta ${MONTHS[D.m]} ${D.yr}</span><span>Generado el ${new Date().toLocaleDateString('es-DO')} · Documento confidencial</span></div></body></html>`;
+  const win = window.open('', '_blank');
+  if(!win){ alert('Permite las ventanas emergentes para imprimir.'); return; }
+  win.document.write(html);
+  win.document.close();
+  setTimeout(()=>win.print(), 700);
 }
 
 // ── Cambiar a Salud o Estado, igual que las otras secciones ───────────────
