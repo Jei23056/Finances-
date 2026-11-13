@@ -8899,7 +8899,7 @@ function _ecHTML(D, print){
     <div class="ec-sec"><div class="l">En qué se fue el dinero</div>${D.top.length ? D.top.map(([c,v])=>`<div class="ec-line"><span>${esc(_grCatNombre(c))}</span><span class="num">${K(v)} · ${D.d.exp?Math.round(v/D.d.exp*100):0}%</span></div>`).join('') : '<p>Sin gastos este mes.</p>'}</div>
     <div class="ec-sec"><div class="l">Desviaciones contra lo normal</div>${D.desv.length ? D.desv.map(x=>`<div class="ec-line"><span>${esc(_grCatNombre(x.c))}</span><span class="num" style="color:${x.v>x.p?'var(--red)':'var(--green)'}">${x.v>x.p?'+':'−'}${Math.abs(Math.round((x.v-x.p)/x.p*100))}% · ${x.v>x.p?'+':'−'}${K(Math.abs(x.v-x.p))}</span></div>`).join('') : `<p>${D.previos.length ? 'Ninguna categoría se salió de lo normal. 👌' : 'Todavía no hay meses anteriores para comparar.'}</p>`}</div>
     <div class="ec-sec"><div class="l">Recomendaciones</div>${rec.map((r,i)=>`<div class="sa-tip"><i>${i+1}</i><span>${r}</span></div>`).join('')}</div>
-    ${print ? '' : `<button class="ec-pdf" type="button" onclick="ecPDF()">📄 Descargar en PDF</button>`}`;
+    ${print ? '' : `<button class="ec-pdf" type="button" onclick="ecPDF()">🖨️ Imprimir</button>`}`;
 }
 function _ecDatosConComp(){
   const D = _ecDatos(_ecYear, _ecMes), f = _grFuentes(), py = _ecYear - 1;
@@ -8940,8 +8940,16 @@ function ecPDF(){
     .ec-sec p{font-size:13px;line-height:1.6;color:#4a5363;margin:0}.ec-sec p b{color:#1c2433}
     .ec-line{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f2f5;font-size:13px}.ec-line .num{font-weight:600}
     .sa-tip{display:flex;gap:10px;padding:6px 0;font-size:13px;color:#4a5363;line-height:1.5}.sa-tip b{color:#1c2433}.sa-tip i{font-style:normal;flex-shrink:0;width:20px;height:20px;border-radius:50%;background:#eef0f4;display:grid;place-items:center;font-weight:700;font-size:11px}
-    .pie{margin-top:28px;font-size:10px;color:#7a8494;display:flex;justify-content:space-between;border-top:1px solid #e6e9ef;padding-top:8px}`;
-  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Estado de cuenta ${MONTHS[D.m]} ${D.yr}</title><style>${css}</style></head><body>${_ecHTML(D, true)}
+    .pie{margin-top:28px;font-size:10px;color:#7a8494;display:flex;justify-content:space-between;border-top:1px solid #e6e9ef;padding-top:8px}
+    .barra{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;gap:10px;margin:-36px -36px 24px;padding:14px 20px;background:#fff;border-bottom:1px solid #e6e9ef}
+    .barra button{font:600 15px 'Helvetica Neue',Helvetica,Arial,sans-serif;padding:11px 16px;border-radius:10px;border:1px solid #d5dae3;background:#f4f6f9;color:#1c2433;cursor:pointer}
+    .barra button.pri{background:#1c2433;color:#fff;border-color:#1c2433}
+    @media print{.barra{display:none}}`;
+  // Botones arriba (no salen al imprimir): volver a la app e imprimir otra vez
+  const appUrl = JSON.stringify(location.href.split('#')[0]);
+  const barra = `<div class="barra"><button type="button" onclick="volver()">← Volver a la app</button><button type="button" class="pri" onclick="window.print()">🖨️ Imprimir</button></div>
+    <script>function volver(){ try { window.close(); } catch(e){} setTimeout(function(){ location.href = ${appUrl}; }, 300); }<\/script>`;
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Estado de cuenta ${MONTHS[D.m]} ${D.yr}</title><style>${css}</style></head><body>${barra}${_ecHTML(D, true)}
     <div class="pie"><span>JB Marte · Estado de cuenta ${MONTHS[D.m]} ${D.yr}</span><span>Generado el ${new Date().toLocaleDateString('es-DO')} · Documento confidencial</span></div></body></html>`;
   const win = window.open('', '_blank');
   if(!win){ alert('Permite las ventanas emergentes para descargar el PDF.'); return; }
