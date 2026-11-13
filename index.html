@@ -1345,6 +1345,8 @@ body {
 .ec-line { display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid var(--border); font-size:13px; }
 .ec-line:last-child { border-bottom:none; }
 .ec-line .num { font-variant-numeric:tabular-nums; font-weight:600; white-space:nowrap; }
+.ec-line > span:first-child { flex-shrink:0; }
+.ec-line > span.num { text-align:right; white-space:normal; }
 .ec-pdf { margin-top:14px; padding:10px 16px; border-radius:var(--rs); border:1px solid var(--gold); background:var(--gldim); color:var(--text); font:600 13px 'DM Sans',sans-serif; cursor:pointer; }
 </style>
 </head>
@@ -8237,6 +8239,10 @@ function generateAlerts(){
   // 6) Estado de cuenta del mes anterior listo (días 1 al 5)
   if(dia <= 5 && mi > 0 && ((data[mi-1] && Array.isArray(data[mi-1].entries)) ? data[mi-1].entries.length : 0))
     out.push({ id:`estado-${CURRENT_YEAR}-${mi-1}`, c:'var(--gold2)', t:`📄 Tu estado de cuenta de ${MONTHS[mi-1].toLowerCase()} está listo`, d:'Míralo en la barra de abajo, en 📄 Estado.' });
+  // En enero: el de diciembre del año anterior (ya guardado en el Historial)
+  if(dia <= 5 && mi === 0){ const h = (typeof historialFinanzasCache !== 'undefined' && historialFinanzasCache) ? historialFinanzasCache[CURRENT_YEAR-1] : null;
+    if(h && h[11] && Array.isArray(h[11].entries) && h[11].entries.length)
+      out.push({ id:`estado-${CURRENT_YEAR-1}-11`, c:'var(--gold2)', t:`📄 Tu estado de cuenta de diciembre ${CURRENT_YEAR-1} está listo`, d:`Míralo en 📄 Estado, tocando el año ${CURRENT_YEAR-1}.` }); }
 
   // 5) Racha de días sin gastar (venía de la línea de mensajes)
   try {
@@ -8827,26 +8833,29 @@ function renderSalud(){
 }
 
 // ── Estado de cuenta ejecutivo ─────────────────────────────────────────────
-let _ecMes = null;
-function _ecDatos(m){
-  const T = _grTotales(data), d = T[m], yr = _curDataYear();
-  const gastosCat = {}; _grE(data,m).forEach(e=>{ if(e.type==='expense') gastosCat[e.cat] = (gastosCat[e.cat]||0) + (e.amount||0); });
-  // Lo normal: promedio de los meses anteriores de este año con gastos
-  const previos = []; for(let k=0;k<m;k++) if(_grE(data,k).some(e=>e.type==='expense')) previos.push(k);
-  const prom = {}; previos.forEach(k=> _grE(data,k).forEach(e=>{ if(e.type==='expense') prom[e.cat] = (prom[e.cat]||0) + (e.amount||0)/previos.length; }));
+let _ecMes = null, _ecYear = null, _ecComp = false;
+// Los estados de cuenta no se guardan aparte: se arman con tus movimientos. Los de
+// años anteriores salen del Historial que la app guarda sola al cambiar de año.
+function _ecDatos(yr, m){
+  const src = _grFuentes()[yr] || {};
+  const T = _grTotales(src), d = T[m];
+  const gastosCat = {}; _grE(src,m).forEach(e=>{ if(e.type==='expense') gastosCat[e.cat] = (gastosCat[e.cat]||0) + (e.amount||0); });
+  // Lo normal: promedio de los meses anteriores de ese mismo año con gastos
+  const previos = []; for(let k=0;k<m;k++) if(_grE(src,k).some(e=>e.type==='expense')) previos.push(k);
+  const prom = {}; previos.forEach(k=> _grE(src,k).forEach(e=>{ if(e.type==='expense') prom[e.cat] = (prom[e.cat]||0) + (e.amount||0)/previos.length; }));
   const desv = Object.keys(Object.assign({}, gastosCat, prom)).map(c=>({ c, v:gastosCat[c]||0, p:prom[c]||0 }))
     .filter(x=> x.p>0 && Math.abs(x.v-x.p) >= 1000 && Math.abs(x.v-x.p)/x.p >= 0.15).sort((a,b)=>Math.abs(b.v-b.p)-Math.abs(a.v-a.p)).slice(0,3);
   const top = Object.entries(gastosCat).sort((a,b)=>b[1]-a[1]).slice(0,3);
   const enCurso = (yr === CURRENT_YEAR && m === new Date().getMonth());
-  return { yr, m, T, d, desv, top, previos, enCurso, pct: d.inc ? d.net/d.inc*100 : null };
+  return { yr, m, T, d, desv, top, previos, enCurso, pct: d.inc ? d.net/d.inc*100 : null, vivo: yr === _curDataYear() };
 }
 function _ecRecomendaciones(D){
-  const out = [], S = _saludCalc(D.m);
+  const out = [], S = D.vivo ? _saludCalc(D.m) : null;
   const sube = D.desv.filter(x=>x.v>x.p)[0];
   if(D.pct !== null && D.pct < _metaAhorro && D.d.inc) out.push(`Para llegar a tu meta del ${_metaAhorro}% te faltaron <b>${fmt(_metaAhorro/100*D.d.inc - D.d.net)}</b>.${sube ? ` El lugar más fácil para recortar es <b>${esc(_grCatNombre(sube.c))}</b>.` : ''}`);
   if(sube) out.push(`Pon un tope de <b>${fmt(Math.round(sube.p/100)*100)}</b> a <b>${esc(_grCatNombre(sube.c))}</b> el próximo mes (este mes fueron ${fmt(sube.v)}).`);
-  (tarjetas||[]).forEach(tj=>{ const pg = _diaValido(tj.pago); if(pg && !tj.cerrada && _diasHasta(pg) <= 10) out.push(`Paga tu <b>${esc(tj.nombre)}</b> antes del día <b>${pg}</b> para no pagar intereses.`); });
-  const col = S.ind.find(x=>x.k==='colchon'), fu = S.ind.find(x=>x.k==='fuentes');
+  if(D.vivo && D.enCurso) (tarjetas||[]).forEach(tj=>{ const pg = _diaValido(tj.pago); if(pg && !tj.cerrada && _diasHasta(pg) <= 10) out.push(`Paga tu <b>${esc(tj.nombre)}</b> antes del día <b>${pg}</b> para no pagar intereses.`); });
+  const col = S ? S.ind.find(x=>x.k==='colchon') : null, fu = S ? S.ind.find(x=>x.k==='fuentes') : null;
   const cubre = col && col.v!=='—' ? parseFloat(col.v) : null;
   if(cubre !== null && cubre >= 6) out.push(`Tienes más de 6 meses de gastos guardados: el dinero por encima de eso podría estar en un <b>certificado</b> ganando intereses.`);
   if(cubre !== null && cubre < 3) out.push(`Prioriza tu fondo de emergencia: hoy cubre <b>${cubre.toFixed(1)} meses</b>; la meta son 6.`);
@@ -8874,29 +8883,48 @@ function _ecHTML(D, print){
       <div class="gr-kpi"><div class="l">Salió</div><div class="v" style="color:var(--red)">${_grPlata(D.d.exp)}</div><div class="s">${K(D.d.exp)}</div></div>
       <div class="gr-kpi"><div class="l">Ahorro</div><div class="v" style="color:${D.pct===null?'var(--muted)':D.pct>=_metaAhorro?'var(--green)':D.pct>=0?'#e3b04f':'var(--red)'}">${D.pct===null?'—':Math.round(D.pct)+'%'}</div><div class="s">${D.d.net>=0?'sobró ':'faltó '}${K(Math.abs(D.d.net))}</div></div>
     </div>
+    ${D.cmp ? (()=>{ const P = D.cmp, fila = (l, a, b, bueno, f) => { const dif = a - b, ok = bueno==='alto' ? dif>=0 : dif<=0;
+        return `<div class="ec-line"><span>${l}</span><span class="num">${f(a)} <span style="color:var(--muted);font-weight:400">vs ${f(b)}</span> <span style="color:${dif===0?'var(--muted2)':ok?'var(--green)':'var(--red)'}">${dif>=0?'▲':'▼'} ${f(Math.abs(dif))}</span></span></div>`; };
+      const pc = v => v===null ? '—' : Math.round(v)+'%';
+      return `<div class="ec-sec"><div class="l">Contra ${MONTHS[P.m].toLowerCase()} ${P.yr}</div>
+        ${fila('Entró', D.d.inc, P.d.inc, 'alto', K)}${fila('Salió', D.d.exp, P.d.exp, 'bajo', K)}
+        <div class="ec-line"><span>Ahorro</span><span class="num">${pc(D.pct)} <span style="color:var(--muted);font-weight:400">vs ${pc(P.pct)}</span>${D.pct!==null && P.pct!==null ? ` <span style="color:${D.pct>=P.pct?'var(--green)':'var(--red)'}">${D.pct>=P.pct?'▲':'▼'} ${Math.abs(Math.round(D.pct-P.pct))} pts</span>` : ''}</span></div>
+        ${fila('Capital al cierre', D.d.end, P.d.end, 'alto', K)}</div>`; })() : ''}
     <div class="ec-sec"><div class="l">Lo más destacado</div><p>${_ecDestacado(D)}</p></div>
     <div class="ec-sec"><div class="l">En qué se fue el dinero</div>${D.top.length ? D.top.map(([c,v])=>`<div class="ec-line"><span>${esc(_grCatNombre(c))}</span><span class="num">${K(v)} · ${D.d.exp?Math.round(v/D.d.exp*100):0}%</span></div>`).join('') : '<p>Sin gastos este mes.</p>'}</div>
     <div class="ec-sec"><div class="l">Desviaciones contra lo normal</div>${D.desv.length ? D.desv.map(x=>`<div class="ec-line"><span>${esc(_grCatNombre(x.c))}</span><span class="num" style="color:${x.v>x.p?'var(--red)':'var(--green)'}">${x.v>x.p?'+':'−'}${Math.abs(Math.round((x.v-x.p)/x.p*100))}% · ${x.v>x.p?'+':'−'}${K(Math.abs(x.v-x.p))}</span></div>`).join('') : `<p>${D.previos.length ? 'Ninguna categoría se salió de lo normal. 👌' : 'Todavía no hay meses anteriores para comparar.'}</p>`}</div>
     <div class="ec-sec"><div class="l">Recomendaciones</div>${rec.map((r,i)=>`<div class="sa-tip"><i>${i+1}</i><span>${r}</span></div>`).join('')}</div>
     ${print ? '' : `<button class="ec-pdf" type="button" onclick="ecPDF()">📄 Descargar en PDF</button>`}`;
 }
+function _ecDatosConComp(){
+  const D = _ecDatos(_ecYear, _ecMes), f = _grFuentes(), py = _ecYear - 1;
+  if(_ecComp && f[py] && _grE(f[py], _ecMes).length) D.cmp = _ecDatos(py, _ecMes);
+  return D;
+}
 function renderEstado(){
   const panel = document.getElementById('panel-estado'); if(!panel) return;
-  const yr = _curDataYear(), hoyM = (yr === CURRENT_YEAR) ? new Date().getMonth() : 11;
-  const conDatos = []; for(let m=0;m<=hoyM;m++) if(_grE(data,m).length) conDatos.push(m);
-  if(!conDatos.length){ panel.innerHTML = `<div class="gr-head"><div class="t">Estado de cuenta</div></div><div class="gr-card"><div class="gr-empty">Todavía no hay movimientos este año.</div></div>`; return; }
+  const anios = _grAnios(), f = _grFuentes();
+  if(!_ecYear || !f[_ecYear]) _ecYear = _curDataYear();
+  const yr = _ecYear, src = f[yr], hoyM = (yr === CURRENT_YEAR) ? new Date().getMonth() : 11;
+  const conDatos = []; for(let m=0;m<=hoyM;m++) if(_grE(src,m).length) conDatos.push(m);
+  const yearsHTML = anios.length > 1 ? `<div class="gr-top"><div class="gr-years">${anios.map(y=>`<button class="gr-year${y===yr?' on':''}" onclick="ecSetYear(${y})">${y}</button>`).join('')}</div></div>` : '';
+  if(!conDatos.length){ panel.innerHTML = `<div class="gr-head"><div class="t">Estado de cuenta</div></div>${yearsHTML}<div class="gr-card"><div class="gr-empty">Todavía no hay movimientos en ${yr}.</div></div>`; return; }
   // Por defecto: el último mes cerrado (o el mes en curso si es el único)
   if(_ecMes === null || !conDatos.includes(_ecMes)){ const cerrados = conDatos.filter(m=> !(yr===CURRENT_YEAR && m===new Date().getMonth())); _ecMes = cerrados.length ? cerrados[cerrados.length-1] : conDatos[conDatos.length-1]; }
-  const D = _ecDatos(_ecMes);
+  const D = _ecDatosConComp(), py = yr - 1, hayPrev = !!(f[py] && _grE(f[py], _ecMes).length);
   panel.innerHTML = `
-    <div class="gr-head"><div class="t">Estado de cuenta</div><div class="s">El resumen de una página de cada mes, como el de un banco privado. Elige el mes.</div></div>
+    <div class="gr-head"><div class="t">Estado de cuenta</div><div class="s">El resumen de una página de cada mes, como el de un banco privado. Elige el año y el mes${yr !== _curDataYear() ? ' · año guardado en tu historial, solo para ver' : ''}.</div></div>
+    ${anios.length > 1 || hayPrev ? `<div class="gr-top">${anios.length > 1 ? `<div class="gr-years">${anios.map(y=>`<button class="gr-year${y===yr?' on':''}" onclick="ecSetYear(${y})">${y}</button>`).join('')}</div>` : '<div></div>'}
+      ${hayPrev ? `<button class="gr-cmp${_ecComp?' on':''}" onclick="ecToggleComp()">⇄ ${_ecComp ? `Comparando con ${MONTHS[_ecMes].toLowerCase()} ${py}` : `Comparar con ${MONTHS[_ecMes].toLowerCase()} ${py}`}</button>` : ''}</div>` : ''}
     <div class="ec-months">${conDatos.slice().reverse().map(m=>`<button class="ec-m${m===_ecMes?' on':''}" onclick="ecSetMes(${m})">${MONTHS[m]}${(yr===CURRENT_YEAR && m===new Date().getMonth())?' · en curso':''}</button>`).join('')}</div>
     <div class="ec-doc">${_ecHTML(D, false)}</div>`;
 }
 function ecSetMes(m){ _ecMes = m; renderEstado(); }
+function ecSetYear(y){ _ecYear = y; _ecMes = null; renderEstado(); }
+function ecToggleComp(){ _ecComp = !_ecComp; renderEstado(); }
 // PDF: una versión clara para imprimir o guardar como PDF (como el reporte anual)
 function ecPDF(){
-  const D = _ecDatos(_ecMes);
+  const D = _ecDatosConComp();
   const css = `body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#1c2433;margin:0;padding:36px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     :root{--text:#1c2433;--muted:#7a8494;--muted2:#4a5363;--border:#e6e9ef;--border2:#d5dae3;--surf:#f4f6f9;--green:#16916a;--red:#c8443a;--gold2:#3b4250;--gldim:#eef0f4}
     .ec-h{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #1c2433;padding-bottom:12px}.ec-h .k{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#7a8494}
