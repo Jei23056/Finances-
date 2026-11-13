@@ -8263,7 +8263,8 @@ function _grCtx(){
   const meses = []; for(let m=0;m<=hasta;m++) meses.push(m);
   const py = year - 1, hayPrev = !!(f[py] && _grTieneDatos(f[py]));
   const prev = (_grComp && hayPrev) ? { year:py, src:f[py], T:_grTotales(f[py]) } : null;
-  return { year, src, T:_grTotales(src), meses, restan: (year === CURRENT_YEAR) ? 11 - hasta : 0, prev, hayPrev, py, anios,
+  return { year, src, T:_grTotales(src), meses, restan: 0, prev,   // sin proyección (se quitó a pedido)
+           hayPrev, py, anios,
            periodo: (year === CURRENT_YEAR && hasta < 11) ? `ene–${GR_MES[hasta].toLowerCase()}` : 'todo el año' };
 }
 
@@ -8310,13 +8311,14 @@ function _grCapital(C){
   const ini = t[0].start, fin = t[t.length-1].end, cambio = fin - ini;
   const prom = t.reduce((s,d)=>s+d.net,0)/t.length;
   const proj = []; for(let k=1;k<=C.restan;k++) proj.push({ m:t[t.length-1].m+k, end: fin + prom*k });
-  const P = C.prev ? C.prev.T : null;
+  const XM = Math.max(1, t[t.length-1].m);            // último mes que se dibuja
+  const P = C.prev ? C.prev.T.slice(0, XM+1) : null;
   const vals = [...t.map(d=>d.end), ini, ...proj.map(d=>d.end), ...(P ? P.map(d=>d.end).concat(P[0].start) : [])];
   // Arriba la línea del capital, en medio los meses y abajo lo que sumó/restó cada mes
   const H = 312, yMes = 240, yb0 = 268, bh = 36;
-  const eje = _grEje(Math.max(1, ...vals), Math.min(0, ...vals)); const f = _grFrame(eje, 222 + _grB);
+  const eje = _grEje(Math.max(1, ...vals)*1.1, Math.min(0, ...vals)); const f = _grFrame(eje, 222 + _grB);   // 10% de aire arriba para la etiqueta
   const Rx = _grW - _grR - 54;
-  const x = m => _grL + 10 + m/11*(Rx-_grL-10);
+  const x = m => _grL + 10 + m/XM*(Rx-_grL-10);
   const pts = t.map(d=>[x(d.m), f.y(d.end)]);
   const base = f.y(Math.max(eje.bot, 0));
   let svg = `<defs><linearGradient id="grCapG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--gold2)" stop-opacity="0.30"/><stop offset="1" stop-color="var(--gold2)" stop-opacity="0"/></linearGradient></defs>` + f.grid;
@@ -8326,7 +8328,7 @@ function _grCapital(C){
   // Año anterior (para comparar)
   if(P){ const pp = P.map(d=>[x(d.m), f.y(d.end)]);
     svg += `<path d="${_grCurva(pp)}" fill="none" stroke="var(--muted2)" stroke-width="2" stroke-dasharray="4 4" opacity="${GR_PREV_OP}"/>
-      <text x="${(x(11)+8).toFixed(1)}" y="${(f.y(P[11].end)+4).toFixed(1)}" font-size="10.5" fill="var(--muted2)">${C.prev.year}</text>`; }
+      <text x="${(x(XM)+8).toFixed(1)}" y="${(f.y(P[P.length-1].end)+4).toFixed(1)}" font-size="10.5" fill="var(--muted2)">${C.prev.year}</text>`; }
   if(pts.length >= 2) svg += `<path d="${_grCurva(pts)} L${pts[pts.length-1][0].toFixed(1)},${base.toFixed(1)} L${pts[0][0].toFixed(1)},${base.toFixed(1)}Z" fill="url(#grCapG)"/>`;
   svg += `<path d="${_grCurva(pts)}" fill="none" stroke="var(--gold2)" stroke-width="2.8" stroke-linecap="round"/>`;
   if(proj.length){ const q = [[x(t[t.length-1].m), f.y(fin)], ...proj.map(d=>[x(d.m), f.y(d.end)])];
@@ -8342,10 +8344,10 @@ function _grCapital(C){
   svg += t.map(d=>{ const hgt = Math.abs(d.net)/mxN*(bh/2), yy = d.net>=0 ? yb0+bh/2-hgt : yb0+bh/2;
     return `<rect x="${(x(d.m)-bw/2).toFixed(1)}" y="${yy.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,hgt).toFixed(1)}" rx="2" fill="${d.net>=0?'var(--green)':'var(--red)'}" opacity="0.85"/>`; }).join('');
   // Toques
-  svg += t.map(d=>`<rect x="${(x(d.m)-(Rx-_grL)/22).toFixed(1)}" y="${_grT}" width="${((Rx-_grL)/11).toFixed(1)}" height="${H-_grT-_grB}" fill="transparent"
+  svg += t.map(d=>`<rect x="${(x(d.m)-(Rx-_grL)/(2*XM)).toFixed(1)}" y="${_grT}" width="${((Rx-_grL)/XM).toFixed(1)}" height="${H-_grT-_grB}" fill="transparent"
       data-tip="${MONTHS[d.m]}: cerraste con <b>${fmt(d.end)}</b> · ${d.net>=0?'sumaste':'restaste'} <b>${fmt(Math.abs(d.net))}</b>${P?` · en ${C.prev.year}: ${fmt(P[d.m].end)}`:''}"/>`).join('');
-  const corto = (Rx-_grL)/11 < 32, ultimo = t[t.length-1].m;
-  svg += GR_MES.map((l,m)=>`<text x="${x(m).toFixed(1)}" y="${yMes}" text-anchor="middle" font-size="11" fill="${m<=ultimo?'var(--muted2)':'var(--muted)'}" opacity="${m<=ultimo?1:0.6}">${corto ? l[0] : l}</text>`).join('');
+  const corto = (Rx-_grL)/XM < 32, ultimo = t[t.length-1].m;
+  svg += GR_MES.slice(0, XM+1).map((l,m)=>`<text x="${x(m).toFixed(1)}" y="${yMes}" text-anchor="middle" font-size="11" fill="${m<=ultimo?'var(--muted2)':'var(--muted)'}" opacity="${m<=ultimo?1:0.6}">${corto ? l[0] : l}</text>`).join('');
   const mejor = t.slice().sort((a,b)=>b.net-a.net)[0], peor = t.slice().sort((a,b)=>a.net-b.net)[0];
   const pct = ini ? Math.round(cambio/Math.abs(ini)*100) : null;
   let kp3 = ['Mejor mes', _grPlata(mejor.net), MONTHS[mejor.m], 'var(--green)'];
@@ -8359,7 +8361,7 @@ function _grCapital(C){
     svg,
     proj: proj.length ? `🔮 <span>Si sigues sumando lo de tu promedio (<b>${fmt(prom)}</b> al mes), cerrarías diciembre con unos <b>${fmt(proj[proj.length-1].end)}</b>.</span>` : '',
     leyenda: [['var(--gold2)','Tu capital'],['var(--green)','Mes que sumó'],['var(--red)','Mes que restó']].concat(P?[['var(--muted2)',`${C.prev.year} (punteado)`]]:[]),
-    que:'La línea es <b>cuánto dinero tenías</b> al cerrar cada mes. Las barritas de abajo muestran <b>cuánto sumó (verde) o restó (rojo)</b> cada mes. La parte punteada es hacia dónde vas si sigues igual.',
+    que:'La línea es <b>cuánto dinero tenías</b> al cerrar cada mes. Las barritas de abajo muestran <b>cuánto sumó (verde) o restó (rojo)</b> cada mes.',
     dice: `Empezaste ${C.year} con <b>${fmt(ini)}</b> y ${C.year===CURRENT_YEAR?'vas en':'cerraste con'} <b>${fmt(fin)}</b>: ${cambio>=0?'subiste':'bajaste'} <b>${fmt(Math.abs(cambio))}</b>. Tu mejor mes fue <b>${MONTHS[mejor.m]}</b> (+${fmt(mejor.net)})` +
       (peor.net < 0 ? ` y el más difícil <b>${MONTHS[peor.m]}</b> (−${fmt(Math.abs(peor.net))}).` : '.') + comp };
 }
@@ -8481,14 +8483,14 @@ function _grAhorro(C){
 // ── 📉 Acumulado del año ───────────────────────────────────────────────────
 function _grAcumulado(C){
   const acum = (T)=>{ let ai = 0, ae = 0; return C.meses.map(m=>{ ai += T[m].inc; ae += T[m].exp; return { m, ai, ae }; }); };
-  const t = acum(C.T), pt = C.prev ? (()=>{ let ai=0, ae=0; return GR_MES.map((_,m)=>{ ai += C.prev.T[m].inc; ae += C.prev.T[m].exp; return { m, ai, ae }; }); })() : null;
+  const t = acum(C.T), pt = C.prev ? (()=>{ let ai=0, ae=0; return C.meses.map(m=>{ ai += C.prev.T[m].inc; ae += C.prev.T[m].exp; return { m, ai, ae }; }); })() : null;
   const u = t[t.length-1];
   if(!u || (!u.ai && !u.ae)) return { titulo:'Lo que llevas en el año', svg:'', dice:'Todavía no hay datos.' };
   const n = t.length, pi = u.ai/n, pe = u.ae/n;
   const proj = []; for(let k=1;k<=C.restan;k++) proj.push({ m:u.m+k, ai:u.ai+pi*k, ae:u.ae+pe*k });
   const finI = proj.length ? proj[proj.length-1].ai : u.ai, finE = proj.length ? proj[proj.length-1].ae : u.ae;
   const eje = _grEje(Math.max(1, finI, finE, ...(pt ? pt.map(d=>Math.max(d.ai,d.ae)) : [])), 0); const f = _grFrame(eje);
-  const L = _grL, Rx = _grW - _grR - 58, x = m => L + 10 + m/11*(Rx-L-10), base = f.y(0);
+  const XM = Math.max(1, u.m), L = _grL, Rx = _grW - _grR - 58, x = m => L + 10 + m/XM*(Rx-L-10), base = f.y(0);
   const P = (arr,k)=> arr.map(d=>[x(d.m), f.y(d[k])]);
   const pI = P(t,'ai'), pE = P(t,'ae');
   const area = (pts,id)=>`<path d="${_grCurva(pts)} L${pts[pts.length-1][0].toFixed(1)},${base.toFixed(1)} L${pts[0][0].toFixed(1)},${base.toFixed(1)}Z" fill="url(#${id})"/>`;
@@ -8516,10 +8518,10 @@ function _grAcumulado(C){
   const xe = x(proj.length ? 11 : u.m), yIe = f.y(finI), yEe = f.y(finE), sep = Math.abs(yIe - yEe) < 16 ? 8 : 0;
   svg += `<text x="${(xe+8).toFixed(1)}" y="${(yIe+4-sep).toFixed(1)}" font-size="11" font-weight="600" fill="var(--green)">${proj.length?'≈ ':''}${_grPlata(finI)}</text>
     <text x="${(xe+8).toFixed(1)}" y="${(yEe+4+sep).toFixed(1)}" font-size="11" font-weight="600" fill="var(--red)">${proj.length?'≈ ':''}${_grPlata(finE)}</text>`;
-  svg += [...t.map(d=>({...d, real:true})), ...proj].map(d=>`<rect x="${(x(d.m)-(Rx-L)/22).toFixed(1)}" y="${_grT}" width="${((Rx-L)/11).toFixed(1)}" height="${(base-_grT).toFixed(1)}" fill="transparent"
+  svg += [...t.map(d=>({...d, real:true})), ...proj].map(d=>`<rect x="${(x(d.m)-(Rx-L)/(2*XM)).toFixed(1)}" y="${_grT}" width="${((Rx-L)/XM).toFixed(1)}" height="${(base-_grT).toFixed(1)}" fill="transparent"
       data-tip="${d.real?'Hasta':'Si sigues así, hasta'} ${MONTHS[d.m]}: entró <b>${fmt(d.ai)}</b> · salió <b>${fmt(d.ae)}</b> · ${d.ai>=d.ae?'ahorrado':'faltante'} <b>${fmt(Math.abs(d.ai-d.ae))}</b>${pt?` · en ${C.prev.year} llevabas ${fmt(pt[d.m].ai-pt[d.m].ae)}`:''}"/>`).join('');
-  const corto = (Rx-L)/11 < 32;
-  svg += GR_MES.map((l,m)=>`<text x="${x(m).toFixed(1)}" y="${_grH-9}" text-anchor="middle" font-size="11" fill="${m<=u.m?'var(--muted2)':'var(--muted)'}" opacity="${m<=u.m?1:0.6}">${corto ? l[0] : l}</text>`).join('');
+  const corto = (Rx-L)/XM < 32;
+  svg += GR_MES.slice(0, XM+1).map((l,m)=>`<text x="${x(m).toFixed(1)}" y="${_grH-9}" text-anchor="middle" font-size="11" fill="${m<=u.m?'var(--muted2)':'var(--muted)'}" opacity="${m<=u.m?1:0.6}">${corto ? l[0] : l}</text>`).join('');
   const pctAh = u.ai ? Math.round(ah/u.ai*100) : 0;
   const pu = pt ? pt[u.m] : null, pah = pu ? pu.ai - pu.ae : null;
   return { titulo:'Lo que llevas en el año', sub:`Todo lo que ha entrado y salido, sumado mes tras mes · ${C.year}`,
@@ -8529,7 +8531,7 @@ function _grAcumulado(C){
     svg,
     proj: proj.length ? `🔮 <span>Si sigues a este ritmo, cerrarías diciembre con unos <b>${fmt(finI)}</b> de ingresos y <b>${fmt(finE)}</b> de gastos: <b>${fmt(finI-finE)}</b> ${finI>=finE?'ahorrados':'de faltante'} en el año.</span>` : '',
     leyenda:[['var(--green)','Ingresos sumados'],['var(--red)','Gastos sumados'],['var(--gold2)','Lo ahorrado (la diferencia)']].concat(pt?[['var(--muted2)',`${C.prev.year} (líneas de puntitos)`]]:[]),
-    que:'Las dos líneas van <b>sumando</b> mes a mes todo lo que entró (verde) y salió (rojo). El espacio entre ellas es <b>lo que llevas ahorrado</b>. La parte punteada es la <b>proyección</b>: hacia dónde vas si sigues igual.' + (pt ? ` Las líneas de puntitos son ${C.prev.year}.` : ''),
+    que:'Las dos líneas van <b>sumando</b> mes a mes todo lo que entró (verde) y salió (rojo). El espacio entre ellas es <b>lo que llevas ahorrado</b>.' + (pt ? ` Las líneas de puntitos son ${C.prev.year}.` : ''),
     dice: `En lo que va del año entraron <b>${fmt(u.ai)}</b> y salieron <b>${fmt(u.ae)}</b>. ` + (ah>=0 ? `Llevas <b>${fmt(ah)}</b> ahorrados, el <b>${pctAh}%</b> de lo que entró.` : `Llevas <b>${fmt(-ah)}</b> más en gastos que en ingresos.`) +
       (pu ? ` A esta altura de ${C.prev.year} llevabas <b>${fmt(pah)}</b>: ${ah>=pah?`vas <b>${fmt(ah-pah)}</b> por delante`:`vas <b>${fmt(pah-ah)}</b> por detrás`}.` : '') };
 }
