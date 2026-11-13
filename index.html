@@ -1304,6 +1304,7 @@ button:not(:disabled):active, .mtab:active, .itab:active, .ycard.clickable:activ
         <button onclick="menuExportPDF()" class="save-menu-item">📄 <div><div style="font-weight:500">Exportar como PDF</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Descarga un reporte profesional</div></div></button>
         <button onclick="menuSaveToHistory()" class="save-menu-item">📦 <div><div style="font-weight:500">Guardar en historial</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Guarda en Firebase para verlo después</div></div></button>
         <button onclick="menuSaveBoth()" class="save-menu-item gold"><span style="font-size:18px">✨</span> <div><div style="font-weight:500;color:var(--gold)">Hacer ambas</div><div style="font-size:10px;color:var(--muted);margin-top:2px">PDF + guardar en historial</div></div></button>
+        <button onclick="menuBackup()" class="save-menu-item gold">💾 <div><div style="font-weight:500">Descargar copia de seguridad</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Todos tus datos en un archivo. Solo lee, no cambia nada</div></div></button>
       </div>
     </div>
   </div>
@@ -5987,10 +5988,10 @@ function saveUnlockedSet(set){
   }
 }
 
-async function loadAchievementsFromFirebase(){
+async function loadAchievementsFromFirebase(pre){
   if(!currentUser) return;
   try {
-    const doc = await db.collection('users').doc(currentUser.uid).get();
+    const doc = pre || await db.collection('users').doc(currentUser.uid).get();
     if(doc.exists){
       const remote = doc.data()[LOGROS_KEY] || [];
       _achievementsCache = remote;
@@ -6118,6 +6119,41 @@ document.addEventListener('click', function(e){
     m.style.display = 'none';
   }
 });
+
+// Copia de seguridad: descarga TODOS tus datos (documento principal + historial)
+// en un archivo .json. Solo lee de Firebase; no escribe ni cambia nada.
+async function menuBackup(){
+  const menu = document.getElementById('save-menu'); if(menu) menu.style.display = 'none';
+  if(!currentUser){ alert('Inicia sesión primero.'); return; }
+  const ind = document.getElementById('save-indicator');
+  const aviso = (t, ms)=>{ if(!ind) return; ind.textContent = t; ind.classList.add('show');
+    if(ms) setTimeout(()=>{ ind.classList.remove('show'); ind.textContent = 'Guardado ✓'; }, ms); };
+  try {
+    aviso('Preparando copia…');
+    const ref = db.collection('users').doc(currentUser.uid);
+    const [doc, hist] = await Promise.all([ ref.get(), ref.collection('historial').get() ]);
+    const copia = {
+      app: 'JB Marte Finance',
+      creada: new Date().toISOString(),
+      cuenta: currentUser.email || '',
+      datos: doc.exists ? (doc.data() || {}) : {},
+      historial: {}
+    };
+    hist.docs.forEach(h=>{ copia.historial[h.id] = h.data(); });
+    const blob = new Blob([JSON.stringify(copia, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `JB-Marte-copia-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 60000);
+    aviso('✓ Copia descargada', 2500);
+  } catch(e){
+    console.error('Error creando la copia de seguridad:', e);
+    aviso('No se pudo crear la copia', 3000);
+    alert('No se pudo crear la copia de seguridad. Revisa tu internet e intenta de nuevo.');
+  }
+}
 
 function menuExportPDF(){
   document.getElementById('save-menu').style.display = 'none';
@@ -6859,25 +6895,40 @@ auth.onAuthStateChanged(async user => {
     currentUser = user;
     document.getElementById('user-name').textContent = user.displayName || user.email;
     showApp();
+    // ► ARRANQUE RÁPIDO: se lee tu documento UNA vez al principio. Con esa
+    //   lectura se saltan los pasos que ya se hicieron (cada paso tiene su
+    //   bandera de "ya hecho"); los pasos pendientes corren igual que siempre.
+    //   Si esta lectura falla, todo corre exactamente como antes.
+    let _boot = null;
+    try { _boot = await db.collection('users').doc(currentUser.uid).get(); } catch(e){ _boot = null; }
+    const _b = (_boot && _boot.exists) ? (_boot.data() || {}) : null;
+    const _hecho = (k) => !!(_b && _b[k] === true);
+    // Desglose de crédito listo desde el arranque (se abre sin "Cargando…")
+    if(_b && _dc === null) _dc = (_b[DC_FIELD] && typeof _b[DC_FIELD]==='object') ? _b[DC_FIELD] : {};
     // ► PASO 1: Migración una sola vez (datos viejos `finanzas` → `finanzas_YYYY`)
-    await migrateLegacyDataIfNeeded();
+    const _migrar = !_hecho('_migrated');
+    if(_migrar) await migrateLegacyDataIfNeeded();
+    // Si la migración no corrió, el documento no cambió: se reutiliza la lectura inicial
+    const _pre = (!_migrar && _b) ? _boot : null;
     // ► PASO 2: Archivado automático de años anteriores al actual
-    await autoArchivePastYears();
+    await autoArchivePastYears(_pre);
+    // ► PASO 3.45 (en paralelo): Cargar historial (para que las cuentas de débito acumulen todos los años)
+    const _histP = loadHistorialParaSince();
     // ► PASO 3: Cargar los datos del año actual
-    await loadFromFirebase();
+    await loadFromFirebase(_pre);
     // ► PASO 3.4: Arrastrar capital del año anterior como inicio de enero (una vez/año)
-    await arrastrarCapitalDeAnioAnterior();
-    // ► PASO 3.45: Cargar historial (para que las cuentas de débito acumulen todos los años)
-    await loadHistorialParaSince();
+    if(!_hecho(`_capitalArrastrado_${CURRENT_YEAR}`)) await arrastrarCapitalDeAnioAnterior();
+    await _histP;
     // ► PASO 3.47: Asignar TODAS las entradas de Nómina al trabajo "porvenir" (una vez)
-    await asignarNominasAPorenir();
+    if(!_hecho(NOMINAS_PORENIR_FLAG)) await asignarNominasAPorenir();
     // ► PASO 3.5: Crear tarjeta inicial y asignar gastos de Crédito (una vez)
-    await setupInitialCardIfNeeded();
+    if(_hecho('_cardsSetup') && _hecho('_cardsManualSetup') && _hecho('_cardsLast4AndPrevSetup')) _cardsSetupDone = true;
+    else await setupInitialCardIfNeeded();
     // ► PASO 3.6: Cerrar año anterior de tarjetas si cambió el año
-    await rolloverCardsIfNewYear();
+    if(!(_b && _b._cardsLastYear === CURRENT_YEAR)) await rolloverCardsIfNewYear();
     // ► PASO 3.65: Cerrar año anterior de cuentas de débito si cambió el año
-    await rolloverDebitoIfNewYear();
-    await loadAchievementsFromFirebase();
+    if(!(_b && _b._debitoLastYear === CURRENT_YEAR)) await rolloverDebitoIfNewYear();
+    await loadAchievementsFromFirebase(_b ? _boot : null);
     updateAchFab();
     buildSkeleton();
     renderAll();
@@ -7019,11 +7070,11 @@ async function arrastrarCapitalDeAnioAnterior(){
   }
 }
 
-async function autoArchivePastYears(){
+async function autoArchivePastYears(pre){
   if(!currentUser) return;
   try {
     const ref = db.collection('users').doc(currentUser.uid);
-    const doc = await ref.get();
+    const doc = pre || await ref.get();
     if(!doc.exists) return;
     const d = doc.data() || {};
 
@@ -7471,15 +7522,36 @@ async function _dcLoad(){
     _dc = (d[DC_FIELD] && typeof d[DC_FIELD]==='object') ? d[DC_FIELD] : {};
   } catch(e){ console.warn('No se pudo cargar el desglose de crédito', e); _dc = _dc || {}; }
 }
+let _dcPending = 0, _dcSaveGen = 0;   // guardados en camino (para no pisarlos al refrescar)
 async function _dcSaveKey(key){
   if(!currentUser) return false;
   const ref = db.collection('users').doc(currentUser.uid);
   const val = (_dc[key] || []);
-  try { await ref.update({ [`${DC_FIELD}.${key}`]: val }); return true; }
-  catch(e){
-    try { await ref.set({ [DC_FIELD]: { [key]: val } }, { merge:true }); return true; }
-    catch(e2){ console.error('No se pudo guardar el desglose', e2); return false; }
-  }
+  _dcPending++; _dcSaveGen++;
+  try {
+    try { await ref.update({ [`${DC_FIELD}.${key}`]: val }); return true; }
+    catch(e){
+      try { await ref.set({ [DC_FIELD]: { [key]: val } }, { merge:true }); return true; }
+      catch(e2){ console.error('No se pudo guardar el desglose', e2); return false; }
+    }
+  } finally { _dcPending--; }
+}
+// Trae la versión más nueva (por si anotaste algo desde otro aparato) sin
+// hacerte esperar: solo vuelve a dibujar si algo cambió y no estás escribiendo.
+async function _dcRefresh(){
+  if(!currentUser) return;
+  const gen = _dcSaveGen;
+  try {
+    const doc = await db.collection('users').doc(currentUser.uid).get();
+    if(_dcPending > 0 || gen !== _dcSaveGen) return;
+    const d = doc.exists ? (doc.data()||{}) : {};
+    const nuevo = (d[DC_FIELD] && typeof d[DC_FIELD]==='object') ? d[DC_FIELD] : {};
+    if(JSON.stringify(nuevo) === JSON.stringify(_dc || {})) return;
+    const panel = document.getElementById('panel-desglose');
+    if(panel && panel.contains(document.activeElement) && /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
+    _dc = nuevo;
+    if(panel && panel.style.display !== 'none') renderDesglose();
+  } catch(e){ console.warn('No se pudo refrescar el desglose de crédito', e); }
 }
 // Gastos de crédito de un año: el presente sale de tus datos; los años
 // anteriores, de la copia del Historial (solo se leen).
@@ -7545,9 +7617,15 @@ function switchToDesglose(){
   const tab = document.getElementById('mtab-desglose'); if(tab) tab.className = 'mtab active';
   const panel = document.getElementById('panel-desglose'); if(panel) panel.style.display = 'block';
   if(typeof applyMonthsCollapsed === 'function') applyMonthsCollapsed();
-  if(panel) panel.innerHTML = '<div class="dc-empty">Cargando…</div>';
   _dcYear = _curDataYear();
-  _dcLoad().then(renderDesglose);
+  if(_dc){
+    // Ya está cargado: se muestra al instante y se actualiza por detrás
+    renderDesglose();
+    _dcRefresh();
+  } else {
+    if(panel) panel.innerHTML = '<div class="dc-empty">Cargando…</div>';
+    _dcLoad().then(renderDesglose);
+  }
 }
 function _dcHide(){
   const p = document.getElementById('panel-desglose'); if(p) p.style.display = 'none';
@@ -7793,9 +7871,9 @@ if(typeof renderYear === 'function'){
   };
 }
 
-async function loadFromFirebase(){
+async function loadFromFirebase(pre){
   try {
-    const doc = await db.collection('users').doc(currentUser.uid).get();
+    const doc = pre || await db.collection('users').doc(currentUser.uid).get();
     const d = doc.exists ? (doc.data() || {}) : {};
     // Carga los datos del año actual: `finanzas_${año}`
     data = d[FINANZAS_KEY] || {};
