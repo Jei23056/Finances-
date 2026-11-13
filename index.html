@@ -1232,7 +1232,7 @@ body {
 .cc-best .s { font-size:12px; color:var(--muted2); margin-top:2px; }
 
 /* Alertas inteligentes */
-#alerts-bar { display:flex; flex-direction:column; gap:8px; margin:-1.2rem 0 1.6rem; }
+#alerts-bar { display:flex; flex-direction:column; gap:8px; margin:0 0 1.6rem; }
 #alerts-bar:empty { display:none; }
 .alert-card { display:flex; align-items:flex-start; gap:10px; background:var(--card); border:1px solid var(--border); border-left:3px solid var(--ac, var(--gold)); border-radius:var(--rs); padding:10px 12px; }
 .alert-card .tx { flex:1; min-width:0; }
@@ -1438,6 +1438,8 @@ body {
   </div>
 </header>
 
+<div id="alerts-bar"></div>
+
 <div id="topbar" aria-hidden="true"><div class="tb-in"><span class="tb-title">JB Marte</span><span class="tb-cap"><span class="tb-lbl">Capital</span> <b id="tb-cap"></b></span></div></div>
 
 <!-- Barra de "viendo año anterior" (solo lectura) -->
@@ -1462,7 +1464,6 @@ body {
 <div class="mini-chart" id="mini-chart"></div>
 
 <div class="insights-bar" id="insights-bar"></div>
-<div id="alerts-bar"></div>
 
 <div class="month-scroll" id="month-tabs"></div>
 <div id="month-panels"></div>
@@ -8173,13 +8174,17 @@ function editCardDates(idx){
 // Firebase. Las que descartas se recuerdan en este aparato y vuelven a salir
 // el mes siguiente si se repiten.
 // ═════════════════════════════════════════════════════════════════════════
-const LS_ALERTAS = 'jb_alertas_ocultas';
-function _alertasOcultas(){ try { return new Set(JSON.parse(localStorage.getItem(LS_ALERTAS) || '[]')); } catch(e){ return new Set(); } }
-function dismissAlert(id){
-  const s = _alertasOcultas(); s.add(id);
-  try { localStorage.setItem(LS_ALERTAS, JSON.stringify([...s].slice(-200))); } catch(e){}
-  renderAlerts();
-}
+// Al quitar una alerta con ✕ se esconde solo mientras la app está abierta.
+// Cada vez que entras (o vuelves después de más de 1 minuto fuera) vuelven a salir.
+const _alertasQuitadas = new Set();
+try { localStorage.removeItem('jb_alertas_ocultas'); } catch(e){}   // limpia lo que guardaba la versión anterior
+function _alertasOcultas(){ return _alertasQuitadas; }
+function dismissAlert(id){ _alertasQuitadas.add(id); renderAlerts(); }
+let _alertasFueraDesde = 0;
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden){ _alertasFueraDesde = Date.now(); return; }
+  if(_alertasFueraDesde && Date.now() - _alertasFueraDesde > 60000){ _alertasQuitadas.clear(); try { renderAlerts(); } catch(e){} }
+});
 function _catNombre(cat){
   try { const i = _dcIcon(cat); return (/\p{Extended_Pictographic}/u.test(i.icon) ? `${i.icon} ${i.name}` : i.name).trim(); } catch(e){ return cat || ''; }
 }
