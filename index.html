@@ -1199,13 +1199,15 @@ body {
   position:fixed; left:50%; transform:translateX(-50%);
   bottom:max(14px, env(safe-area-inset-bottom, 0px));
   width:min(460px, calc(100% - 24px)); z-index:900;
-  display:flex; justify-content:space-around; gap:2px; padding:7px 6px;
+  display:flex; justify-content:flex-start; gap:2px; padding:7px 6px;
+  overflow-x:auto; overscroll-behavior-x:contain; scroll-snap-type:x proximity; scrollbar-width:none; -webkit-overflow-scrolling:touch;
   background:rgba(25,25,29,0.82); backdrop-filter:blur(16px) saturate(140%); -webkit-backdrop-filter:blur(16px) saturate(140%);
   border:1px solid var(--border2); border-radius:999px;
   box-shadow:0 14px 34px -10px rgba(0,0,0,0.8);
 }
+#float-nav::-webkit-scrollbar { display:none; }
 #float-nav button {
-  flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:2px;
+  flex:1 0 auto; min-width:64px; scroll-snap-align:center; white-space:nowrap; display:flex; flex-direction:column; align-items:center; gap:2px;
   background:none; border:none; border-radius:999px; padding:6px 2px; cursor:pointer;
   color:var(--muted2); font:500 10.5px 'DM Sans',sans-serif; transition:color .2s, background .2s;
 }
@@ -1249,7 +1251,7 @@ body {
 #bio-lock .bl-out { background:none; border:none; color:var(--muted); font-size:12px; text-decoration:underline; cursor:pointer; margin-top:10px; }
 
 /* Las pestañas de secciones ya están en la barra flotante: se ocultan de la fila de arriba */
-#mtab-trabajos, #mtab-annual, #mtab-cards, #mtab-desglose, #mtab-graficas { display:none !important; }
+#mtab-trabajos, #mtab-annual, #mtab-cards, #mtab-desglose, #mtab-graficas, #mtab-since { display:none !important; }
 
 /* ═══ Gráficas (nov 2026) ═══ */
 .gr-head { margin-bottom:1rem; }
@@ -8441,6 +8443,7 @@ function switchToGraficas(){
   const items = [
     ['mes',   '🏠', 'Mes',      ()=> document.querySelectorAll('#month-tabs .mtab')[new Date().getMonth()]],
     ['anual', '📊', 'Año',      ()=> document.getElementById('mtab-annual')],
+    ['since', '📆', `Desde ${SINCE_YEAR}`, ()=> document.getElementById('mtab-since')],
     ['graf',  '📈', 'Gráficas', ()=> document.getElementById('mtab-graficas')],
     ['cards', '💳', 'Tarjetas', ()=> document.getElementById('mtab-cards')],
     ['dc',    '🧾', 'Desglose', ()=> document.getElementById('mtab-desglose')],
@@ -8473,10 +8476,13 @@ function switchToGraficas(){
     if(act){
       if(act.id === 'mtab-annual') k = 'anual'; else if(act.id === 'mtab-cards') k = 'cards';
       else if(act.id === 'mtab-desglose') k = 'dc'; else if(act.id === 'mtab-trabajos') k = 'trab';
-      else if(act.id === 'mtab-graficas') k = 'graf';
+      else if(act.id === 'mtab-graficas') k = 'graf'; else if(act.id === 'mtab-since') k = 'since';
       else if(all.indexOf(act) < 12) k = 'mes';
     }
     nav.querySelectorAll('button').forEach(b=> b.classList.toggle('on', b.dataset.k === k));
+    const on = nav.querySelector('button.on');
+    if(on && (on.offsetLeft < nav.scrollLeft || on.offsetLeft + on.offsetWidth > nav.scrollLeft + nav.clientWidth))
+      nav.scrollTo({ left: on.offsetLeft - (nav.clientWidth - on.offsetWidth)/2, behavior:'smooth' });
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', build); else build();
 })();
