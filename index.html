@@ -4,6 +4,15 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>JB Marte Finance</title>
+<!-- Ícono y modo app al agregarla a la pantalla de inicio (nov 2026) -->
+<link rel="apple-touch-icon" href="icon-180.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+<meta name="apple-mobile-web-app-title" content="JB Marte" />
+<meta name="theme-color" content="#0c0c0e" />
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=Manrope:wght@500;600;700&display=swap" rel="stylesheet" />
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1299,6 +1308,53 @@ body {
 .gr-year.on { background:var(--card2); color:var(--text); border-color:var(--gold); }
 .gr-cmp { padding:7px 14px; border-radius:999px; border:1px dashed var(--border2); background:var(--card); color:var(--muted2); font:500 13px 'DM Sans',sans-serif; cursor:pointer; }
 .gr-cmp.on { border-style:solid; border-color:var(--gold2); color:var(--text); background:var(--gldim); }
+
+/* Pestañas ocultas de Salud y Estado (se abren desde la barra flotante) */
+#mtab-salud, #mtab-estado { display:none !important; }
+
+/* ═══ Salud financiera (nov 2026) ═══ */
+.sa-hero { display:grid; grid-template-columns:auto minmax(0,1fr); gap:18px; align-items:center; }
+@media(max-width:560px){ .sa-hero { grid-template-columns:1fr; justify-items:center; text-align:center; } }
+.sa-lvl { font:400 26px 'DM Serif Display',serif; color:var(--text); }
+.sa-sub { font-size:13px; color:var(--muted2); margin-top:4px; max-width:46ch; }
+.sa-chg { display:inline-block; margin-top:8px; font-size:12px; padding:3px 10px; border-radius:999px; background:var(--surf); }
+.sa-ind { display:grid; grid-template-columns:14px minmax(0,1fr) auto; gap:4px 12px; align-items:center; width:100%; text-align:left; background:none; border:none; border-bottom:1px solid var(--border); padding:12px 2px; color:var(--text); cursor:pointer; font-family:'DM Sans',sans-serif; }
+.sa-ind:last-child { border-bottom:none; }
+.sa-ind .dot { width:12px; height:12px; border-radius:50%; box-shadow:0 0 10px currentColor; }
+.sa-ind .n { font-size:14px; font-weight:600; }
+.sa-ind .t { font-size:11.5px; color:var(--muted); }
+.sa-ind .v { font:700 17px var(--num,'Manrope'),sans-serif; text-align:right; font-variant-numeric:tabular-nums; }
+.sa-ind .pts { grid-column:2 / -1; height:4px; background:var(--surf); border-radius:2px; overflow:hidden; }
+.sa-ind .pts i { display:block; height:100%; border-radius:2px; }
+.sa-ind .more { grid-column:2 / -1; font-size:12.5px; color:var(--muted2); line-height:1.5; display:none; padding-top:4px; }
+.sa-ind.open .more { display:block; }
+.sa-ind .more b { color:var(--text); }
+.sa-src { display:flex; height:12px; border-radius:6px; overflow:hidden; margin:10px 0 8px; }
+.sa-row { display:flex; justify-content:space-between; gap:10px; padding:7px 0; border-bottom:1px solid var(--border); font-size:13px; }
+.sa-row:last-child { border-bottom:none; }
+.sa-tip { display:flex; gap:10px; padding:8px 0; font-size:13px; color:var(--muted2); line-height:1.5; }
+.sa-tip i { font-style:normal; flex-shrink:0; width:22px; height:22px; border-radius:50%; background:var(--gldim); color:var(--gold2); display:grid; place-items:center; font:700 11px 'Manrope',sans-serif; }
+.sa-tip b { color:var(--text); }
+
+/* ═══ Estado de cuenta (nov 2026) ═══ */
+.ec-months { display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:12px; scrollbar-width:none; }
+.ec-months::-webkit-scrollbar { display:none; }
+.ec-m { flex-shrink:0; padding:7px 13px; border-radius:999px; border:1px solid var(--border2); background:transparent; color:var(--muted2); font:500 13px 'DM Sans',sans-serif; cursor:pointer; }
+.ec-m.on { background:var(--card2); color:var(--text); border-color:var(--gold); }
+.ec-doc { background:var(--card); border:1px solid var(--border2); border-radius:var(--r); padding:1.3rem 1.3rem 1.1rem; max-width:760px;
+  box-shadow:0 12px 30px -14px rgba(0,0,0,0.85), 0 2px 6px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.045); }
+.ec-h { display:flex; justify-content:space-between; align-items:flex-end; gap:12px; padding-bottom:12px; border-bottom:1px solid var(--border2); }
+.ec-h .k { font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+.ec-h .b { font:400 22px 'DM Serif Display',serif; color:var(--text); margin-top:2px; }
+.ec-h .r { text-align:right; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted2); line-height:1.6; }
+.ec-sec { margin-top:16px; }
+.ec-sec > .l { font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+.ec-sec p { font-size:13.5px; color:var(--muted2); line-height:1.6; }
+.ec-sec p b { color:var(--text); }
+.ec-line { display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid var(--border); font-size:13px; }
+.ec-line:last-child { border-bottom:none; }
+.ec-line .num { font-variant-numeric:tabular-nums; font-weight:600; white-space:nowrap; }
+.ec-pdf { margin-top:14px; padding:10px 16px; border-radius:var(--rs); border:1px solid var(--gold); background:var(--gldim); color:var(--text); font:600 13px 'DM Sans',sans-serif; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -1493,6 +1549,8 @@ body {
 
 <div id="panel-desglose" style="display:none"></div>
 <div id="panel-graficas" style="display:none"></div>
+<div id="panel-salud" style="display:none"></div>
+<div id="panel-estado" style="display:none"></div>
 
 <div id="panel-since" style="display:none">
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1.5rem">
@@ -8184,6 +8242,10 @@ function generateAlerts(){
     });
   });
 
+  // 6) Estado de cuenta del mes anterior listo (días 1 al 5)
+  if(dia <= 5 && mi > 0 && ((data[mi-1] && Array.isArray(data[mi-1].entries)) ? data[mi-1].entries.length : 0))
+    out.push({ id:`estado-${CURRENT_YEAR}-${mi-1}`, c:'var(--gold2)', t:`📄 Tu estado de cuenta de ${MONTHS[mi-1].toLowerCase()} está listo`, d:'Míralo en la barra de abajo, en 📄 Estado.' });
+
   // 5) Racha de días sin gastar (venía de la línea de mensajes)
   try {
     const { racha, tipo } = calcularRachas();
@@ -8651,6 +8713,233 @@ function switchToGraficas(){
   }
 })();
 
+
+// ═════════════════════════════════════════════════════════════════════════
+// SALUD FINANCIERA Y ESTADO DE CUENTA (nov 2026) — solo leen tus datos.
+// Usan los mismos cálculos de las gráficas (_grTotales, _grE).
+// ═════════════════════════════════════════════════════════════════════════
+const _clamp01 = v => Math.max(0, Math.min(1, v));
+// ¿De dónde viene cada ingreso? Del trabajo si lo tiene; si no, de su categoría.
+function _fuenteIngreso(e){ if(e.trabajo) return `💼 ${e.trabajo}`; try { return _catLabel(e.cat, 'income') || e.cat; } catch(err){ return e.cat || 'Otros'; } }
+// Meses completos: en el año actual, el mes en curso todavía no cuenta como "completo"
+function _mesesHasta(hasta){ const out = []; for(let m=0; m<=hasta; m++) out.push(m); return out; }
+
+function _saludCalc(hasta){
+  const T = _grTotales(data), meses = _mesesHasta(hasta), yr = _curDataYear();
+  const conDatos = meses.filter(m=>T[m].inc || T[m].exp);
+  const enCurso = (yr === CURRENT_YEAR && hasta === new Date().getMonth());
+  const completos = conDatos.filter(m=> !(enCurso && m === hasta));
+  const sumInc = conDatos.reduce((s,m)=>s+T[m].inc,0), sumNet = conDatos.reduce((s,m)=>s+T[m].net,0);
+  // 1) Tasa de ahorro
+  const ahorro = sumInc ? sumNet/sumInc*100 : null;
+  // 2) Meses cubiertos: capital / gasto promedio de los últimos 3 meses completos
+  const ult3 = completos.slice(-3), gProm = ult3.length ? ult3.reduce((s,m)=>s+T[m].exp,0)/ult3.length : (conDatos.length ? conDatos.reduce((s,m)=>s+T[m].exp,0)/conDatos.length : 0);
+  const capital = T[hasta].end, cubre = gProm > 0 ? capital / gProm : null;
+  // 3) Estabilidad: meses en rojo entre los últimos 6 completos
+  const ult6 = completos.slice(-6), rojos = ult6.filter(m=>T[m].net < 0).length;
+  // 4) Gastos con tarjeta de crédito sobre lo que entra
+  let cred = 0; conDatos.forEach(m=> _grE(data,m).forEach(e=>{ if(e.type==='expense' && e.cat==='Crédito') cred += e.amount||0; }));
+  const credPct = sumInc ? cred/sumInc*100 : null;
+  // 5) Concentración de ingresos
+  const fuentes = {}; conDatos.forEach(m=> _grE(data,m).forEach(e=>{ if(e.type==='income'){ const f = _fuenteIngreso(e); fuentes[f] = (fuentes[f]||0) + (e.amount||0); } }));
+  const listaF = Object.entries(fuentes).sort((a,b)=>b[1]-a[1]);
+  const topF = (listaF[0] && sumInc) ? listaF[0][1]/sumInc*100 : null;
+  const hhi = sumInc ? listaF.reduce((s,[,v])=>s+Math.pow(v/sumInc*100,2),0) : null;
+  const col = (v, verde, amar, inv) => v===null ? 'var(--muted)' : (inv ? (v<=verde?'var(--green)':v<=amar?'#e3b04f':'var(--red)') : (v>=verde?'var(--green)':v>=amar?'#e3b04f':'var(--red)'));
+  const ind = [
+    { k:'ahorro', n:'Tasa de ahorro', max:25, pts: ahorro===null?0:25*_clamp01(ahorro/25), v: ahorro===null?'—':`${Math.round(ahorro)}%`, c: col(ahorro,20,10),
+      t:'Meta: 20% o más', que:`De cada RD$100 que entran, te quedan <b>RD$${ahorro===null?0:Math.max(0,Math.round(ahorro))}</b>.`,
+      tip: ahorro!==null && ahorro<20 && sumInc ? `Para llegar al 20% necesitas ahorrar unos <b>${fmt((0.2*sumInc - sumNet)/Math.max(1,conDatos.length))}</b> más al mes.` : 'Vas bien. Mantén el ritmo.' },
+    { k:'colchon', n:'Meses cubiertos', max:25, pts: cubre===null?0:25*_clamp01(cubre/6), v: cubre===null?'—':cubre.toFixed(1), c: col(cubre,6,3),
+      t:'Meta: 6 meses de gastos', que:`Con tu capital de <b>${fmt(capital)}</b> podrías vivir <b>${cubre===null?0:cubre.toFixed(1)} meses</b> sin ingresos, gastando como en los últimos meses (${fmt(gProm)} al mes).`,
+      tip: cubre!==null && cubre<6 ? `Te faltan <b>${fmt(Math.max(0, 6*gProm - capital))}</b> para tener 6 meses cubiertos.` : 'Tienes un colchón sólido. El dinero de más podría estar ganando intereses.' },
+    { k:'estab', n:'Estabilidad', max:20, pts: ult6.length ? 20*_clamp01(1 - rojos/3) : 0, v: ult6.length ? `${ult6.length - rojos}/${ult6.length}` : '—', c: !ult6.length ? 'var(--muted)' : rojos===0?'var(--green)':rojos<=2?'#e3b04f':'var(--red)',
+      t:'Meses sin gastar más de lo que entra', que:`En los últimos <b>${ult6.length}</b> meses completos, <b>${rojos}</b> ${rojos===1?'cerró':'cerraron'} con más gastos que ingresos.`,
+      tip: rojos ? 'Revisa qué pasó en esos meses: suelen ser gastos grandes que se pueden planificar con tiempo.' : 'Ningún mes en rojo. Excelente control.' },
+    { k:'credito', n:'Uso de crédito', max:15, pts: credPct===null?0:15*_clamp01((50-credPct)/40), v: credPct===null?'—':`${Math.round(credPct)}%`, c: col(credPct,20,35,true),
+      t:'Sano: menos del 20% de lo que entra', que:`Pagas con tarjeta de crédito el equivalente al <b>${credPct===null?0:Math.round(credPct)}%</b> de tus ingresos.`,
+      tip: credPct!==null && credPct>=20 ? 'Usar menos la tarjeta reduce el riesgo de pagar intereses.' : 'Usas el crédito con moderación.' },
+    { k:'fuentes', n:'Concentración de ingresos', max:15, pts: topF===null?0:15*_clamp01((100-topF)/40), v: topF===null?'—':`${Math.round(topF)}%`, c: col(topF,70,90,true),
+      t:'Lo que viene de tu fuente principal', que: listaF.length ? `El <b>${Math.round(topF)}%</b> de lo que ganas viene de <b>${esc(listaF[0][0])}</b>.` : 'Todavía no hay ingresos.',
+      tip: topF!==null && topF>=90 ? 'Depender de una sola fuente es un riesgo: un ingreso extra estable lo bajaría.' : 'Tus ingresos están repartidos de forma saludable.' }
+  ];
+  const score = Math.round(ind.reduce((s,x)=>s+x.pts,0));
+  return { score, ind, listaF, sumInc, hhi, capital, conDatos, enCurso };
+}
+const _saludNivel = sc => sc>=80 ? ['Excelente','var(--green)'] : sc>=65 ? ['Buena','var(--green)'] : sc>=50 ? ['Regular','#e3b04f'] : ['Necesita atención','var(--red)'];
+
+function renderSalud(){
+  const panel = document.getElementById('panel-salud'); if(!panel) return;
+  const yr = _curDataYear(), hasta = (yr === CURRENT_YEAR) ? new Date().getMonth() : 11;
+  const S = _saludCalc(hasta);
+  if(!S.conDatos.length){ panel.innerHTML = `<div class="gr-head"><div class="t">Tu salud financiera</div></div><div class="gr-card"><div class="gr-empty">Todavía no hay movimientos este año.</div></div>`; return; }
+  const P = hasta > 0 ? _saludCalc(hasta-1) : null;
+  const [nivel, color] = _saludNivel(S.score);
+  const R = 70, C = Math.PI*R, off = C*(1 - S.score/100);
+  const gauge = `<svg viewBox="0 0 180 104" width="200" style="max-width:100%"><path d="M20 94 A70 70 0 0 1 160 94" fill="none" stroke="var(--surf)" stroke-width="14" stroke-linecap="round"/>
+    <path d="M20 94 A70 70 0 0 1 160 94" fill="none" stroke="${color}" stroke-width="14" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/>
+    <text x="90" y="84" text-anchor="middle" font-size="38" font-weight="700" fill="var(--text)">${S.score}</text><text x="90" y="101" text-anchor="middle" font-size="10" fill="var(--muted)">de 100</text></svg>`;
+  const dif = P && P.conDatos.length ? S.score - P.score : null;
+  const peores = S.ind.slice().sort((a,b)=>(a.pts/a.max)-(b.pts/b.max)).filter(x=>x.pts/x.max < 0.999).slice(0,3);
+  const colsF = (typeof DONUT_COLORS_LIVE !== 'undefined') ? DONUT_COLORS_LIVE : ['#5b8fd6','#4ec99a','#e8695d','#c9a15a','#8f7fd6'];
+  panel.innerHTML = `
+    <div class="gr-head"><div class="t">Tu salud financiera</div><div class="s">Una nota de 0 a 100 que combina 5 indicadores, como los que usa un banco para evaluar a un cliente. ${S.enCurso ? 'Incluye el mes en curso.' : ''}</div></div>
+    <div class="gr-card"><div class="sa-hero">${gauge}
+      <div><div class="sa-lvl" style="color:${color}">${nivel}</div>
+        <div class="sa-sub">${S.score>=80 ? 'Tus finanzas están en muy buena forma.' : S.score>=65 ? 'Vas bien; hay uno o dos puntos que puedes reforzar.' : S.score>=50 ? 'Tienes una base, pero hay áreas que conviene mejorar.' : 'Hay varios puntos que necesitan atención. Empieza por las recomendaciones de abajo.'}</div>
+        ${dif!==null ? `<span class="sa-chg" style="color:${dif>=0?'var(--green)':'var(--red)'}">${dif>=0?'▲':'▼'} ${Math.abs(dif)} ${Math.abs(dif)===1?'punto':'puntos'} vs ${MONTHS[hasta-1].toLowerCase()}</span>` : ''}
+      </div></div></div>
+    <div class="gr-card"><h3>Tus 5 indicadores</h3><div class="sub">Toca uno para ver qué significa y cómo mejorarlo</div>
+      ${S.ind.map(x=>`<button class="sa-ind" type="button" onclick="this.classList.toggle('open')">
+        <span class="dot" style="background:${x.c};color:${x.c}"></span>
+        <span><div class="n">${x.n}</div><div class="t">${x.t}</div></span>
+        <span class="v" style="color:${x.c}">${x.v}</span>
+        <span class="pts"><i style="width:${(x.pts/x.max*100).toFixed(0)}%;background:${x.c}"></i></span>
+        <span class="more">${x.que} ${x.tip}<br><span style="color:var(--muted)">Aporta ${Math.round(x.pts)} de ${x.max} puntos.</span></span>
+      </button>`).join('')}
+    </div>
+    <div class="gr-card"><h3>De dónde viene tu dinero</h3><div class="sub">Tus ingresos de ${yr} por fuente</div>
+      ${S.listaF.length ? `<div class="sa-src">${S.listaF.map(([f,v],i)=>`<i style="width:${(v/S.sumInc*100).toFixed(2)}%;background:${colsF[i%colsF.length]}" title="${esc(f)}"></i>`).join('')}</div>
+      ${S.listaF.map(([f,v],i)=>`<div class="sa-row"><span><span style="color:${colsF[i%colsF.length]}">●</span> ${esc(f)}</span><span class="num" style="font-variant-numeric:tabular-nums">${fmt(v)} · <b>${(v/S.sumInc*100).toFixed(1)}%</b></span></div>`).join('')}
+      <div class="sa-sub" style="margin-top:10px">Índice de concentración: <b style="color:var(--text)">${Math.round(S.hhi).toLocaleString('en-US')}</b> de 10,000. Más de 2,500 se considera concentrado: si esa fuente falla, tus ingresos caen de golpe.</div>` : '<div class="gr-empty">Todavía no hay ingresos.</div>'}
+    </div>
+    ${peores.length ? `<div class="gr-card"><h3>Qué hacer para subir tu nota</h3>${peores.map((x,i)=>`<div class="sa-tip"><i>${i+1}</i><span><b>${x.n}:</b> ${x.tip}</span></div>`).join('')}</div>` : ''}`;
+}
+
+// ── Estado de cuenta ejecutivo ─────────────────────────────────────────────
+let _ecMes = null;
+function _ecDatos(m){
+  const T = _grTotales(data), d = T[m], yr = _curDataYear();
+  const gastosCat = {}; _grE(data,m).forEach(e=>{ if(e.type==='expense') gastosCat[e.cat] = (gastosCat[e.cat]||0) + (e.amount||0); });
+  // Lo normal: promedio de los meses anteriores de este año con gastos
+  const previos = []; for(let k=0;k<m;k++) if(_grE(data,k).some(e=>e.type==='expense')) previos.push(k);
+  const prom = {}; previos.forEach(k=> _grE(data,k).forEach(e=>{ if(e.type==='expense') prom[e.cat] = (prom[e.cat]||0) + (e.amount||0)/previos.length; }));
+  const desv = Object.keys(Object.assign({}, gastosCat, prom)).map(c=>({ c, v:gastosCat[c]||0, p:prom[c]||0 }))
+    .filter(x=> x.p>0 && Math.abs(x.v-x.p) >= 1000 && Math.abs(x.v-x.p)/x.p >= 0.15).sort((a,b)=>Math.abs(b.v-b.p)-Math.abs(a.v-a.p)).slice(0,3);
+  const top = Object.entries(gastosCat).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const enCurso = (yr === CURRENT_YEAR && m === new Date().getMonth());
+  return { yr, m, T, d, desv, top, previos, enCurso, pct: d.inc ? d.net/d.inc*100 : null };
+}
+function _ecRecomendaciones(D){
+  const out = [], S = _saludCalc(D.m);
+  const sube = D.desv.filter(x=>x.v>x.p)[0];
+  if(D.pct !== null && D.pct < 20 && D.d.inc) out.push(`Para ahorrar el 20% de lo que entra te faltaron <b>${fmt(0.2*D.d.inc - D.d.net)}</b>.${sube ? ` El lugar más fácil para recortar es <b>${esc(_grCatNombre(sube.c))}</b>.` : ''}`);
+  if(sube) out.push(`Pon un tope de <b>${fmt(Math.round(sube.p/100)*100)}</b> a <b>${esc(_grCatNombre(sube.c))}</b> el próximo mes (este mes fueron ${fmt(sube.v)}).`);
+  (tarjetas||[]).forEach(tj=>{ const pg = _diaValido(tj.pago); if(pg && !tj.cerrada && _diasHasta(pg) <= 10) out.push(`Paga tu <b>${esc(tj.nombre)}</b> antes del día <b>${pg}</b> para no pagar intereses.`); });
+  const col = S.ind.find(x=>x.k==='colchon'), fu = S.ind.find(x=>x.k==='fuentes');
+  const cubre = col && col.v!=='—' ? parseFloat(col.v) : null;
+  if(cubre !== null && cubre >= 6) out.push(`Tienes más de 6 meses de gastos guardados: el dinero por encima de eso podría estar en un <b>certificado</b> ganando intereses.`);
+  if(cubre !== null && cubre < 3) out.push(`Prioriza tu fondo de emergencia: hoy cubre <b>${cubre.toFixed(1)} meses</b>; la meta son 6.`);
+  if(fu && fu.v !== '—' && parseFloat(fu.v) >= 90) out.push(`Casi todo tu ingreso viene de una sola fuente. Un ingreso extra, aunque sea pequeño, bajaría tu riesgo.`);
+  if(!out.length) out.push('Buen mes. Mantén el mismo ritmo y revisa tus gráficas para comparar con los meses anteriores.');
+  return out.slice(0,3);
+}
+function _ecDestacado(D){
+  const { T, m, d } = D, prev = m>0 ? T[m-1].end : T[0].start, cambio = d.end - prev;
+  const maxAnio = Math.max(...T.slice(0, m+1).map(x=>x.end));
+  let t = `Tu capital ${D.enCurso?'va en':'cerró en'} <b>${fmt(d.end)}</b> (${cambio>=0?'+':'−'}${fmt(Math.abs(cambio))} en el mes)`;
+  t += (d.end >= maxAnio && m>0) ? ', su punto más alto del año.' : '.';
+  let racha = 0; for(let k=m; k>=0; k--){ const x = T[k]; if(x.inc && x.net/x.inc >= 0.2) racha++; else break; }
+  if(racha >= 2) t += ` Llevas <b>${racha} meses seguidos</b> por encima de la meta de ahorro.`;
+  else if(d.net < 0) t += ` Este mes saliste con <b>${fmt(Math.abs(d.net))}</b> más en gastos que en ingresos.`;
+  return t;
+}
+function _ecHTML(D, print){
+  const fechaCierre = D.enCurso ? `Al ${new Date().getDate()}/${String(D.m+1).padStart(2,'0')} · en curso` : `Cierre ${new Date(D.yr, D.m+1, 0).getDate()}/${String(D.m+1).padStart(2,'0')}`;
+  const rec = _ecRecomendaciones(D);
+  const K = v => fmt(v);
+  return `<div class="ec-h"><div><div class="k">Estado de cuenta</div><div class="b">JB Marte · Privado</div></div><div class="r">${MONTHS[D.m]} ${D.yr}<br>${fechaCierre}</div></div>
+    <div class="gr-kpis" style="margin-top:14px">
+      <div class="gr-kpi"><div class="l">Entró</div><div class="v" style="color:var(--green)">${_grPlata(D.d.inc)}</div><div class="s">${K(D.d.inc)}</div></div>
+      <div class="gr-kpi"><div class="l">Salió</div><div class="v" style="color:var(--red)">${_grPlata(D.d.exp)}</div><div class="s">${K(D.d.exp)}</div></div>
+      <div class="gr-kpi"><div class="l">Ahorro</div><div class="v" style="color:${D.pct===null?'var(--muted)':D.pct>=20?'var(--green)':D.pct>=0?'#e3b04f':'var(--red)'}">${D.pct===null?'—':Math.round(D.pct)+'%'}</div><div class="s">${D.d.net>=0?'sobró ':'faltó '}${K(Math.abs(D.d.net))}</div></div>
+    </div>
+    <div class="ec-sec"><div class="l">Lo más destacado</div><p>${_ecDestacado(D)}</p></div>
+    <div class="ec-sec"><div class="l">En qué se fue el dinero</div>${D.top.length ? D.top.map(([c,v])=>`<div class="ec-line"><span>${esc(_grCatNombre(c))}</span><span class="num">${K(v)} · ${D.d.exp?Math.round(v/D.d.exp*100):0}%</span></div>`).join('') : '<p>Sin gastos este mes.</p>'}</div>
+    <div class="ec-sec"><div class="l">Desviaciones contra lo normal</div>${D.desv.length ? D.desv.map(x=>`<div class="ec-line"><span>${esc(_grCatNombre(x.c))}</span><span class="num" style="color:${x.v>x.p?'var(--red)':'var(--green)'}">${x.v>x.p?'+':'−'}${Math.abs(Math.round((x.v-x.p)/x.p*100))}% · ${x.v>x.p?'+':'−'}${K(Math.abs(x.v-x.p))}</span></div>`).join('') : `<p>${D.previos.length ? 'Ninguna categoría se salió de lo normal. 👌' : 'Todavía no hay meses anteriores para comparar.'}</p>`}</div>
+    <div class="ec-sec"><div class="l">Recomendaciones</div>${rec.map((r,i)=>`<div class="sa-tip"><i>${i+1}</i><span>${r}</span></div>`).join('')}</div>
+    ${print ? '' : `<button class="ec-pdf" type="button" onclick="ecPDF()">📄 Descargar en PDF</button>`}`;
+}
+function renderEstado(){
+  const panel = document.getElementById('panel-estado'); if(!panel) return;
+  const yr = _curDataYear(), hoyM = (yr === CURRENT_YEAR) ? new Date().getMonth() : 11;
+  const conDatos = []; for(let m=0;m<=hoyM;m++) if(_grE(data,m).length) conDatos.push(m);
+  if(!conDatos.length){ panel.innerHTML = `<div class="gr-head"><div class="t">Estado de cuenta</div></div><div class="gr-card"><div class="gr-empty">Todavía no hay movimientos este año.</div></div>`; return; }
+  // Por defecto: el último mes cerrado (o el mes en curso si es el único)
+  if(_ecMes === null || !conDatos.includes(_ecMes)){ const cerrados = conDatos.filter(m=> !(yr===CURRENT_YEAR && m===new Date().getMonth())); _ecMes = cerrados.length ? cerrados[cerrados.length-1] : conDatos[conDatos.length-1]; }
+  const D = _ecDatos(_ecMes);
+  panel.innerHTML = `
+    <div class="gr-head"><div class="t">Estado de cuenta</div><div class="s">El resumen de una página de cada mes, como el de un banco privado. Elige el mes.</div></div>
+    <div class="ec-months">${conDatos.slice().reverse().map(m=>`<button class="ec-m${m===_ecMes?' on':''}" onclick="ecSetMes(${m})">${MONTHS[m]}${(yr===CURRENT_YEAR && m===new Date().getMonth())?' · en curso':''}</button>`).join('')}</div>
+    <div class="ec-doc">${_ecHTML(D, false)}</div>`;
+}
+function ecSetMes(m){ _ecMes = m; renderEstado(); }
+// PDF: una versión clara para imprimir o guardar como PDF (como el reporte anual)
+function ecPDF(){
+  const D = _ecDatos(_ecMes);
+  const css = `body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#1c2433;margin:0;padding:36px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    :root{--text:#1c2433;--muted:#7a8494;--muted2:#4a5363;--border:#e6e9ef;--border2:#d5dae3;--surf:#f4f6f9;--green:#16916a;--red:#c8443a;--gold2:#3b4250;--gldim:#eef0f4}
+    .ec-h{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #1c2433;padding-bottom:12px}.ec-h .k{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#7a8494}
+    .ec-h .b{font-family:Georgia,serif;font-size:26px;margin-top:2px}.ec-h .r{text-align:right;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#4a5363;line-height:1.6}
+    .gr-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.gr-kpi{border:1px solid #e6e9ef;border-radius:10px;padding:10px 12px}.gr-kpi .l{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#7a8494}
+    .gr-kpi .v{font-size:22px;font-weight:700;margin-top:3px}.gr-kpi .s{font-size:11px;color:#4a5363}
+    .ec-sec{margin-top:20px}.ec-sec>.l{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#7a8494;margin-bottom:6px;border-bottom:1px solid #e6e9ef;padding-bottom:4px}
+    .ec-sec p{font-size:13px;line-height:1.6;color:#4a5363;margin:0}.ec-sec p b{color:#1c2433}
+    .ec-line{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f2f5;font-size:13px}.ec-line .num{font-weight:600}
+    .sa-tip{display:flex;gap:10px;padding:6px 0;font-size:13px;color:#4a5363;line-height:1.5}.sa-tip b{color:#1c2433}.sa-tip i{font-style:normal;flex-shrink:0;width:20px;height:20px;border-radius:50%;background:#eef0f4;display:grid;place-items:center;font-weight:700;font-size:11px}
+    .pie{margin-top:28px;font-size:10px;color:#7a8494;display:flex;justify-content:space-between;border-top:1px solid #e6e9ef;padding-top:8px}`;
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Estado de cuenta ${MONTHS[D.m]} ${D.yr}</title><style>${css}</style></head><body>${_ecHTML(D, true)}
+    <div class="pie"><span>JB Marte · Estado de cuenta ${MONTHS[D.m]} ${D.yr}</span><span>Generado el ${new Date().toLocaleDateString('es-DO')} · Documento confidencial</span></div></body></html>`;
+  const win = window.open('', '_blank');
+  if(!win){ alert('Permite las ventanas emergentes para descargar el PDF.'); return; }
+  win.document.write(html); win.document.close();
+  setTimeout(()=>win.print(), 600);
+}
+
+// ── Cambiar a Salud o Estado, igual que las otras secciones ───────────────
+function _secHide(){
+  ['salud','estado'].forEach(k=>{ const p=document.getElementById('panel-'+k); if(p) p.style.display='none'; const t=document.getElementById('mtab-'+k); if(t) t.className='mtab'; });
+}
+function _switchToSeccion(k, render){
+  annualActive = false;
+  document.querySelectorAll('.month-panel').forEach(p=>{ p.className = 'month-panel'; });
+  const presentMonth = new Date().getMonth();
+  document.querySelectorAll('.mtab').forEach((t,i)=>{ if(i < 12){ let cls = 'mtab' + (hasData(i)?' has-data':''); cls += (i === presentMonth) ? ' present-month' : ' hideable'; t.className = cls; } });
+  ['mtab-annual','mtab-since','mtab-cards','mtab-trabajos'].forEach(id=>{ const t=document.getElementById(id); if(t) t.className='mtab'; });
+  ['panel-annual','panel-since','panel-cards','panel-trabajos'].forEach(id=>{ const p=document.getElementById(id); if(p) p.style.display='none'; });
+  try { _dcHide(); } catch(e){} try { _grHide(); } catch(e){}
+  _secHide();
+  const tab = document.getElementById('mtab-'+k); if(tab) tab.className = 'mtab active';
+  const panel = document.getElementById('panel-'+k); if(panel) panel.style.display = 'block';
+  if(typeof applyMonthsCollapsed === 'function') applyMonthsCollapsed();
+  render();
+}
+function switchToSalud(){ _switchToSeccion('salud', renderSalud); }
+function switchToEstado(){ _switchToSeccion('estado', renderEstado); }
+(function(){
+  const ob = window.buildSkeleton;
+  if(typeof ob === 'function'){
+    window.buildSkeleton = function(){
+      const r = ob.apply(this, arguments);
+      const ref = document.getElementById('mtab-since');
+      [['salud','💚 Salud',switchToSalud],['estado','📄 Estado',switchToEstado]].forEach(([k,l,fn])=>{
+        if(ref && !document.getElementById('mtab-'+k)){ const b = document.createElement('button'); b.id = 'mtab-'+k; b.className = 'mtab'; b.textContent = l; b.onclick = ()=>fn(); ref.parentElement.appendChild(b); }
+      });
+      return r;
+    };
+  }
+  ['switchMonth','switchToAnnual','switchToCards','switchToTrabajos','switchToSince','switchToDesglose','switchToGraficas'].forEach(name=>{
+    const f = window[name]; if(typeof f !== 'function') return;
+    window[name] = function(){ _secHide(); return f.apply(this, arguments); };
+  });
+  const ra = window.renderAll;
+  if(typeof ra === 'function'){
+    window.renderAll = function(){ const r = ra.apply(this, arguments);
+      [['salud',renderSalud],['estado',renderEstado]].forEach(([k,fn])=>{ const p=document.getElementById('panel-'+k); if(p && p.style.display==='block'){ try { fn(); } catch(e){ console.warn(e); } } });
+      return r; };
+  }
+})();
+
 // ═════════════════════════════════════════════════════════════════════════
 // BARRA FLOTANTE (nov 2026) — atajos a las pestañas que ya existen; cada
 // botón solo "toca" la pestaña de siempre.
@@ -8661,6 +8950,8 @@ function switchToGraficas(){
     ['anual', '📊', 'Año',      ()=> document.getElementById('mtab-annual')],
     ['since', '📆', `Desde ${SINCE_YEAR}`, ()=> document.getElementById('mtab-since')],
     ['graf',  '📈', 'Gráficas', ()=> document.getElementById('mtab-graficas')],
+    ['salud', '💚', 'Salud',    ()=> document.getElementById('mtab-salud')],
+    ['estado','📄', 'Estado',   ()=> document.getElementById('mtab-estado')],
     ['cards', '💳', 'Tarjetas', ()=> document.getElementById('mtab-cards')],
     ['dc',    '🧾', 'Desglose', ()=> document.getElementById('mtab-desglose')],
     ['trab',  '💼', 'Trabajo',  ()=> document.getElementById('mtab-trabajos')]
@@ -8693,6 +8984,7 @@ function switchToGraficas(){
       if(act.id === 'mtab-annual') k = 'anual'; else if(act.id === 'mtab-cards') k = 'cards';
       else if(act.id === 'mtab-desglose') k = 'dc'; else if(act.id === 'mtab-trabajos') k = 'trab';
       else if(act.id === 'mtab-graficas') k = 'graf'; else if(act.id === 'mtab-since') k = 'since';
+      else if(act.id === 'mtab-salud') k = 'salud'; else if(act.id === 'mtab-estado') k = 'estado';
       else if(all.indexOf(act) < 12) k = 'mes';
     }
     nav.querySelectorAll('button').forEach(b=> b.classList.toggle('on', b.dataset.k === k));
