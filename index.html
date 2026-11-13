@@ -8930,11 +8930,78 @@ function _ecHTML(D, print){
     <div class="ec-sec"><div class="l">Recomendaciones</div>${rec.map((r,i)=>`<div class="sa-tip"><i>${i+1}</i><span>${r}</span></div>`).join('')}</div>
     ${print ? '' : `<button class="ec-pdf" type="button" onclick="ecPDF()">🖨️ Imprimir</button>`}`;
 }
+// ── Estado de cuenta ANUAL (nov 2026) ──────────────────────────────────────
+// _ecMes === -1 significa "Año completo". En el año actual cubre de enero al
+// mes de hoy; al comparar, usa los mismos meses del año anterior. Solo lee.
+const EC_ANUAL = -1;
+function _ecAnualDatos(yr, hastaForzado){
+  const src = _grFuentes()[yr] || {}, T = _grTotales(src);
+  const hasta = hastaForzado !== undefined ? hastaForzado : ((yr === CURRENT_YEAR) ? new Date().getMonth() : 11);
+  const meses = []; for(let m=0; m<=hasta; m++) if(_grE(src,m).length) meses.push(m);
+  let inc = 0, exp = 0; const cat = {};
+  meses.forEach(m=>{ inc += T[m].inc; exp += T[m].exp; _grE(src,m).forEach(e=>{ if(e.type==='expense') cat[e.cat] = (cat[e.cat]||0) + (e.amount||0); }); });
+  const net = inc - exp, ini = T[0].start, fin = T[hasta].end;
+  const conPct = meses.filter(m=>T[m].inc>0).map(m=>({ m, pct: T[m].net/T[m].inc*100, net:T[m].net }));
+  const mejor = meses.slice().sort((a,b)=>T[b].net-T[a].net)[0], peor = meses.slice().sort((a,b)=>T[a].net-T[b].net)[0];
+  return { anual:true, yr, hasta, meses, T, inc, exp, net, ini, fin, cat, pct: inc ? net/inc*100 : null,
+    enMeta: conPct.filter(x=>x.pct >= _metaAhorro).length, conPct, mejor, peor,
+    top: Object.entries(cat).sort((a,b)=>b[1]-a[1]).slice(0,5),
+    enCurso: yr === CURRENT_YEAR && hasta < 11, vivo: yr === _curDataYear(),
+    periodo: (hasta < 11) ? `enero a ${MONTHS[hasta].toLowerCase()}` : 'enero a diciembre' };
+}
+function _ecAnualRecs(A){
+  const out = [];
+  if(A.pct !== null && A.pct < _metaAhorro && A.inc) out.push(`En el año ahorraste el <b>${Math.round(A.pct)}%</b>; tu meta es ${_metaAhorro}%. Te faltaron unos <b>${fmt((_metaAhorro/100*A.inc - A.net)/Math.max(1,A.meses.length))}</b> al mes.`);
+  if(A.cmp){ const sube = Object.keys(A.cat).map(c=>({ c, v:A.cat[c], p:A.cmp.cat[c]||0 })).filter(x=>x.p>0 && x.v-x.p >= 3000).sort((a,b)=>(b.v-b.p)-(a.v-a.p))[0];
+    if(sube) out.push(`<b>${esc(_grCatNombre(sube.c))}</b> subió <b>${fmt(sube.v-sube.p)}</b> contra ${A.cmp.yr}. Ponle un tope de unos <b>${fmt(Math.round(sube.p/Math.max(1,A.cmp.meses.length)/100)*100)}</b> al mes.`); }
+  if(A.peor !== undefined && A.T[A.peor].net < 0) out.push(`<b>${MONTHS[A.peor]}</b> fue tu mes más difícil (−${fmt(Math.abs(A.T[A.peor].net))}). Revisa qué pasó para planificarlo mejor el próximo año.`);
+  if(A.vivo){ try { const S = _saludCalc(A.hasta), fu = S.ind.find(x=>x.k==='fuentes'), col = S.ind.find(x=>x.k==='colchon');
+    if(col && col.v!=='—' && parseFloat(col.v) < 6) out.push(`Tu fondo de emergencia cubre <b>${col.v} meses</b>; la meta son 6.`);
+    if(fu && fu.v!=='—' && parseFloat(fu.v) >= 90) out.push('Casi todo tu ingreso viene de una sola fuente. Un ingreso extra bajaría tu riesgo.'); } catch(e){} }
+  if(!out.length) out.push('Buen año. Mantén el ritmo y compara con este mismo periodo el próximo año.');
+  return out.slice(0,3);
+}
+function _ecAnualHTML(A, print){
+  const K = v => fmt(v), pc = v => v===null ? '—' : Math.round(v)+'%';
+  const cambio = A.fin - A.ini;
+  const colPct = A.pct===null ? 'var(--muted)' : A.pct>=_metaAhorro ? 'var(--green)' : A.pct>=0 ? '#e3b04f' : 'var(--red)';
+  let destacado = `Tu capital ${A.enCurso?'va en':'cerró el año en'} <b>${K(A.fin)}</b>: ${cambio>=0?'subió':'bajó'} <b>${K(Math.abs(cambio))}</b> desde enero (empezaste con ${K(A.ini)}).`;
+  if(A.mejor !== undefined) destacado += ` Tu mejor mes fue <b>${MONTHS[A.mejor].toLowerCase()}</b> (+${K(A.T[A.mejor].net)}).`;
+  destacado += ` Llegaste a tu meta de ahorro en <b>${A.enMeta} de ${A.conPct.length}</b> meses.`;
+  const fila = (l, a, b, bueno, f) => { const dif = a - b, ok = bueno==='alto' ? dif>=0 : dif<=0;
+    return `<div class="ec-line"><span>${l}</span><span class="num">${f(a)} <span style="color:var(--muted);font-weight:400">vs ${f(b)}</span> <span style="color:${dif===0?'var(--muted2)':ok?'var(--green)':'var(--red)'}">${dif>=0?'▲':'▼'} ${f(Math.abs(dif))}</span></span></div>`; };
+  const cmp = A.cmp ? (()=>{ const P = A.cmp;
+    const cambios = Object.keys(Object.assign({}, A.cat, P.cat)).map(c=>({ c, v:A.cat[c]||0, p:P.cat[c]||0 })).filter(x=>Math.abs(x.v-x.p) >= 1000).sort((a,b)=>Math.abs(b.v-b.p)-Math.abs(a.v-a.p)).slice(0,3);
+    return `<div class="ec-sec"><div class="l">Contra ${P.yr} · ${P.periodo}</div>
+      ${fila('Entró', A.inc, P.inc, 'alto', K)}${fila('Salió', A.exp, P.exp, 'bajo', K)}
+      <div class="ec-line"><span>Ahorro</span><span class="num">${pc(A.pct)} <span style="color:var(--muted);font-weight:400">vs ${pc(P.pct)}</span>${A.pct!==null && P.pct!==null ? ` <span style="color:${A.pct>=P.pct?'var(--green)':'var(--red)'}">${A.pct>=P.pct?'▲':'▼'} ${Math.abs(Math.round(A.pct-P.pct))} pts</span>` : ''}</span></div>
+      ${fila('Capital al cierre', A.fin, P.fin, 'alto', K)}
+      ${cambios.length ? `<div style="margin-top:8px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Lo que más cambió</div>` + cambios.map(x=>`<div class="ec-line"><span>${esc(_grCatNombre(x.c))}</span><span class="num" style="color:${x.v>x.p?'var(--red)':'var(--green)'}">${x.v>x.p?'+':'−'}${K(Math.abs(x.v-x.p))}${x.p?` · ${x.v>x.p?'+':'−'}${Math.abs(Math.round((x.v-x.p)/x.p*100))}%`:' · nuevo'}</span></div>`).join('') : ''}</div>`; })() : '';
+  const mesAMes = `<div class="ec-sec"><div class="l">Mes a mes</div>
+    <div class="ec-line" style="color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase"><span>Mes</span><span class="num" style="font-weight:500">Entró · Salió · Ahorro</span></div>
+    ${A.meses.map(m=>{ const t = A.T[m], p = t.inc ? t.net/t.inc*100 : null; return `<div class="ec-line"><span>${MONTHS[m]}</span><span class="num">${_grPlata(t.inc)} · ${_grPlata(t.exp)} · <span style="color:${p===null?'var(--muted)':p>=_metaAhorro?'var(--green)':p>=0?'#e3b04f':'var(--red)'}">${pc(p)}</span></span></div>`; }).join('')}</div>`;
+  return `<div class="ec-h"><div><div class="k">Estado de cuenta anual</div><div class="b">JB Marte · Privado</div></div><div class="r">Año ${A.yr}<br>${A.enCurso ? `${A.periodo} · en curso` : 'Cierre 31/12'}</div></div>
+    <div class="gr-kpis" style="margin-top:14px">
+      <div class="gr-kpi"><div class="l">Entró</div><div class="v" style="color:var(--green)">${_grPlata(A.inc)}</div><div class="s">${K(A.inc)}</div></div>
+      <div class="gr-kpi"><div class="l">Salió</div><div class="v" style="color:var(--red)">${_grPlata(A.exp)}</div><div class="s">${K(A.exp)}</div></div>
+      <div class="gr-kpi"><div class="l">Ahorro</div><div class="v" style="color:${colPct}">${pc(A.pct)}</div><div class="s">${A.net>=0?'sobró ':'faltó '}${K(Math.abs(A.net))}</div></div>
+    </div>
+    ${cmp}
+    <div class="ec-sec"><div class="l">Lo más destacado</div><p>${destacado}</p></div>
+    <div class="ec-sec"><div class="l">En qué se fue el dinero</div>${A.top.length ? A.top.map(([c,v])=>`<div class="ec-line"><span>${esc(_grCatNombre(c))}</span><span class="num">${K(v)} · ${A.exp?Math.round(v/A.exp*100):0}%</span></div>`).join('') : '<p>Sin gastos.</p>'}</div>
+    ${mesAMes}
+    <div class="ec-sec"><div class="l">Recomendaciones</div>${_ecAnualRecs(A).map((r,i)=>`<div class="sa-tip"><i>${i+1}</i><span>${r}</span></div>`).join('')}</div>
+    ${print ? '' : `<button class="ec-pdf" type="button" onclick="ecPDF()">🖨️ Imprimir</button>`}`;
+}
+
 function _ecDatosConComp(){
-  const D = _ecDatos(_ecYear, _ecMes), f = _grFuentes(), py = _ecYear - 1;
+  const f = _grFuentes(), py = _ecYear - 1;
+  if(_ecMes === EC_ANUAL){ const A = _ecAnualDatos(_ecYear); if(_ecComp && f[py] && _grTieneDatos(f[py])) A.cmp = _ecAnualDatos(py, A.hasta); return A; }
+  const D = _ecDatos(_ecYear, _ecMes);
   if(_ecComp && f[py] && _grE(f[py], _ecMes).length) D.cmp = _ecDatos(py, _ecMes);
   return D;
 }
+const _ecDocHTML = (D, print) => D.anual ? _ecAnualHTML(D, print) : _ecHTML(D, print);
 function renderEstado(){
   const panel = document.getElementById('panel-estado'); if(!panel) return;
   const anios = _grAnios(), f = _grFuentes();
@@ -8944,14 +9011,16 @@ function renderEstado(){
   const yearsHTML = anios.length > 1 ? `<div class="gr-top"><div class="gr-years">${anios.map(y=>`<button class="gr-year${y===yr?' on':''}" onclick="ecSetYear(${y})">${y}</button>`).join('')}</div></div>` : '';
   if(!conDatos.length){ panel.innerHTML = `<div class="gr-head"><div class="t">Estado de cuenta</div></div>${yearsHTML}<div class="gr-card"><div class="gr-empty">Todavía no hay movimientos en ${yr}.</div></div>`; return; }
   // Por defecto: el último mes cerrado (o el mes en curso si es el único)
-  if(_ecMes === null || !conDatos.includes(_ecMes)){ const cerrados = conDatos.filter(m=> !(yr===CURRENT_YEAR && m===new Date().getMonth())); _ecMes = cerrados.length ? cerrados[cerrados.length-1] : conDatos[conDatos.length-1]; }
-  const D = _ecDatosConComp(), py = yr - 1, hayPrev = !!(f[py] && _grE(f[py], _ecMes).length);
+  if(_ecMes === null || (_ecMes !== EC_ANUAL && !conDatos.includes(_ecMes))){ const cerrados = conDatos.filter(m=> !(yr===CURRENT_YEAR && m===new Date().getMonth())); _ecMes = cerrados.length ? cerrados[cerrados.length-1] : conDatos[conDatos.length-1]; }
+  const D = _ecDatosConComp(), py = yr - 1, anual = _ecMes === EC_ANUAL;
+  const hayPrev = !!(f[py] && (anual ? _grTieneDatos(f[py]) : _grE(f[py], _ecMes).length));
+  const conQue = anual ? `${py}` : `${MONTHS[_ecMes].toLowerCase()} ${py}`;
   panel.innerHTML = `
-    <div class="gr-head"><div class="t">Estado de cuenta</div><div class="s">El resumen de una página de cada mes, como el de un banco privado. Elige el año y el mes${yr !== _curDataYear() ? ' · año guardado en tu historial, solo para ver' : ''}.</div></div>
+    <div class="gr-head"><div class="t">Estado de cuenta</div><div class="s">El resumen de una página de cada mes o del año completo, como el de un banco privado. Elige el año y el mes${yr !== _curDataYear() ? ' · año guardado en tu historial, solo para ver' : ''}.</div></div>
     ${anios.length > 1 || hayPrev ? `<div class="gr-top">${anios.length > 1 ? `<div class="gr-years">${anios.map(y=>`<button class="gr-year${y===yr?' on':''}" onclick="ecSetYear(${y})">${y}</button>`).join('')}</div>` : '<div></div>'}
-      ${hayPrev ? `<button class="gr-cmp${_ecComp?' on':''}" onclick="ecToggleComp()">⇄ ${_ecComp ? `Comparando con ${MONTHS[_ecMes].toLowerCase()} ${py}` : `Comparar con ${MONTHS[_ecMes].toLowerCase()} ${py}`}</button>` : ''}</div>` : ''}
-    <div class="ec-months">${conDatos.slice().reverse().map(m=>`<button class="ec-m${m===_ecMes?' on':''}" onclick="ecSetMes(${m})">${MONTHS[m]}${(yr===CURRENT_YEAR && m===new Date().getMonth())?' · en curso':''}</button>`).join('')}</div>
-    <div class="ec-doc">${_ecHTML(D, false)}</div>`;
+      ${hayPrev ? `<button class="gr-cmp${_ecComp?' on':''}" onclick="ecToggleComp()">⇄ ${_ecComp ? `Comparando con ${conQue}` : `Comparar con ${conQue}`}</button>` : ''}</div>` : ''}
+    <div class="ec-months"><button class="ec-m${anual?' on':''}" onclick="ecSetMes(${EC_ANUAL})">📅 Año completo${(yr===CURRENT_YEAR && new Date().getMonth()<11)?' · en curso':''}</button>${conDatos.slice().reverse().map(m=>`<button class="ec-m${m===_ecMes?' on':''}" onclick="ecSetMes(${m})">${MONTHS[m]}${(yr===CURRENT_YEAR && m===new Date().getMonth())?' · en curso':''}</button>`).join('')}</div>
+    <div class="ec-doc">${_ecDocHTML(D, false)}</div>`;
 }
 function ecSetMes(m){ _ecMes = m; renderEstado(); }
 function ecSetYear(y){ _ecYear = y; _ecMes = null; renderEstado(); }
@@ -8976,11 +9045,11 @@ function ecPDF(){
     .back-btn-float{left:16px}.print-btn-float{right:16px;background:#fff;color:#1b2a4a;border:1px solid #d5dae3}
     .back-btn-float:active,.print-btn-float:active{transform:scale(.96)}
     @media print{.back-btn-float,.print-btn-float{display:none !important}body{padding:36px}}`;
-  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Estado de cuenta ${MONTHS[D.m]} ${D.yr}</title><style>${css}</style></head><body>
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Estado de cuenta ${D.anual ? 'anual' : MONTHS[D.m]} ${D.yr}</title><style>${css}</style></head><body>
     <button class="back-btn-float" onclick="window.close(); setTimeout(function(){ history.back(); }, 100);">&larr; Volver</button>
     <button class="print-btn-float" onclick="window.print()">🖨️ Imprimir</button>
-    ${_ecHTML(D, true)}
-    <div class="pie"><span>JB Marte · Estado de cuenta ${MONTHS[D.m]} ${D.yr}</span><span>Generado el ${new Date().toLocaleDateString('es-DO')} · Documento confidencial</span></div></body></html>`;
+    ${_ecDocHTML(D, true)}
+    <div class="pie"><span>JB Marte · Estado de cuenta ${D.anual ? 'anual' : MONTHS[D.m]} ${D.yr}</span><span>Generado el ${new Date().toLocaleDateString('es-DO')} · Documento confidencial</span></div></body></html>`;
   const win = window.open('', '_blank');
   if(!win){ alert('Permite las ventanas emergentes para imprimir.'); return; }
   win.document.write(html);
