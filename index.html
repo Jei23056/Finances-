@@ -7093,6 +7093,7 @@ auth.onAuthStateChanged(async user => {
     let _boot = null;
     try { _boot = await db.collection('users').doc(currentUser.uid).get(); } catch(e){ _boot = null; }
     const _b = (_boot && _boot.exists) ? (_boot.data() || {}) : null;
+    if(_b && typeof _b[META_AHORRO_KEY] === 'number') _metaAhorro = _b[META_AHORRO_KEY];   // tu meta de ahorro (%)
     const _hecho = (k) => !!(_b && _b[k] === true);
     // Desglose de crédito listo desde el arranque (se abre sin "Cargando…")
     if(_b && _dc === null) _dc = (_b[DC_FIELD] && typeof _b[DC_FIELD]==='object') ? _b[DC_FIELD] : {};
@@ -8486,7 +8487,7 @@ function _grAhorro(C){
   const t = C.meses.map(m=>fila(C.T, m)), con = t.filter(d=>d.pct!==null);
   const pt = C.prev ? C.meses.map(m=>fila(C.prev.T, m)) : null, pcon = pt ? pt.filter(d=>d.pct!==null) : [];
   if(!con.length) return { titulo:'Qué parte de lo que ganas ahorras', svg:'', dice:'Todavía no hay meses con ingresos.' };
-  const META = 20;
+  const META = _metaAhorro;
   const sumInc = con.reduce((s,d)=>s+d.inc,0), sumNet = con.reduce((s,d)=>s+d.net,0), prom = sumInc ? sumNet/sumInc*100 : 0;
   const pInc = pcon.reduce((s,d)=>s+d.inc,0), pNet = pcon.reduce((s,d)=>s+d.net,0), pprom = pInc ? pNet/pInc*100 : null;
   const mejor = con.slice().sort((a,b)=>b.pct-a.pct)[0], enMeta = con.filter(d=>d.pct>=META).length;
@@ -8523,14 +8524,14 @@ function _grAhorro(C){
   const k3 = pprom!==null ? [`vs ${C.prev.year}`, `${prom>=pprom?'▲':'▼'} ${Math.abs(Math.round(prom-pprom))} pts`, `${C.prev.year}: ${Math.round(pprom)}%`, prom>=pprom?'var(--green)':'var(--red)']
                          : ['En la meta', `${enMeta} de ${con.length}`, enMeta===1?'mes':'meses', enMeta===con.length?'var(--green)':'var(--text)'];
   return { titulo:'Qué parte de lo que ganas ahorras', sub:`Porcentaje de tus ingresos que te sobró cada mes · ${C.year}`,
-    kpis:[ ['Promedio', `${Math.round(prom)}%`, prom>=META?'en la meta ✓':'meta: 20%', zona(prom)],
+    kpis:[ ['Promedio', `${Math.round(prom)}%`, prom>=META?'en la meta ✓':`meta: ${META}%`, zona(prom)],
            ['Mejor mes', `${Math.round(mejor.pct)}%`, MONTHS[mejor.m], 'var(--text)'], k3 ],
     svg, proj,
-    leyenda:[['var(--green)','20% o más'],['#e3b04f','Entre 0 y 20%'],['var(--red)','Gastaste más de lo que entró'],['repeating-linear-gradient(90deg,var(--green) 0 4px,transparent 4px 7px)','Línea de meta (20%)'],['var(--gold2)',`Tu promedio (${Math.round(prom)}%)`]].concat(pt?[['var(--muted2)',`${C.prev.year} (bolita hueca)`]]:[]),
-    que:`Cada bolita es el <b>porcentaje de tu sueldo que te sobró</b> ese mes. La franja verde de arriba es la <b>zona de meta</b>: ahorrar al menos el ${META}%, como recomiendan los asesores. La línea clara es tu promedio.` + (pt ? ` Las bolitas huecas son ${C.prev.year}.` : ''),
+    leyenda:[['var(--green)',`${META}% o más`],['#e3b04f',`Entre 0 y ${META}%`],['var(--red)','Gastaste más de lo que entró'],['repeating-linear-gradient(90deg,var(--green) 0 4px,transparent 4px 7px)',`Línea de meta (${META}%)`],['var(--gold2)',`Tu promedio (${Math.round(prom)}%)`]].concat(pt?[['var(--muted2)',`${C.prev.year} (bolita hueca)`]]:[]),
+    que:`Cada bolita es el <b>porcentaje de tu sueldo que te sobró</b> ese mes. La franja verde de arriba es la <b>zona de meta</b>: ahorrar al menos el ${META}%, la meta que tú pusiste. La línea clara es tu promedio.` + (pt ? ` Las bolitas huecas son ${C.prev.year}.` : ''),
     dice: `En promedio ahorras el <b>${Math.round(prom)}%</b> de lo que ganas. Llegaste a la meta en <b>${enMeta} de ${con.length}</b> meses y tu mejor mes fue <b>${MONTHS[mejor.m]}</b> con <b>${Math.round(mejor.pct)}%</b>.` +
       (pprom!==null ? ` En ${C.prev.year}, en los mismos meses, ahorrabas el <b>${Math.round(pprom)}%</b>: ${prom>=pprom?'vas mejor':'vas un poco peor'}.` : '') +
-      (prom < META && sumInc ? ` Para llegar al 20% te faltarían unos <b>${fmt((META/100*sumInc - sumNet)/con.length)}</b> más de ahorro al mes.` : '') };
+      (prom < META && sumInc ? ` Para llegar al ${META}% te faltarían unos <b>${fmt((META/100*sumInc - sumNet)/con.length)}</b> más de ahorro al mes.` : '') };
 }
 
 // ── 📉 Acumulado del año ───────────────────────────────────────────────────
@@ -8710,6 +8711,29 @@ function switchToGraficas(){
 // Usan los mismos cálculos de las gráficas (_grTotales, _grE).
 // ═════════════════════════════════════════════════════════════════════════
 const _clamp01 = v => Math.max(0, Math.min(1, v));
+// Tu meta de ahorro en % de lo que entra. Se guarda con tus datos en Firebase
+// (campo propio `meta_ahorro_pct`); si no la has puesto, se usa 20%.
+const META_AHORRO_KEY = 'meta_ahorro_pct';
+let _metaAhorro = 20;
+function editMetaAhorro(){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
+  const v = prompt('¿Qué porcentaje de lo que ganas quieres ahorrar cada mes?\nEscribe solo el número (por ejemplo 25).', String(_metaAhorro));
+  if(v === null) return;
+  const n = parseFloat(String(v).replace(',', '.').replace('%', '').trim());
+  if(!(n >= 1 && n <= 90)){ alert('Escribe un número entre 1 y 90.'); return; }
+  const nuevo = Math.round(n*10)/10;
+  if(!currentUser){ alert('Inicia sesión primero.'); return; }
+  const anterior = _metaAhorro;
+  _metaAhorro = nuevo;
+  db.collection('users').doc(currentUser.uid).set({ [META_AHORRO_KEY]: nuevo }, { merge: true })
+    .then(()=>{ const ind = document.getElementById('save-indicator'); if(ind){ ind.classList.add('show'); setTimeout(()=>ind.classList.remove('show'), 1500); } })
+    .catch(e=>{ console.error('No se pudo guardar la meta de ahorro', e); _metaAhorro = anterior; alert('No se pudo guardar. Revisa tu internet e intenta de nuevo.'); _metaRefrescar(); });
+  _metaRefrescar();
+}
+function _metaRefrescar(){
+  [['panel-salud', typeof renderSalud==='function'?renderSalud:null], ['panel-estado', typeof renderEstado==='function'?renderEstado:null], ['panel-graficas', typeof renderGraficas==='function'?renderGraficas:null]]
+    .forEach(([id,fn])=>{ const p = document.getElementById(id); if(fn && p && p.style.display === 'block'){ try { fn(); } catch(e){} } });
+}
 // ¿De dónde viene cada ingreso? Del trabajo si lo tiene; si no, de su categoría.
 function _fuenteIngreso(e){ if(e.trabajo) return `💼 ${e.trabajo}`; try { return _catLabel(e.cat, 'income') || e.cat; } catch(err){ return e.cat || 'Otros'; } }
 // Meses completos: en el año actual, el mes en curso todavía no cuenta como "completo"
@@ -8738,9 +8762,9 @@ function _saludCalc(hasta){
   const hhi = sumInc ? listaF.reduce((s,[,v])=>s+Math.pow(v/sumInc*100,2),0) : null;
   const col = (v, verde, amar, inv) => v===null ? 'var(--muted)' : (inv ? (v<=verde?'var(--green)':v<=amar?'#e3b04f':'var(--red)') : (v>=verde?'var(--green)':v>=amar?'#e3b04f':'var(--red)'));
   const ind = [
-    { k:'ahorro', n:'Tasa de ahorro', max:25, pts: ahorro===null?0:25*_clamp01(ahorro/25), v: ahorro===null?'—':`${Math.round(ahorro)}%`, c: col(ahorro,20,10),
-      t:'Meta: 20% o más', que:`De cada RD$100 que entran, te quedan <b>RD$${ahorro===null?0:Math.max(0,Math.round(ahorro))}</b>.`,
-      tip: ahorro!==null && ahorro<20 && sumInc ? `Para llegar al 20% necesitas ahorrar unos <b>${fmt((0.2*sumInc - sumNet)/Math.max(1,conDatos.length))}</b> más al mes.` : 'Vas bien. Mantén el ritmo.' },
+    { k:'ahorro', n:'Tasa de ahorro', max:25, pts: ahorro===null?0:25*_clamp01(ahorro/_metaAhorro), v: ahorro===null?'—':`${Math.round(ahorro)}%`, c: col(ahorro,_metaAhorro,_metaAhorro/2),
+      t:`Tu meta: ${_metaAhorro}% o más`, que:`De cada RD$100 que entran, te quedan <b>RD$${ahorro===null?0:Math.max(0,Math.round(ahorro))}</b>.`,
+      tip: ahorro!==null && ahorro<_metaAhorro && sumInc ? `Para llegar a tu meta del ${_metaAhorro}% necesitas ahorrar unos <b>${fmt((_metaAhorro/100*sumInc - sumNet)/Math.max(1,conDatos.length))}</b> más al mes.` : 'Vas bien. Mantén el ritmo.' },
     { k:'colchon', n:'Meses cubiertos', max:25, pts: cubre===null?0:25*_clamp01(cubre/6), v: cubre===null?'—':cubre.toFixed(1), c: col(cubre,6,3),
       t:'Meta: 6 meses de gastos', que:`Con tu capital de <b>${fmt(capital)}</b> podrías vivir <b>${cubre===null?0:cubre.toFixed(1)} meses</b> sin ingresos, gastando como en los últimos meses (${fmt(gProm)} al mes).`,
       tip: cubre!==null && cubre<6 ? `Te faltan <b>${fmt(Math.max(0, 6*gProm - capital))}</b> para tener 6 meses cubiertos.` : 'Tienes un colchón sólido. El dinero de más podría estar ganando intereses.' },
@@ -8780,6 +8804,11 @@ function renderSalud(){
         <div class="sa-sub">${S.score>=80 ? 'Tus finanzas están en muy buena forma.' : S.score>=65 ? 'Vas bien; hay uno o dos puntos que puedes reforzar.' : S.score>=50 ? 'Tienes una base, pero hay áreas que conviene mejorar.' : 'Hay varios puntos que necesitan atención. Empieza por las recomendaciones de abajo.'}</div>
         ${dif!==null ? `<span class="sa-chg" style="color:${dif>=0?'var(--green)':'var(--red)'}">${dif>=0?'▲':'▼'} ${Math.abs(dif)} ${Math.abs(dif)===1?'punto':'puntos'} vs ${MONTHS[hasta-1].toLowerCase()}</span>` : ''}
       </div></div></div>
+    <div class="gr-card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div><div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Mi meta de ahorro</div>
+        <div style="font:700 24px var(--num,'Manrope'),sans-serif;margin-top:2px">${_metaAhorro}% <span style="font:400 13px 'DM Sans',sans-serif;color:var(--muted2)">de lo que gano cada mes</span></div></div>
+      <button class="ec-pdf" style="margin-top:0" type="button" onclick="editMetaAhorro()">✏️ Cambiar meta</button>
+    </div>
     <div class="gr-card"><h3>Tus 5 indicadores</h3><div class="sub">Toca uno para ver qué significa y cómo mejorarlo</div>
       ${S.ind.map(x=>`<button class="sa-ind" type="button" onclick="this.classList.toggle('open')">
         <span class="dot" style="background:${x.c};color:${x.c}"></span>
@@ -8814,7 +8843,7 @@ function _ecDatos(m){
 function _ecRecomendaciones(D){
   const out = [], S = _saludCalc(D.m);
   const sube = D.desv.filter(x=>x.v>x.p)[0];
-  if(D.pct !== null && D.pct < 20 && D.d.inc) out.push(`Para ahorrar el 20% de lo que entra te faltaron <b>${fmt(0.2*D.d.inc - D.d.net)}</b>.${sube ? ` El lugar más fácil para recortar es <b>${esc(_grCatNombre(sube.c))}</b>.` : ''}`);
+  if(D.pct !== null && D.pct < _metaAhorro && D.d.inc) out.push(`Para llegar a tu meta del ${_metaAhorro}% te faltaron <b>${fmt(_metaAhorro/100*D.d.inc - D.d.net)}</b>.${sube ? ` El lugar más fácil para recortar es <b>${esc(_grCatNombre(sube.c))}</b>.` : ''}`);
   if(sube) out.push(`Pon un tope de <b>${fmt(Math.round(sube.p/100)*100)}</b> a <b>${esc(_grCatNombre(sube.c))}</b> el próximo mes (este mes fueron ${fmt(sube.v)}).`);
   (tarjetas||[]).forEach(tj=>{ const pg = _diaValido(tj.pago); if(pg && !tj.cerrada && _diasHasta(pg) <= 10) out.push(`Paga tu <b>${esc(tj.nombre)}</b> antes del día <b>${pg}</b> para no pagar intereses.`); });
   const col = S.ind.find(x=>x.k==='colchon'), fu = S.ind.find(x=>x.k==='fuentes');
@@ -8830,7 +8859,7 @@ function _ecDestacado(D){
   const maxAnio = Math.max(...T.slice(0, m+1).map(x=>x.end));
   let t = `Tu capital ${D.enCurso?'va en':'cerró en'} <b>${fmt(d.end)}</b> (${cambio>=0?'+':'−'}${fmt(Math.abs(cambio))} en el mes)`;
   t += (d.end >= maxAnio && m>0) ? ', su punto más alto del año.' : '.';
-  let racha = 0; for(let k=m; k>=0; k--){ const x = T[k]; if(x.inc && x.net/x.inc >= 0.2) racha++; else break; }
+  let racha = 0; for(let k=m; k>=0; k--){ const x = T[k]; if(x.inc && x.net/x.inc >= _metaAhorro/100) racha++; else break; }
   if(racha >= 2) t += ` Llevas <b>${racha} meses seguidos</b> por encima de la meta de ahorro.`;
   else if(d.net < 0) t += ` Este mes saliste con <b>${fmt(Math.abs(d.net))}</b> más en gastos que en ingresos.`;
   return t;
@@ -8843,7 +8872,7 @@ function _ecHTML(D, print){
     <div class="gr-kpis" style="margin-top:14px">
       <div class="gr-kpi"><div class="l">Entró</div><div class="v" style="color:var(--green)">${_grPlata(D.d.inc)}</div><div class="s">${K(D.d.inc)}</div></div>
       <div class="gr-kpi"><div class="l">Salió</div><div class="v" style="color:var(--red)">${_grPlata(D.d.exp)}</div><div class="s">${K(D.d.exp)}</div></div>
-      <div class="gr-kpi"><div class="l">Ahorro</div><div class="v" style="color:${D.pct===null?'var(--muted)':D.pct>=20?'var(--green)':D.pct>=0?'#e3b04f':'var(--red)'}">${D.pct===null?'—':Math.round(D.pct)+'%'}</div><div class="s">${D.d.net>=0?'sobró ':'faltó '}${K(Math.abs(D.d.net))}</div></div>
+      <div class="gr-kpi"><div class="l">Ahorro</div><div class="v" style="color:${D.pct===null?'var(--muted)':D.pct>=_metaAhorro?'var(--green)':D.pct>=0?'#e3b04f':'var(--red)'}">${D.pct===null?'—':Math.round(D.pct)+'%'}</div><div class="s">${D.d.net>=0?'sobró ':'faltó '}${K(Math.abs(D.d.net))}</div></div>
     </div>
     <div class="ec-sec"><div class="l">Lo más destacado</div><p>${_ecDestacado(D)}</p></div>
     <div class="ec-sec"><div class="l">En qué se fue el dinero</div>${D.top.length ? D.top.map(([c,v])=>`<div class="ec-line"><span>${esc(_grCatNombre(c))}</span><span class="num">${K(v)} · ${D.d.exp?Math.round(v/D.d.exp*100):0}%</span></div>`).join('') : '<p>Sin gastos este mes.</p>'}</div>
