@@ -23,7 +23,7 @@
   --rdim:    rgba(232,105,93,0.08);
   --gold:    #5b8fd6;
   --gold2:   #86b3ec;
-  --gldim:   rgba(91,143,214,0.10);
+  --gldim:   rgba(201,204,211,0.10);
   --blue:    #6fa8e6;
   --r: 12px; --rs: 8px; --rxs: 6px;
   /* — Capa de profundidad (lujo Onyx & Navy) — */
@@ -168,7 +168,7 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   .cal-stat { padding:8px; } .cal-stat-v { font-size:11.5px; }
 }
 /* Resumen del año (historias) */
-.wr-launch { width:100%; display:flex; align-items:center; gap:14px; text-align:left; cursor:pointer; margin-bottom:1rem; padding:1rem 1.1rem; border-radius:var(--r); border:1px solid rgba(134,179,236,0.35); background:linear-gradient(120deg, rgba(91,143,214,0.22), rgba(78,201,154,0.12) 60%, rgba(232,105,93,0.12)); color:var(--text); font-family:'DM Sans',sans-serif; }
+.wr-launch { width:100%; display:flex; align-items:center; gap:14px; text-align:left; cursor:pointer; margin-bottom:1rem; padding:1rem 1.1rem; border-radius:var(--r); border:1px solid rgba(134,179,236,0.35); background:linear-gradient(120deg, rgba(201,204,211,0.22), rgba(78,201,154,0.12) 60%, rgba(232,105,93,0.12)); color:var(--text); font-family:'DM Sans',sans-serif; }
 .wr-launch:active { transform:scale(.99); }
 .wr-launch .wl-ic { font-size:28px; }
 .wr-launch .wl-t { font-family:'DM Serif Display',serif; font-size:1.15rem; }
@@ -481,7 +481,7 @@ body.viewer-mode #viewer-banner { display:flex !important; }
 body {
   padding-top: 2.25rem;
   background:
-    radial-gradient(900px 520px at 50% -10%, rgba(91,143,214,0.10), transparent 65%),
+    radial-gradient(900px 520px at 50% -10%, rgba(201,204,211,0.10), transparent 65%),
     var(--bg);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
@@ -555,7 +555,7 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 .mtab.active {
   background:var(--card); border-color:var(--gold); color:var(--gold2); font-weight:500;
   transform:translateY(-1px);
-  box-shadow:0 4px 16px rgba(91,143,214,0.18), 0 0 0 1px rgba(91,143,214,0.12);
+  box-shadow:0 4px 16px rgba(201,204,211,0.18), 0 0 0 1px rgba(201,204,211,0.12);
   background-image:none;
 }
 
@@ -586,15 +586,15 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 
 /* Botón "Agregar": degradado dorado refinado */
 .btn-add {
-  background: linear-gradient(135deg, rgba(91,143,214,0.16), rgba(91,143,214,0.06));
+  background: linear-gradient(135deg, rgba(201,204,211,0.16), rgba(201,204,211,0.06));
   border-color: var(--gold); color: var(--gold2);
-  box-shadow: 0 2px 12px rgba(91,143,214,0.08);
+  box-shadow: 0 2px 12px rgba(201,204,211,0.08);
   transition: transform .15s, box-shadow .2s, background .2s;
   letter-spacing:.04em; font-weight:600;
 }
 .btn-add:hover {
-  background: linear-gradient(135deg, rgba(91,143,214,0.26), rgba(91,143,214,0.12));
-  box-shadow: 0 4px 18px rgba(91,143,214,0.16);
+  background: linear-gradient(135deg, rgba(201,204,211,0.26), rgba(201,204,211,0.12));
+  box-shadow: 0 4px 18px rgba(201,204,211,0.16);
 }
 
 /* ENTRIES — más padding y hover sutil */
@@ -614,7 +614,7 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 .credit-card::after {
   content:''; position:absolute; top:-50%; right:-20%;
   width:220px; height:220px;
-  background:radial-gradient(circle, rgba(91,143,214,0.08), transparent 70%);
+  background:radial-gradient(circle, rgba(201,204,211,0.08), transparent 70%);
   pointer-events:none;
 }
 .credit-card > * { position:relative; }
@@ -676,7 +676,7 @@ header h1 { font-size:2.1rem; letter-spacing:-0.5px; }
 *::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); background-clip:padding-box; }
 
 /* Selección de texto en dorado tenue */
-::selection { background: rgba(91,143,214,0.25); color: var(--text); }
+::selection { background: rgba(201,204,211,0.25); color: var(--text); }
 
 /* Detalles finales */
 .btn-signout { transition:border-color .2s, color .2s, background .2s; }
@@ -1063,7 +1063,7 @@ body.viewer-mode .pl-vence { pointer-events:none; }
 .mtab.active, .mtab.month-positive.active, .mtab.month-negative.active {
   background:var(--gold) !important; background-image:none !important; border-color:transparent !important;
   color:#fff !important; font-weight:600; animation:none;
-  box-shadow:0 6px 18px rgba(91,143,214,0.35) !important;
+  box-shadow:0 6px 18px rgba(201,204,211,0.35) !important;
 }
 .mtab.active::after { background:#fff !important; box-shadow:none !important; }
 
@@ -1090,7 +1090,7 @@ button:not(:disabled):active, .mtab:active, .itab:active, .ycard.clickable:activ
 .splash-jb { width:84px; height:84px; border-radius:24px; display:flex; align-items:center; justify-content:center;
   font-family:'DM Serif Display',serif; font-size:2.3rem; color:#fff; position:relative; overflow:hidden;
   background:linear-gradient(135deg, var(--gold2), var(--gold) 55%, #2c4f86);
-  box-shadow:0 14px 40px rgba(91,143,214,0.35), inset 0 1px 0 rgba(255,255,255,0.35); }
+  box-shadow:0 14px 40px rgba(201,204,211,0.35), inset 0 1px 0 rgba(255,255,255,0.35); }
 .splash-jb::after { content:""; position:absolute; top:-40%; left:-80%; width:50%; height:180%; transform:rotate(20deg);
   background:linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent); animation:jbShine 1s ease .45s both; }
 @keyframes jbShine { from { left:-80%; } to { left:140%; } }
@@ -1173,6 +1173,80 @@ button:not(:disabled):active, .mtab:active, .itab:active, .ycard.clickable:activ
 .dc-pick.active { color:#fff; border-color:transparent; box-shadow:0 8px 22px rgba(0,0,0,.35);
   background:radial-gradient(120% 120% at 100% 0%, rgba(255,255,255,.16), transparent 55%), linear-gradient(135deg, var(--pl1), var(--pl2)); }
 
+
+/* ═══ Estilo elegido (nov 2026): Grafito · elegante · muy redondas ·
+       con sombra · brillo arriba · barra flotante ═══ */
+:root {
+  --bg:#0c0c0e; --surf:#141417; --card:#19191d; --card2:#212126;
+  --border:rgba(255,255,255,0.06); --border2:rgba(255,255,255,0.11);
+  --gold:#c9ccd3; --gold2:#eceef2; --gldim:rgba(201,204,211,0.10);
+  --gold-grad:linear-gradient(135deg,#eceef2,#a9adb6);
+  --r:20px; --rs:14px; --rxs:10px;
+}
+body {
+  background:
+    radial-gradient(1000px 560px at 50% -14%, rgba(201,204,211,0.13), transparent 66%),
+    var(--bg);
+  background-attachment: fixed;
+  padding-bottom: 7.5rem;
+}
+.ycard, .mcard, .form-wrap, .cat-block, .bycat-picker, .bycat-summary, .credit-card, .cc-card,
+.mini-chart, .cal-wrap, .cal-stat, .dc-card, .dc-intro, .alert-card {
+  box-shadow: 0 12px 30px -14px rgba(0,0,0,0.85), 0 2px 6px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.045);
+}
+/* Barra flotante */
+#float-nav {
+  position:fixed; left:50%; transform:translateX(-50%);
+  bottom:max(14px, env(safe-area-inset-bottom, 0px));
+  width:min(460px, calc(100% - 24px)); z-index:900;
+  display:flex; justify-content:space-around; gap:2px; padding:7px 6px;
+  background:rgba(25,25,29,0.82); backdrop-filter:blur(16px) saturate(140%); -webkit-backdrop-filter:blur(16px) saturate(140%);
+  border:1px solid var(--border2); border-radius:999px;
+  box-shadow:0 14px 34px -10px rgba(0,0,0,0.8);
+}
+#float-nav button {
+  flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:2px;
+  background:none; border:none; border-radius:999px; padding:6px 2px; cursor:pointer;
+  color:var(--muted2); font:500 10.5px 'DM Sans',sans-serif; transition:color .2s, background .2s;
+}
+#float-nav button b { font-size:18px; font-weight:400; line-height:1.1; }
+#float-nav button.on { color:var(--text); background:var(--gldim); }
+#float-nav button:focus-visible { outline:2px solid var(--gold2); outline-offset:1px; }
+/* Lo que flota abajo sube un poco para no quedar debajo de la barra */
+#ach-fab, #save-indicator, #undo-toast { bottom:calc(max(14px, env(safe-area-inset-bottom, 0px)) + 74px); }
+#archivo-aviso { bottom:calc(max(14px, env(safe-area-inset-bottom, 0px)) + 80px) !important; }
+
+/* Fechas de corte y pago en cada tarjeta */
+.cc-dates { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:.85rem 0 .2rem; }
+.cc-date { text-align:left; background:var(--surf); border:1px solid var(--border); border-radius:var(--rs); padding:9px 11px; color:var(--text); cursor:pointer; font-family:'DM Sans',sans-serif; }
+.cc-date:hover { border-color:var(--border2); }
+.cc-date .l { display:block; font-size:10px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); }
+.cc-date .v { display:block; font-size:13px; font-weight:500; margin-top:2px; }
+.cc-date .v.warn { color:var(--red); }
+.cc-date.full { grid-column:1 / -1; text-align:center; color:var(--muted2); font-size:12.5px; }
+.cc-best { background:var(--card); border:1px solid var(--green); border-radius:var(--r); padding:12px 14px; }
+.cc-best .l { font-size:10px; letter-spacing:.07em; text-transform:uppercase; color:var(--green); }
+.cc-best .t { font-size:15px; font-weight:600; margin-top:2px; }
+.cc-best .s { font-size:12px; color:var(--muted2); margin-top:2px; }
+
+/* Alertas inteligentes */
+#alerts-bar { display:flex; flex-direction:column; gap:8px; margin:-1.2rem 0 1.6rem; }
+#alerts-bar:empty { display:none; }
+.alert-card { display:flex; align-items:flex-start; gap:10px; background:var(--card); border:1px solid var(--border); border-left:3px solid var(--ac, var(--gold)); border-radius:var(--rs); padding:10px 12px; }
+.alert-card .tx { flex:1; min-width:0; }
+.alert-card .t { font-size:13px; font-weight:600; color:var(--text); }
+.alert-card .d { font-size:12px; color:var(--muted2); margin-top:2px; }
+.alert-card .x { background:none; border:none; color:var(--muted); font-size:16px; line-height:1; cursor:pointer; padding:2px 4px; border-radius:6px; }
+.alert-card .x:hover { color:var(--text); background:var(--surf); }
+
+/* Candado con Face ID / Touch ID */
+#bio-lock { position:fixed; inset:0; z-index:100000; display:none; flex-direction:column; align-items:center; justify-content:center; gap:16px; text-align:center; padding:24px;
+  background:radial-gradient(800px 500px at 50% -10%, rgba(201,204,211,0.12), transparent 65%), var(--bg); color:var(--text); }
+#bio-lock .bl-logo { font:400 30px 'DM Serif Display',serif; }
+#bio-lock .bl-btn { width:92px; height:92px; border-radius:26px; border:2px solid var(--gold2); background:var(--card); color:var(--gold2); font-size:38px; cursor:pointer; box-shadow:0 14px 34px -12px rgba(0,0,0,.8); }
+#bio-lock .bl-btn:active { transform:scale(.96); }
+#bio-lock .bl-msg { font-size:13px; color:var(--muted2); min-height:1.2em; max-width:320px; }
+#bio-lock .bl-out { background:none; border:none; color:var(--muted); font-size:12px; text-decoration:underline; cursor:pointer; margin-top:10px; }
 </style>
 </head>
 <body>
@@ -1214,6 +1288,17 @@ button:not(:disabled):active, .mtab:active, .itab:active, .ycard.clickable:activ
   </div>
 </div>
 
+<div id="bio-lock" role="dialog" aria-label="App bloqueada">
+  <div class="bl-logo">JB Marte</div>
+  <button class="bl-btn" id="bio-lock-btn" type="button" onclick="bioUnlock()" aria-label="Desbloquear">🔒</button>
+  <div class="bl-msg" id="bio-lock-msg">Toca el candado para abrir</div>
+  <button class="bl-out" type="button" onclick="bioForgot()">¿No funciona? Entrar con Google y quitar el candado en este aparato</button>
+</div>
+<script>
+  // Se tapa la app desde el primer instante si este aparato tiene el candado activado
+  try { if(localStorage.getItem('jb_bio_cred')) document.getElementById('bio-lock').style.display = 'flex'; } catch(e){}
+</script>
+
 <div id="splash-screen">
   <div class="splash-particles" id="splash-particles"></div>
   <div class="splash-logo"><div class="splash-jb">JB</div></div>
@@ -1247,6 +1332,7 @@ button:not(:disabled):active, .mtab:active, .itab:active, .ycard.clickable:activ
   </div>
   <div class="user-badge">
     <span id="user-name"></span>
+    <button class="btn-signout" id="bio-btn" onclick="toggleBioLock()" style="display:none"></button>
     <button class="btn-signout" onclick="signOut()">Cerrar sesión</button>
   </div>
 </header>
@@ -1275,6 +1361,7 @@ button:not(:disabled):active, .mtab:active, .itab:active, .ycard.clickable:activ
 <div class="mini-chart" id="mini-chart"></div>
 
 <div class="insights-bar" id="insights-bar"></div>
+<div id="alerts-bar"></div>
 
 <div class="month-scroll" id="month-tabs"></div>
 <div id="month-panels"></div>
@@ -4712,7 +4799,7 @@ function renderCards(){
     grid.innerHTML = '<div class="empty">Aún no has agregado ninguna tarjeta. Usa el formulario de arriba para agregar una.</div>';
     return;
   }
-  grid.innerHTML = tarjetas.map((tj,idx)=>{
+  grid.innerHTML = _ccBestHTML() + tarjetas.map((tj,idx)=>{
     const inicio  = tj.inicio || 0;
     const gastado = cardSpent(tj.nombre);
     const uso     = inicio>0 ? (gastado/inicio*100) : 0;
@@ -4742,6 +4829,7 @@ function renderCards(){
           holder: _titularTarjeta(), lbl:'Límite', big: inicio>0 ? fmt(inicio) : '—',
           vence: tj.vence || '', venceIdx: idx,
           pct: inicio>0 ? uso : null, barColor: usoColor, closed: cerrada })}
+      ${cerrada ? '' : _ccDatesHTML(tj, idx)}
       <div class="cc-stats">
         <div class="cc-stat">
           <div class="cc-stat-lbl">Inicio</div>
@@ -5908,6 +5996,7 @@ function generateInsights(){
 }
 
 function renderInsights(){
+  try { renderAlerts(); } catch(e){ console.warn('Alertas:', e); }
   const el = document.getElementById('insights-bar');
   if(!el) return;
   const ins = generateInsights();
@@ -7923,6 +8012,270 @@ function save(){
     .catch(e=>console.error('Error guardando:', e));
 }
 
+
+
+// ═════════════════════════════════════════════════════════════════════════
+// FECHAS DE CORTE Y PAGO (nov 2026)
+// Se guardan en cada tarjeta como `corte` y `pago` (día del mes, 1-31),
+// igual que la fecha de vencimiento. Nada más de la tarjeta cambia.
+// ═════════════════════════════════════════════════════════════════════════
+function _diasHasta(dia){
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const en = (y, m) => new Date(y, m, Math.min(dia, new Date(y, m+1, 0).getDate()));
+  let y = hoy.getFullYear(), m = hoy.getMonth();
+  let d = en(y, m);
+  if(d < hoy){ m++; if(m > 11){ m = 0; y++; } d = en(y, m); }
+  return Math.round((d - hoy) / 86400000);
+}
+function _enDias(n){ return n === 0 ? 'hoy' : n === 1 ? 'mañana' : `en ${n} días`; }
+function _diaValido(v){ const n = parseInt(v, 10); return (n >= 1 && n <= 31) ? n : null; }
+function _ccDatesHTML(tj, idx){
+  const c = _diaValido(tj.corte), p = _diaValido(tj.pago);
+  if(!c && !p) return `<div class="cc-dates"><button class="cc-date full" onclick="editCardDates(${idx})">📅 Poner fecha de corte y de pago</button></div>`;
+  const dc = c ? _diasHasta(c) : null, dp = p ? _diasHasta(p) : null;
+  return `<div class="cc-dates">
+    <button class="cc-date" onclick="editCardDates(${idx})" title="Cambiar fechas"><span class="l">Corte${c?` · día ${c}`:''}</span><span class="v">${c ? _enDias(dc) : 'Poner'}</span></button>
+    <button class="cc-date" onclick="editCardDates(${idx})" title="Cambiar fechas"><span class="l">Pagar antes${p?` · día ${p}`:''}</span><span class="v ${dp!==null && dp<=3 ? 'warn' : ''}">${p ? (dp<=3?'⚠️ ':'') + _enDias(dp) : 'Poner'}</span></button>
+  </div>`;
+}
+// Con 2 o más tarjetas con corte: la mejor para comprar hoy es la que cortó
+// hace menos (le falta más para el próximo corte = más días para pagar).
+function _ccBestHTML(){
+  const conCorte = (tarjetas||[]).filter(t => t && !t.cerrada && _diaValido(t.corte));
+  if(conCorte.length < 2) return '';
+  const mejor = conCorte.slice().sort((a,b)=> _diasHasta(_diaValido(b.corte)) - _diasHasta(_diaValido(a.corte)))[0];
+  return `<div class="cc-best"><div class="l">Mejor tarjeta para comprar hoy</div><div class="t">💳 ${esc(mejor.nombre)}</div>
+    <div class="s">Su próximo corte es ${_enDias(_diasHasta(_diaValido(mejor.corte)))}, así que tienes más días para pagar sin intereses.</div></div>`;
+}
+function editCardDates(idx){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
+  const tj = tarjetas[idx]; if(!tj) return;
+  const c = prompt(`Día de CORTE de "${tj.nombre}" (1 al 31).\nDéjalo vacío para quitarlo.`, tj.corte || '');
+  if(c === null) return;
+  if(c.trim() && !_diaValido(c)){ alert('Escribe solo el número del día, del 1 al 31.'); return; }
+  const p = prompt(`Día LÍMITE DE PAGO de "${tj.nombre}" (1 al 31).\nDéjalo vacío para quitarlo.`, tj.pago || '');
+  if(p === null) return;
+  if(p.trim() && !_diaValido(p)){ alert('Escribe solo el número del día, del 1 al 31.'); return; }
+  if(_diaValido(c)) tj.corte = _diaValido(c); else delete tj.corte;
+  if(_diaValido(p)) tj.pago  = _diaValido(p); else delete tj.pago;
+  saveTarjetas();
+  renderCards();
+  try { renderAlerts(); } catch(e){}
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// ALERTAS INTELIGENTES (nov 2026) — solo leen tus datos, no guardan nada en
+// Firebase. Las que descartas se recuerdan en este aparato y vuelven a salir
+// el mes siguiente si se repiten.
+// ═════════════════════════════════════════════════════════════════════════
+const LS_ALERTAS = 'jb_alertas_ocultas';
+function _alertasOcultas(){ try { return new Set(JSON.parse(localStorage.getItem(LS_ALERTAS) || '[]')); } catch(e){ return new Set(); } }
+function dismissAlert(id){
+  const s = _alertasOcultas(); s.add(id);
+  try { localStorage.setItem(LS_ALERTAS, JSON.stringify([...s].slice(-200))); } catch(e){}
+  renderAlerts();
+}
+function _catNombre(cat){
+  try { const i = _dcIcon(cat); return (/\p{Extended_Pictographic}/u.test(i.icon) ? `${i.icon} ${i.name}` : i.name).trim(); } catch(e){ return cat || ''; }
+}
+function generateAlerts(){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return [];
+  if(_curDataYear() !== CURRENT_YEAR) return [];
+  const hoy = new Date(), mi = hoy.getMonth(), dia = hoy.getDate(), ym = `${CURRENT_YEAR}-${mi}`;
+  const out = [];
+  const gastos = (m) => ((data[m] && Array.isArray(data[m].entries)) ? data[m].entries : []).filter(e=>e.type==='expense');
+
+  // 1) Tarjetas: pago o corte cerca
+  (tarjetas||[]).forEach(tj=>{
+    if(!tj || tj.cerrada) return;
+    const p = _diaValido(tj.pago), c = _diaValido(tj.corte);
+    if(p){ const n = _diasHasta(p); if(n <= 3) out.push({ id:`pago-${tj.id}-${ym}-${p}`, c:'var(--red)', t:`💳 Paga tu ${tj.nombre}`, d:`La fecha límite de pago es ${_enDias(n)} (día ${p}).` }); }
+    if(c){ const n = _diasHasta(c); if(n <= 2) out.push({ id:`corte-${tj.id}-${ym}-${c}`, c:'var(--gold)', t:`✂️ ${tj.nombre} corta ${_enDias(n)}`, d:'Si vas a comprar algo grande, espera al día siguiente del corte y tendrás más días para pagar.' }); }
+  });
+
+  // Meses anteriores de este año con gastos (para saber qué es "lo normal")
+  const previos = []; for(let m=0; m<mi; m++){ if(gastos(m).length) previos.push(m); }
+
+  // 2) Categorías que se dispararon este mes
+  if(previos.length >= 2){
+    const sumCat = (m)=>{ const o={}; gastos(m).forEach(e=>{ if(e.cat==='Crédito') return; o[e.cat]=(o[e.cat]||0)+(e.amount||0); }); return o; };
+    const prom = {}; previos.forEach(m=>{ const o=sumCat(m); Object.keys(o).forEach(k=>prom[k]=(prom[k]||0)+o[k]); });
+    Object.keys(prom).forEach(k=>prom[k]/=previos.length);
+    const ahora = sumCat(mi);
+    Object.keys(ahora).map(k=>({k, v:ahora[k], n:prom[k]||0}))
+      .filter(x=> x.n>0 && x.v > x.n*1.5 && (x.v - x.n) >= 1000)
+      .sort((a,b)=>(b.v-b.n)-(a.v-a.n)).slice(0,2)
+      .forEach(x=> out.push({ id:`alto-${ym}-${x.k}`, c:'var(--red)', t:`📈 ${_catNombre(x.k)} se disparó`, d:`Llevas ${fmt(x.v)} este mes. Lo normal son ${fmt(x.n)} al mes.` }));
+
+    // 4) Buenas noticias: gastando menos que de costumbre (a partir del día 20)
+    if(dia >= 20){
+      const tot = (m)=> gastos(m).reduce((s,e)=>s+(e.amount||0),0);
+      const promTot = previos.reduce((s,m)=>s+tot(m),0)/previos.length, ahoraTot = tot(mi);
+      if(promTot > 0 && ahoraTot > 0 && ahoraTot < promTot*0.8)
+        out.push({ id:`mejor-${ym}`, c:'var(--green)', t:'🎉 Vas mejor que de costumbre', d:`Llevas ${fmt(ahoraTot)} en gastos este mes. Lo normal son ${fmt(promTot)}.` });
+    }
+  }
+
+  // 3) Posibles cobros dobles (este mes y el anterior)
+  [mi, mi-1].filter(m=>m>=0).forEach(m=>{
+    const g = {};
+    gastos(m).forEach(e=>{
+      const d = parseDayFromDateStr(e.date); if(!d || !(e.amount>0)) return;
+      const k = `${e.cat}|${e.amount}|${String(e.desc||'').trim().toLowerCase()}|${d}`;
+      (g[k] = g[k] || []).push(e);
+    });
+    Object.values(g).filter(a=>a.length>=2).slice(0,2).forEach(a=>{
+      const e = a[0], d = parseDayFromDateStr(e.date);
+      out.push({ id:`doble-${CURRENT_YEAR}-${m}-${a.map(x=>x.id).join('_')}`, c:'var(--gold)', t:'🔁 Posible cobro doble',
+        d:`"${e.desc || e.cat}" de ${fmt(e.amount)} aparece ${a.length} veces el ${d} de ${MONTHS[m].toLowerCase()}. Si fue a propósito, descarta este aviso.` });
+    });
+  });
+
+  const ocultas = _alertasOcultas();
+  return out.filter(a=>!ocultas.has(a.id));
+}
+function renderAlerts(){
+  const el = document.getElementById('alerts-bar'); if(!el) return;
+  const al = generateAlerts();
+  el.innerHTML = al.map(a=>`<div class="alert-card" style="--ac:${a.c}">
+      <div class="tx"><div class="t">${esc(a.t)}</div><div class="d">${esc(a.d)}</div></div>
+      <button class="x" onclick="dismissAlert('${a.id.replace(/'/g,'')}')" title="Descartar" aria-label="Descartar aviso">✕</button>
+    </div>`).join('');
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// BARRA FLOTANTE (nov 2026) — atajos a las pestañas que ya existen; cada
+// botón solo "toca" la pestaña de siempre.
+// ═════════════════════════════════════════════════════════════════════════
+(function(){
+  const items = [
+    ['mes',   '🏠', 'Mes',      ()=> document.querySelectorAll('#month-tabs .mtab')[new Date().getMonth()]],
+    ['anual', '📊', 'Año',      ()=> document.getElementById('mtab-annual')],
+    ['cards', '💳', 'Tarjetas', ()=> document.getElementById('mtab-cards')],
+    ['dc',    '🧾', 'Desglose', ()=> document.getElementById('mtab-desglose')],
+    ['trab',  '💼', 'Trabajo',  ()=> document.getElementById('mtab-trabajos')]
+  ];
+  function build(){
+    const shell = document.getElementById('app-shell');
+    if(!shell || document.getElementById('float-nav')) return;
+    const nav = document.createElement('nav');
+    nav.id = 'float-nav'; nav.setAttribute('aria-label', 'Secciones');
+    nav.innerHTML = items.map(([k,ic,l])=>`<button type="button" data-k="${k}"><b>${ic}</b>${l}</button>`).join('');
+    shell.appendChild(nav);
+    nav.querySelectorAll('button').forEach(b=> b.onclick = ()=>{
+      const it = items.find(x=>x[0]===b.dataset.k); const tab = it && it[3]();
+      if(!tab) return;
+      tab.click();
+      const tabs = document.getElementById('month-tabs');
+      if(tabs){ const y = tabs.getBoundingClientRect().top + window.scrollY - 70; if(window.scrollY > y) window.scrollTo({ top: Math.max(0,y), behavior:'smooth' }); }
+      mark();
+    });
+    const tabs = document.getElementById('month-tabs');
+    if(tabs && window.MutationObserver) new MutationObserver(mark).observe(tabs, { subtree:true, attributes:true, attributeFilter:['class'], childList:true });
+    mark();
+  }
+  function mark(){
+    const nav = document.getElementById('float-nav'); if(!nav) return;
+    const all = [...document.querySelectorAll('#month-tabs .mtab')];
+    const act = all.find(t=>t.classList.contains('active'));
+    let k = null;
+    if(act){
+      if(act.id === 'mtab-annual') k = 'anual'; else if(act.id === 'mtab-cards') k = 'cards';
+      else if(act.id === 'mtab-desglose') k = 'dc'; else if(act.id === 'mtab-trabajos') k = 'trab';
+      else if(all.indexOf(act) < 12) k = 'mes';
+    }
+    nav.querySelectorAll('button').forEach(b=> b.classList.toggle('on', b.dataset.k === k));
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', build); else build();
+})();
+
+// ═════════════════════════════════════════════════════════════════════════
+// CANDADO CON FACE ID / TOUCH ID (nov 2026)
+// Es una capa encima de tu inicio de sesión con Google; no lo cambia. Usa el
+// Face ID / Touch ID del aparato (WebAuthn). Se activa en cada aparato por
+// separado y se guarda solo en ese aparato. Es un candado de privacidad: la
+// seguridad de tus datos sigue siendo tu cuenta de Google.
+// ═════════════════════════════════════════════════════════════════════════
+const LS_BIO = 'jb_bio_cred';
+const _bioNombre = (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.userAgent))) ? 'Face ID' : 'Touch ID';
+let _bioUser = null, _bioHiddenAt = 0;
+const _b64 = (buf)=> btoa(String.fromCharCode(...new Uint8Array(buf)));
+const _unb64 = (s)=> Uint8Array.from(atob(s), c=>c.charCodeAt(0));
+const _rand = (n)=> crypto.getRandomValues(new Uint8Array(n));
+function _bioCred(){ try { return JSON.parse(localStorage.getItem(LS_BIO) || 'null'); } catch(e){ return null; } }
+function _bioShow(on){ const el = document.getElementById('bio-lock'); if(el) el.style.display = on ? 'flex' : 'none'; if(on){ const m=document.getElementById('bio-lock-msg'); if(m) m.textContent = `Toca el candado para abrir con ${_bioNombre}`; } }
+async function _bioDisponible(){
+  try { return !!(window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()); }
+  catch(e){ return false; }
+}
+async function _bioButton(){
+  const b = document.getElementById('bio-btn'); if(!b) return;
+  if(!_bioUser || !(await _bioDisponible())){ b.style.display = 'none'; return; }
+  const on = !!(_bioCred() && _bioCred().uid === _bioUser.uid);
+  b.textContent = on ? `🔒 ${_bioNombre}: activado` : `🔓 Activar ${_bioNombre}`;
+  b.style.display = '';
+}
+async function toggleBioLock(){
+  if(!_bioUser) return;
+  const cred = _bioCred();
+  if(cred && cred.uid === _bioUser.uid){
+    if(!confirm(`¿Quitar el candado de ${_bioNombre} en este aparato?`)) return;
+    try { localStorage.removeItem(LS_BIO); } catch(e){}
+    _bioButton(); return;
+  }
+  try {
+    const c = await navigator.credentials.create({ publicKey: {
+      challenge: _rand(32),
+      rp: { name: 'JB Marte' },
+      user: { id: _rand(16), name: _bioUser.email || 'JB Marte', displayName: _bioUser.displayName || 'JB Marte' },
+      pubKeyCredParams: [ { type:'public-key', alg:-7 }, { type:'public-key', alg:-257 } ],
+      authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required', residentKey:'preferred' },
+      timeout: 60000
+    }});
+    if(!c) throw new Error('sin credencial');
+    localStorage.setItem(LS_BIO, JSON.stringify({ id: _b64(c.rawId), uid: _bioUser.uid }));
+    alert(`Listo. Desde ahora este aparato te pedirá ${_bioNombre} al abrir la app.`);
+  } catch(e){
+    console.warn('No se pudo activar el candado', e);
+    alert(`No se pudo activar ${_bioNombre}. Si cancelaste, intenta de nuevo.`);
+  }
+  _bioButton();
+}
+async function bioUnlock(){
+  const cred = _bioCred(); const msg = document.getElementById('bio-lock-msg');
+  if(!cred){ _bioShow(false); return; }
+  try {
+    if(msg) msg.textContent = 'Verificando…';
+    const a = await navigator.credentials.get({ publicKey: {
+      challenge: _rand(32),
+      allowCredentials: [ { type:'public-key', id: _unb64(cred.id) } ],
+      userVerification: 'required', timeout: 60000
+    }});
+    if(!a) throw new Error('sin respuesta');
+    _bioShow(false);
+  } catch(e){
+    console.warn('Desbloqueo fallido', e);
+    if(msg) msg.textContent = `No se pudo verificar. Toca el candado para intentar otra vez.`;
+  }
+}
+// Salida de emergencia: quita el candado de este aparato y pide entrar con Google otra vez
+function bioForgot(){
+  try { localStorage.removeItem(LS_BIO); } catch(e){}
+  _bioShow(false);
+  try { signOut(); } catch(e){}
+}
+auth.onAuthStateChanged(u=>{
+  _bioUser = u || null;
+  const cred = _bioCred();
+  if(!u || !cred || cred.uid !== u.uid) _bioShow(false);   // sin sesión o sin candado: nada que tapar
+  _bioButton();
+});
+// Si la app estuvo en segundo plano más de 1 minuto, vuelve a pedir Face ID
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden){ _bioHiddenAt = Date.now(); return; }
+  const cred = _bioCred();
+  if(_bioUser && cred && cred.uid === _bioUser.uid && _bioHiddenAt && Date.now() - _bioHiddenAt > 60000) _bioShow(true);
+});
 
 // ── Splash Screen ─────────────────────────────────────────────────────────
 (function initSplash(){
