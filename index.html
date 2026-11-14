@@ -4775,6 +4775,30 @@ function _trPorMes(nombre, year){
 }
 function trToggleMeses(id){ _trOpen[id] = !_trOpen[id]; renderTrabajos(); }
 function trSetYear(id, y){ _trYear[id] = y; _trOpen[id] = true; renderTrabajos(); }
+// Gráfica del trabajo: lo que ganaste cada mes (y el año anterior al lado)
+function _trGraficaHTML(id, y, meses, prev, hasta){
+  const grid = document.getElementById('trabajos-grid');
+  const W = Math.round(Math.max(300, Math.min(900, ((grid && grid.clientWidth) || 360) - 40))), H = 190, L = 44, R = W - 12, T = 16, B = H - 26;
+  const vals = meses.slice(0, hasta+1).concat(prev ? prev.slice(0, hasta+1) : []);
+  const eje = _grEje(Math.max(1, ...vals) * 1.1, 0);
+  const y0 = v => T + (eje.top - v)/(eje.top || 1)*(B - T), x = m => L + 10 + m/Math.max(1, hasta)*(R - L - 20);
+  let svg = eje.ticks.map(v=>`<line x1="${L}" x2="${R}" y1="${y0(v).toFixed(1)}" y2="${y0(v).toFixed(1)}" stroke="var(--border2)" stroke-width="${v===0?1:0.5}" ${v===0?'':'stroke-dasharray="2 5"'}/><text x="${L-6}" y="${(y0(v)+4).toFixed(1)}" text-anchor="end" font-size="10.5" fill="var(--muted)">${_grK(v)}</text>`).join('');
+  const pts = arr => arr.slice(0, hasta+1).map((v,m)=>[x(m), y0(v)]);
+  if(prev) svg += `<path d="${_grCurva(pts(prev))}" fill="none" stroke="var(--muted2)" stroke-width="2" stroke-dasharray="4 4" opacity="0.6"/>`;
+  const P = pts(meses);
+  if(P.length >= 2) svg += `<defs><linearGradient id="trG${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--green)" stop-opacity="0.28"/><stop offset="1" stop-color="var(--green)" stop-opacity="0"/></linearGradient></defs>
+    <path d="${_grCurva(P)} L${P[P.length-1][0].toFixed(1)},${y0(0).toFixed(1)} L${P[0][0].toFixed(1)},${y0(0).toFixed(1)}Z" fill="url(#trG${id})"/>`;
+  svg += `<path d="${_grCurva(P)}" fill="none" stroke="var(--green)" stroke-width="2.6" stroke-linecap="round"/>`;
+  svg += meses.slice(0, hasta+1).map((v,m)=>`<g data-tip="${MONTHS[m]} ${y}: <b>${fmt(v)}</b>${prev?` · ${y-1}: ${fmt(prev[m])}`:''}"><rect x="${(x(m)-14).toFixed(1)}" y="${T}" width="28" height="${B-T}" fill="transparent"/><circle cx="${x(m).toFixed(1)}" cy="${y0(v).toFixed(1)}" r="${m===hasta?5.5:3.5}" fill="var(--green)" stroke="var(--card)" stroke-width="2"/></g>`).join('');
+  const corto = (R - L)/Math.max(1, hasta) < 30;
+  svg += Array.from({length: hasta+1}, (_,m)=>`<text x="${x(m).toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="11" fill="var(--muted2)">${corto ? GR_MES[m][0] : GR_MES[m]}</text>`).join('');
+  return `<div style="margin:4px 0 12px">
+    <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block" role="img" aria-label="Lo que ganaste cada mes" onclick="trTip(event,'${id}')">${svg}</svg>
+    <div id="tr-tip-${id}" style="min-height:18px;font-size:12.5px;color:var(--text);margin-top:4px">${'<span style="color:var(--muted);font-size:11.5px">Toca un punto para ver el mes</span>'}</div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted2);margin-top:4px"><span><i style="display:inline-block;width:10px;height:3px;background:var(--green);vertical-align:middle;margin-right:5px"></i>${y}</span>${prev ? `<span><i style="display:inline-block;width:10px;height:0;border-top:2px dashed var(--muted2);vertical-align:middle;margin-right:5px"></i>${y-1}</span>` : ''}</div>
+  </div>`;
+}
+function trTip(ev, id){ const el = ev.target.closest('[data-tip]'), box = document.getElementById('tr-tip-'+id); if(box && el) box.innerHTML = el.getAttribute('data-tip'); }
 function _trMesesHTML(tr, anios){
   const id = String(tr.id), abierto = !!_trOpen[id];
   const conIngresos = anios.filter(y=> trabajoTotalAnio(tr.nombre, y) > 0);
@@ -4802,6 +4826,7 @@ function _trMesesHTML(tr, anios){
       ${kpi('Promedio por mes', fmt(prom), `${conPago.length} ${conPago.length===1?'mes':'meses'} con pago`)}
       ${mejor ? kpi('Mejor mes', fmt(mejor.v), MONTHS[mejor.m]) : ''}
     </div>
+    ${_trGraficaHTML(id, y, meses, prev, hasta)}
     ${filas}</div>`;
 }
 
