@@ -1349,6 +1349,11 @@ body {
 .ec-line > span.num { text-align:right; white-space:normal; }
 .ec-pdf { margin-top:14px; padding:10px 16px; border-radius:var(--rs); border:1px solid var(--gold); background:var(--gldim); color:var(--text); font:600 13px 'DM Sans',sans-serif; cursor:pointer; }
 
+
+/* Filas de Trabajo (sueldo y meses): usan todo el ancho */
+.tr-row { display:grid !important; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px; }
+.tr-row .cc-month-name { width:auto; }
+.tr-row .cc-month-amt { width:auto; white-space:nowrap; }
 </style>
 </head>
 <body>
@@ -4814,7 +4819,7 @@ function _trMesesHTML(tr, anios){
   const totPrev = prev ? prev.slice(0, hasta+1).reduce((a,v)=>a+v, 0) : null;
   const kpi = (l, v, sub, c) => `<div class="cc-stat"><div class="cc-stat-lbl">${l}</div><div class="cc-stat-val" style="color:${c||'var(--text)'}">${v}</div>${sub?`<div style="font-size:10.5px;color:var(--muted);margin-top:2px">${sub}</div>`:''}</div>`;
   const filas = meses.slice(0, hasta+1).map((v,m)=>{ const p = prev ? prev[m] : null, d = (p!==null && p>0) ? v - p : null;
-    return `<div class="cc-month-row" style="grid-template-columns:minmax(0,1fr) auto">
+    return `<div class="cc-month-row tr-row">
       <div style="min-width:0"><div class="cc-month-name">${MONTHS[m]}${(y===CURRENT_YEAR && m===new Date().getMonth())?' <span style="color:var(--muted);font-size:10.5px">· en curso</span>':''}</div>
         <div style="height:5px;background:var(--surf);border-radius:3px;margin-top:5px;position:relative;overflow:hidden"><i style="position:absolute;left:0;top:0;bottom:0;width:${(v/mx*100).toFixed(1)}%;background:var(--green);border-radius:3px"></i></div>
         ${p!==null ? `<div style="font-size:10.5px;color:var(--muted);margin-top:3px">${y-1}: ${fmt(p)}${d!==null && v>0 ? ` · <span style="color:${d>=0?'var(--green)':'var(--red)'}">${d>=0?'▲':'▼'} ${fmt(Math.abs(d))}</span>` : ''}</div>` : ''}</div>
@@ -4828,6 +4833,59 @@ function _trMesesHTML(tr, anios){
     </div>
     ${_trGraficaHTML(id, y, meses, prev, hasta)}
     ${filas}</div>`;
+}
+
+// ── Trabajo: sueldo bruto y descuentos (nov 2026) ──────────────────────────
+// Se guarda en cada trabajo como `bruto` (sueldo mensual antes de descuentos),
+// igual que los demás datos del trabajo. Los descuentos son una ESTIMACIÓN con
+// las tasas del empleado en RD: AFP 2.87 %, SFS 3.04 % y la escala anual del ISR.
+const TSS_AFP = 0.0287, TSS_SFS = 0.0304;
+const ISR_ESCALA = [ [416220.00, 0, 0], [624329.00, 0.15, 0], [867123.00, 0.20, 31216], [Infinity, 0.25, 79776] ];
+function _isrAnual(baseAnual){
+  if(baseAnual <= ISR_ESCALA[0][0]) return 0;
+  for(let i=1; i<ISR_ESCALA.length; i++){ const [tope, tasa, fijo] = ISR_ESCALA[i];
+    if(baseAnual <= tope) return fijo + (baseAnual - ISR_ESCALA[i-1][0]) * tasa; }
+  return 0;
+}
+function _sueldoDesglose(bruto){
+  const afp = bruto * TSS_AFP, sfs = bruto * TSS_SFS;
+  const isr = _isrAnual((bruto - afp - sfs) * 12) / 12;
+  const neto = bruto - afp - sfs - isr;
+  return { bruto, afp, sfs, isr, neto, desc: afp + sfs + isr };
+}
+function editSueldoBruto(idx){
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
+  const tr = trabajos[idx]; if(!tr) return;
+  const v = prompt(`Sueldo BRUTO mensual de "${tr.nombre}" (antes de descuentos).\nEscribe solo el número. Déjalo vacío para quitarlo.`, tr.bruto ? String(tr.bruto) : '');
+  if(v === null) return;
+  const limpio = String(v).replace(/[^0-9.]/g, '');
+  if(!limpio){ delete tr.bruto; }
+  else { const n = parseFloat(limpio); if(!(n > 0)){ alert('Escribe un número mayor que 0.'); return; } tr.bruto = Math.round(n*100)/100; }
+  saveTrabajos();
+  renderTrabajos();
+}
+function _sueldoHTML(tr, idx){
+  if(!(tr.bruto > 0)) return `<button class="cc-toggle" style="margin-top:.85rem" onclick="editSueldoBruto(${idx})">💵 Poner mi sueldo bruto (antes de descuentos)</button>`;
+  const D = _sueldoDesglose(tr.bruto);
+  // Lo que de verdad te llegó: promedio de los últimos 3 meses completos con pago
+  const mesesAct = _trPorMes(tr.nombre, CURRENT_YEAR), hoy = new Date().getMonth();
+  const ult = mesesAct.slice(0, hoy).map((v,m)=>({ m, v })).filter(x=>x.v>0).slice(-3);
+  const real = ult.length ? ult.reduce((a,x)=>a+x.v,0)/ult.length : null;
+  const fila = (l, v, c, extra) => `<div class="cc-month-row tr-row"><div class="cc-month-name">${l}${extra?` <span style="color:var(--muted);font-size:10.5px">${extra}</span>`:''}</div><div class="cc-month-amt" style="color:${c}">${v}</div></div>`;
+  return `<div class="cc-months" style="margin-top:.85rem;padding:12px 14px;border:1px solid var(--border);border-radius:var(--rs);background:var(--surf)">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px">
+      <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Tu sueldo y descuentos</div>
+      <button class="cc-edit-btn" onclick="editSueldoBruto(${idx})" title="Cambiar sueldo bruto">✏️</button></div>
+    ${fila('Sueldo bruto', fmt(D.bruto), 'var(--text)')}
+    ${fila('− AFP (pensión)', '−'+fmt(D.afp), 'var(--red)', '2.87%')}
+    ${fila('− Seguro de salud (SFS)', '−'+fmt(D.sfs), 'var(--red)', '3.04%')}
+    ${fila('− Impuesto sobre la renta (ISR)', D.isr > 0 ? '−'+fmt(D.isr) : 'Exento', D.isr > 0 ? 'var(--red)' : 'var(--green)')}
+    <div class="cc-month-row tr-row" style="border-top:1.5px solid var(--border2)"><div class="cc-month-name" style="font-weight:600">Te debería llegar</div><div class="cc-month-amt" style="color:var(--green);font-weight:700">${fmt(D.neto)}</div></div>
+    <div style="font-size:11.5px;color:var(--muted2);margin-top:8px;line-height:1.5">
+      Se van <b style="color:var(--text)">${fmt(D.desc)}</b> al mes en descuentos (${(D.desc/D.bruto*100).toFixed(1)}% de tu sueldo), unos <b style="color:var(--text)">${fmt(D.desc*12)}</b> al año.
+      ${real !== null ? `<br>Según tus ingresos anotados te llegan en promedio <b style="color:var(--text)">${fmt(real)}</b> al mes${Math.abs(real - D.neto) >= 500 ? ` (${real > D.neto ? 'más' : 'menos'} de lo esperado: ${fmt(Math.abs(real - D.neto))}).` : ', casi igual a lo esperado. ✓'}` : ''}
+      <br><span style="color:var(--muted)">Es una estimación con las tasas de la TSS y la escala del ISR de la DGII. Tu recibo de pago tiene la cifra exacta.</span>
+    </div></div>`;
 }
 
 function renderTrabajos(){
@@ -4878,6 +4936,7 @@ function renderTrabajos(){
           </div>
         </div>
       </div>
+      ${_sueldoHTML(tr, idx)}
       ${_trMesesHTML(tr, anios)}
     </div>`;
   }).join('');
