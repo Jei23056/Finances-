@@ -4761,6 +4761,50 @@ function switchToTrabajos(){
   applyMonthsCollapsed();
 }
 
+// ── Trabajo: cuánto hiciste cada mes (nov 2026) ────────────────────────────
+// Usa la misma regla que los totales del trabajo: ingresos de "Nómina / Salario"
+// con ese trabajo. El año actual sale de tus datos; los anteriores, del Historial.
+const _trYear = {}, _trOpen = {};
+function _trFinanzas(year){ return (parseInt(year,10) === CURRENT_YEAR) ? data : ((historialFinanzasCache && historialFinanzasCache[year]) || null); }
+function _trPorMes(nombre, year){
+  const fin = _trFinanzas(year), out = Array(12).fill(0);
+  if(!fin) return out;
+  for(let m=0; m<12; m++){ const md = fin[m];
+    if(md && Array.isArray(md.entries)) md.entries.forEach(e=>{ if(e.type==='income' && e.cat==='Nómina / Salario' && e.trabajo===nombre) out[m] += e.amount||0; }); }
+  return out.map(v=>parseFloat(v.toFixed(2)));
+}
+function trToggleMeses(id){ _trOpen[id] = !_trOpen[id]; renderTrabajos(); }
+function trSetYear(id, y){ _trYear[id] = y; _trOpen[id] = true; renderTrabajos(); }
+function _trMesesHTML(tr, anios){
+  const id = String(tr.id), abierto = !!_trOpen[id];
+  const conIngresos = anios.filter(y=> trabajoTotalAnio(tr.nombre, y) > 0);
+  const boton = `<button class="cc-toggle" style="margin-top:.85rem" onclick="trToggleMeses('${id}')">📅 ${abierto ? 'Ocultar meses ▴' : 'Ver cuánto hice cada mes ▾'}</button>`;
+  if(!abierto) return boton;
+  if(!conIngresos.length) return boton + `<div class="cc-months"><span style="font-size:12px;color:var(--muted)">Todavía no hay ingresos en este trabajo.</span></div>`;
+  let y = _trYear[id]; if(!conIngresos.includes(y)) y = conIngresos[0];
+  const meses = _trPorMes(tr.nombre, y), prev = conIngresos.includes(y-1) ? _trPorMes(tr.nombre, y-1) : null;
+  const hasta = (y === CURRENT_YEAR) ? new Date().getMonth() : 11;
+  const conPago = meses.slice(0, hasta+1).map((v,m)=>({ m, v })).filter(x=>x.v > 0);
+  const total = conPago.reduce((a,x)=>a+x.v, 0), prom = conPago.length ? total/conPago.length : 0;
+  const mejor = conPago.slice().sort((a,b)=>b.v-a.v)[0], mx = Math.max(1, ...meses, ...(prev||[0]));
+  const totPrev = prev ? prev.slice(0, hasta+1).reduce((a,v)=>a+v, 0) : null;
+  const kpi = (l, v, sub, c) => `<div class="cc-stat"><div class="cc-stat-lbl">${l}</div><div class="cc-stat-val" style="color:${c||'var(--text)'}">${v}</div>${sub?`<div style="font-size:10.5px;color:var(--muted);margin-top:2px">${sub}</div>`:''}</div>`;
+  const filas = meses.slice(0, hasta+1).map((v,m)=>{ const p = prev ? prev[m] : null, d = (p!==null && p>0) ? v - p : null;
+    return `<div class="cc-month-row" style="grid-template-columns:minmax(0,1fr) auto">
+      <div style="min-width:0"><div class="cc-month-name">${MONTHS[m]}${(y===CURRENT_YEAR && m===new Date().getMonth())?' <span style="color:var(--muted);font-size:10.5px">· en curso</span>':''}</div>
+        <div style="height:5px;background:var(--surf);border-radius:3px;margin-top:5px;position:relative;overflow:hidden"><i style="position:absolute;left:0;top:0;bottom:0;width:${(v/mx*100).toFixed(1)}%;background:var(--green);border-radius:3px"></i></div>
+        ${p!==null ? `<div style="font-size:10.5px;color:var(--muted);margin-top:3px">${y-1}: ${fmt(p)}${d!==null && v>0 ? ` · <span style="color:${d>=0?'var(--green)':'var(--red)'}">${d>=0?'▲':'▼'} ${fmt(Math.abs(d))}</span>` : ''}</div>` : ''}</div>
+      <div class="cc-month-amt" style="color:${v>0?'var(--green)':'var(--muted)'}">${v>0 ? fmt(v) : '—'}</div></div>`; }).join('');
+  return boton + `<div class="cc-months">
+    ${conIngresos.length > 1 ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${conIngresos.map(a=>`<button class="mtab${a===y?' active':''}" style="padding:5px 12px;font-size:12px" onclick="trSetYear('${id}',${a})">${a}</button>`).join('')}</div>` : ''}
+    <div class="cc-stats" style="margin-bottom:10px">
+      ${kpi(y===CURRENT_YEAR?'En '+y+' (hasta hoy)':'En '+y, fmt(total), totPrev!==null ? `${y-1}, mismos meses: ${fmt(totPrev)}` : '', 'var(--green)')}
+      ${kpi('Promedio por mes', fmt(prom), `${conPago.length} ${conPago.length===1?'mes':'meses'} con pago`)}
+      ${mejor ? kpi('Mejor mes', fmt(mejor.v), MONTHS[mejor.m]) : ''}
+    </div>
+    ${filas}</div>`;
+}
+
 function renderTrabajos(){
   const grid = document.getElementById('trabajos-grid');
   if(!grid) return;
@@ -4809,6 +4853,7 @@ function renderTrabajos(){
           </div>
         </div>
       </div>
+      ${_trMesesHTML(tr, anios)}
     </div>`;
   }).join('');
 }
