@@ -4848,8 +4848,10 @@ function _isrAnual(baseAnual){
   return 0;
 }
 function _sueldoDesglose(bruto){
-  const afp = bruto * TSS_AFP, sfs = bruto * TSS_SFS;
-  const isr = _isrAnual((bruto - afp - sfs) * 12) / 12;
+  // Cada descuento se redondea a centavos, como lo hace la nómina
+  const r2 = v => Math.round(v*100)/100;
+  const afp = r2(bruto * TSS_AFP), sfs = r2(bruto * TSS_SFS);
+  const isr = r2(_isrAnual((bruto - afp - sfs) * 12) / 12);
   const neto = bruto - afp - sfs - isr;
   return { bruto, afp, sfs, isr, neto, desc: afp + sfs + isr };
 }
