@@ -18,9 +18,9 @@
   --muted:   #5d6470;
   --muted2:  #929aa8;
   --green:   #4ec99a;
-  --gdim:    rgba(78,201,154,0.08);
+  --gdim:    rgba(48,204,90,0.08);
   --red:     #e8695d;
-  --rdim:    rgba(232,105,93,0.08);
+  --rdim:    rgba(246,53,56,0.08);
   --gold:    #5b8fd6;
   --gold2:   #86b3ec;
   --gldim:   rgba(201,204,211,0.10);
@@ -157,8 +157,8 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
 .cal-d { font-size:11px; color:var(--muted2); }
 .cal-amt { font-size:11px; font-weight:600; color:var(--text); text-align:right; }
 .cal-inc { position:absolute; top:6px; right:6px; width:6px; height:6px; border-radius:50%; background:var(--green); display:inline-block; }
-.lvl1 { background:rgba(232,105,93,0.14) !important; } .lvl2 { background:rgba(232,105,93,0.28) !important; }
-.lvl3 { background:rgba(232,105,93,0.45) !important; } .lvl4 { background:rgba(232,105,93,0.68) !important; }
+.lvl1 { background:rgba(246,53,56,0.14) !important; } .lvl2 { background:rgba(246,53,56,0.28) !important; }
+.lvl3 { background:rgba(246,53,56,0.45) !important; } .lvl4 { background:rgba(246,53,56,0.68) !important; }
 .cal-legend { display:flex; align-items:center; gap:4px; margin-top:10px; font-size:10px; color:var(--muted); flex-wrap:wrap; }
 .cal-legend i { width:12px; height:12px; border-radius:3px; display:inline-block; background:var(--surf); border:1px solid var(--border); }
 .cal-hint { font-size:12px; color:var(--muted); text-align:center; padding:1rem 0; }
@@ -168,7 +168,7 @@ header h1 { font-family:'DM Serif Display',serif; font-size:1.9rem; font-weight:
   .cal-stat { padding:8px; } .cal-stat-v { font-size:11.5px; }
 }
 /* Resumen del año (historias) */
-.wr-launch { width:100%; display:flex; align-items:center; gap:14px; text-align:left; cursor:pointer; margin-bottom:1rem; padding:1rem 1.1rem; border-radius:var(--r); border:1px solid rgba(134,179,236,0.35); background:linear-gradient(120deg, rgba(201,204,211,0.22), rgba(78,201,154,0.12) 60%, rgba(232,105,93,0.12)); color:var(--text); font-family:'DM Sans',sans-serif; }
+.wr-launch { width:100%; display:flex; align-items:center; gap:14px; text-align:left; cursor:pointer; margin-bottom:1rem; padding:1rem 1.1rem; border-radius:var(--r); border:1px solid rgba(134,179,236,0.35); background:linear-gradient(120deg, rgba(201,204,211,0.22), rgba(48,204,90,0.12) 60%, rgba(246,53,56,0.12)); color:var(--text); font-family:'DM Sans',sans-serif; }
 .wr-launch:active { transform:scale(.99); }
 .wr-launch .wl-ic { font-size:28px; }
 .wr-launch .wl-t { font-family:'DM Serif Display',serif; font-size:1.15rem; }
@@ -1017,7 +1017,7 @@ body.touchui .eswipe-act { display:flex; position:absolute; top:0; right:0; bott
 body.viewer-mode .eswipe-act { display:none !important; }
 
 /* 35 · Pulso al guardar */
-@keyframes addedPulse { 0%{ box-shadow:0 0 0 0 rgba(78,201,154,.55); } 100%{ box-shadow:0 0 0 14px rgba(78,201,154,0); } }
+@keyframes addedPulse { 0%{ box-shadow:0 0 0 0 rgba(48,204,90,.55); } 100%{ box-shadow:0 0 0 14px rgba(48,204,90,0); } }
 .btn-add.added-pulse { animation:addedPulse .7s ease-out; border-color:var(--green) !important; color:var(--green) !important; }
 @media (prefers-reduced-motion: reduce){ .btn-add.added-pulse{ animation:none; } body.touchui .erow{ transition:none; } }
 
@@ -1180,6 +1180,9 @@ button:not(:disabled):active, .mtab:active, .itab:active, .ycard.clickable:activ
   --bg:#0c0c0e; --surf:#141417; --card:#19191d; --card2:#212126;
   --border:rgba(255,255,255,0.06); --border2:rgba(255,255,255,0.11);
   --gold:#c9ccd3; --gold2:#eceef2; --gldim:rgba(201,204,211,0.10);
+  /* Verde y rojo del mercado (como el mapa de calor de Finviz) para ingresos y gastos */
+  --green:#30cc5a; --gdim:rgba(48,204,90,0.10);
+  --red:#f63538; --rdim:rgba(246,53,56,0.10);
   --gold-grad:linear-gradient(135deg,#eceef2,#a9adb6);
   --r:20px; --rs:14px; --rxs:10px;
 }
