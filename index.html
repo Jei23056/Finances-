@@ -8904,13 +8904,20 @@ function _squarify(items, X, Y, W, H){
   if(row.length) colocar();
   return out;
 }
+// Paleta del mapa de calor de Finviz. Aquí verde = el gasto BAJÓ y rojo = SUBIÓ.
+const CALOR_PALETA = ['#30cc5a','#2f9e4f','#35764e','#414554','#8b444e','#bf4045','#f63538'];
+const CALOR_PASOS  = [-50, -25, -10, 0, 10, 25, 50];   // % de cambio de cada color
 function _calorColor(cambio){
-  if(cambio === null) return '#4a4f5a';                       // categoría nueva este mes
-  const t = Math.max(-1, Math.min(1, cambio/50));              // ±50% = color más intenso
-  const mez = (a, b, k) => a.map((v,i)=>Math.round(v + (b[i]-v)*k));
-  const neutro = [58,61,68], verde = [30,150,100], rojo = [205,70,58];
-  const [r,g,b] = t < 0 ? mez(neutro, verde, -t) : mez(neutro, rojo, t);
-  return `rgb(${r},${g},${b})`;
+  if(cambio === null) return '#414554';                       // categoría nueva: gris neutro
+  const c = Math.max(-50, Math.min(50, cambio));
+  for(let i=0; i<CALOR_PASOS.length-1; i++){
+    const a = CALOR_PASOS[i], b = CALOR_PASOS[i+1];
+    if(c <= b){ const k = (c - a)/(b - a), h = x => parseInt(x,16);
+      const c1 = CALOR_PALETA[i], c2 = CALOR_PALETA[i+1];
+      const mix = j => Math.round(h(c1.substr(1+j*2,2)) + (h(c2.substr(1+j*2,2)) - h(c1.substr(1+j*2,2)))*k);
+      return `rgb(${mix(0)},${mix(1)},${mix(2)})`; }
+  }
+  return CALOR_PALETA[CALOR_PALETA.length-1];
 }
 function _grCalor(C){
   const f = _grFuentes();
@@ -8931,15 +8938,19 @@ function _grCalor(C){
     return { k, v, p, cambio, a: v/tot*W*H, nom: _grCatNombre(k) }; });
   const cajas = _squarify(items, 0, 0, W, H);
   const nomPrev = prevM !== null ? (prevSrc === C.src ? MONTHS[prevM].toLowerCase() : `${MONTHS[prevM].toLowerCase()} ${C.year-1}`) : '';
-  let svg = cajas.map(c=>{ const g = 2, x = c.x+g/2, y = c.y+g/2, w = Math.max(0, c.w-g), h = Math.max(0, c.h-g);
+  let svg = `<rect x="0" y="0" width="${W}" height="${H}" fill="#262931" rx="4"/>` + cajas.map(c=>{ const g = 2, x = c.x+g/2, y = c.y+g/2, w = Math.max(0, c.w-g), h = Math.max(0, c.h-g);
     const chip = c.cambio === null ? (hayPrev ? 'nuevo' : '') : `${c.cambio>=0?'▲':'▼'} ${Math.abs(Math.round(c.cambio))}%`;
     const maxCh = Math.max(3, Math.floor((w-14)/7.2)), nom = c.nom.length > maxCh ? c.nom.slice(0, maxCh-1)+'…' : c.nom;
-    const grande = w > 74 && h > 46, medio = w > 46 && h > 26;
+    const grande = w > 74 && h > 46, medio = w > 46 && h > 26, cx = x + w/2, cy = y + h/2;
+    const fz = Math.max(11, Math.min(20, Math.min(w/7, h/4)));   // letra más grande en cuadros grandes, como el original
+    // El nombre se recorta según el tamaño real de la letra, para que nunca se salga del cuadro
+    const mc = Math.max(3, Math.floor((w - 14) / ((grande ? fz : 12) * 0.64)));
+    const nomC = c.nom.length > mc ? c.nom.slice(0, mc - 1) + '…' : c.nom;
     return `<g data-tip="${esc(c.nom)}: <b>${fmt(c.v)}</b> · ${Math.round(c.v/tot*100)}% del mes${hayPrev ? ` · ${nomPrev}: ${fmt(c.p)}${c.cambio!==null ? ` (${c.cambio>=0?'+':'−'}${Math.abs(Math.round(c.cambio))}%)` : ' (nuevo)'}` : ''}">
-      <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="6" fill="${_calorColor(c.cambio)}"/>
-      ${medio ? `<text x="${(x+8).toFixed(1)}" y="${(y+17).toFixed(1)}" font-size="12.5" font-weight="600" fill="#fff">${esc(nom)}</text>` : ''}
-      ${grande ? `<text x="${(x+8).toFixed(1)}" y="${(y+33).toFixed(1)}" font-size="11.5" fill="rgba(255,255,255,.85)">${_grPlata(c.v)}</text>` : ''}
-      ${grande && chip && h > 62 ? `<text x="${(x+8).toFixed(1)}" y="${(y+49).toFixed(1)}" font-size="11.5" font-weight="700" fill="#fff">${chip}</text>` : ''}
+      <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" fill="${_calorColor(c.cambio)}"/>
+      ${medio ? `<text x="${cx.toFixed(1)}" y="${(grande ? cy - fz*0.35 : cy + 4).toFixed(1)}" text-anchor="middle" font-size="${grande ? fz.toFixed(1) : 12}" font-weight="700" fill="#fff">${esc(nomC)}</text>` : ''}
+      ${grande ? `<text x="${cx.toFixed(1)}" y="${(cy + fz*0.75).toFixed(1)}" text-anchor="middle" font-size="${Math.max(11, fz*0.72).toFixed(1)}" font-weight="600" fill="#fff">${chip || _grPlata(c.v)}</text>` : ''}
+      ${grande && chip && h > 80 ? `<text x="${cx.toFixed(1)}" y="${(cy + fz*0.75 + Math.max(13, fz*0.8)).toFixed(1)}" text-anchor="middle" font-size="${Math.max(10.5, fz*0.6).toFixed(1)}" fill="rgba(255,255,255,.8)">${_grPlata(c.v)}</text>` : ''}
     </g>`; }).join('');
   const subieron = items.filter(i=>i.cambio!==null && i.cambio>0).sort((a,b)=>(b.v-b.p)-(a.v-a.p));
   const bajaron = items.filter(i=>i.cambio!==null && i.cambio<0).sort((a,b)=>(a.v-a.p)-(b.v-b.p));
@@ -8951,8 +8962,8 @@ function _grCalor(C){
            ['Subieron', String(subieron.length), subieron[0] ? subieron[0].nom : '—', subieron.length ? 'var(--red)' : 'var(--text)'],
            ['Bajaron', String(bajaron.length), bajaron[0] ? bajaron[0].nom : '—', bajaron.length ? 'var(--green)' : 'var(--text)'] ],
     svg,
-    leyenda:[['rgb(30,150,100)','Bajó mucho'],['rgb(110,140,115)','Bajó poco'],['rgb(58,61,68)','Igual'],['rgb(150,80,70)','Subió poco'],['rgb(205,70,58)','Subió mucho']].concat(hayPrev && items.some(i=>i.cambio===null) ? [['#4a4f5a','Nueva este mes']] : []),
-    que:`Como el mapa de la bolsa: cada cuadro es una categoría de gasto. <b>Mientras más grande</b>, más gastaste ahí ese mes. <b>Verde</b> es que bajó contra el mes anterior y <b>rojo</b> que subió; mientras más intenso el color, más cambió.`,
+    leyenda: CALOR_PASOS.map((v,i)=>[CALOR_PALETA[i], v===0 ? '0%' : `${v>0?'+':'−'}${Math.abs(v)}%`]),
+    que:`Como el mapa de la bolsa: cada cuadro es una categoría de gasto. <b>Mientras más grande</b>, más gastaste ahí ese mes. <b>Verde</b> es que bajó contra el mes anterior y <b>rojo</b> que subió; mientras más intenso el color, más cambió (los colores son los del mapa de la bolsa de Finviz). Gris es casi igual o una categoría nueva.`,
     dice: !hayPrev ? `En ${MONTHS[m].toLowerCase()} gastaste <b>${fmt(tot)}</b>. Lo que más pesa es <b>${esc(items[0].nom)}</b> (${Math.round(items[0].v/tot*100)}%). No hay mes anterior para comparar.` :
       `En ${MONTHS[m].toLowerCase()} gastaste <b>${fmt(tot)}</b>, ${dTot>=0?`<b>${fmt(dTot)} más</b>`:`<b>${fmt(-dTot)} menos</b>`} que en ${nomPrev}.` +
       (subieron[0] ? ` Lo que más subió: <b>${esc(subieron[0].nom)}</b> (+${fmt(subieron[0].v-subieron[0].p)}).` : '') +
