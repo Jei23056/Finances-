@@ -8534,6 +8534,7 @@ const GR_MES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov
 const GR_TIPOS = [
   ['capital',   '📈 Tu capital'],
   ['dona',      '🍩 En qué gastas'],
+  ['calor',     '🟩 Mapa de calor'],
   ['ahorro',    '💰 % ahorrado'],
   ['acumulado', '📉 Acumulado del año'],
   ['semana',    '📅 Día de la semana']
@@ -8885,11 +8886,84 @@ function _grSemana(C){
     dice: !mx ? 'Todavía no hay gastos con fecha en este año.' : `Tu día más caro es el <b>${nom[iMax].toLowerCase()}</b> (<b>${fmt(mx)}</b> en promedio) y el más tranquilo el <b>${nom[iMin].toLowerCase()}</b>. ` + (semana>0 ? (finde > semana*1.15 ? `Los fines de semana gastas <b>${Math.round((finde/semana-1)*100)}% más</b> que entre semana.` : finde < semana*0.85 ? 'Entre semana gastas más que los fines de semana.' : 'Gastas parecido entre semana y los fines de semana.') : '') };
 }
 
+// ── 🟩 Mapa de calor del mes (nov 2026) ─────────────────────────────────────
+// Estilo bolsa de valores: cada cuadro es una categoría de gasto; el tamaño es
+// cuánto gastaste ese mes y el color si subió (rojo) o bajó (verde) contra el
+// mes anterior. Solo lee tus datos.
+let _grCalorMes = null;
+function grSetCalorMes(m){ _grCalorMes = m; renderGraficas(); }
+function _squarify(items, X, Y, W, H){
+  const out = []; let row = [], rect = { x:X, y:Y, w:W, h:H }; const rest = items.slice();
+  const peor = (r, lado) => { const s = r.reduce((a,b)=>a+b.a,0), mx = Math.max(...r.map(i=>i.a)), mn = Math.min(...r.map(i=>i.a)); return Math.max(lado*lado*mx/(s*s), (s*s)/(lado*lado*mn)); };
+  const colocar = () => { const s = row.reduce((a,b)=>a+b.a,0);
+    if(rect.w >= rect.h){ const cw = s/rect.h; let yy = rect.y; row.forEach(r=>{ const hh = r.a/cw; out.push({ ...r, x:rect.x, y:yy, w:cw, h:hh }); yy += hh; }); rect = { x:rect.x+cw, y:rect.y, w:rect.w-cw, h:rect.h }; }
+    else { const rh = s/rect.w; let xx = rect.x; row.forEach(r=>{ const ww = r.a/rh; out.push({ ...r, x:xx, y:rect.y, w:ww, h:rh }); xx += ww; }); rect = { x:rect.x, y:rect.y+rh, w:rect.w, h:rect.h-rh }; }
+    row = []; };
+  while(rest.length){ const lado = Math.min(rect.w, rect.h), it = rest[0];
+    if(!row.length || peor(row.concat([it]), lado) <= peor(row, lado)){ row.push(it); rest.shift(); } else colocar(); }
+  if(row.length) colocar();
+  return out;
+}
+function _calorColor(cambio){
+  if(cambio === null) return '#4a4f5a';                       // categoría nueva este mes
+  const t = Math.max(-1, Math.min(1, cambio/50));              // ±50% = color más intenso
+  const mez = (a, b, k) => a.map((v,i)=>Math.round(v + (b[i]-v)*k));
+  const neutro = [58,61,68], verde = [30,150,100], rojo = [205,70,58];
+  const [r,g,b] = t < 0 ? mez(neutro, verde, -t) : mez(neutro, rojo, t);
+  return `rgb(${r},${g},${b})`;
+}
+function _grCalor(C){
+  const f = _grFuentes();
+  const conGasto = C.meses.filter(m=> _grE(C.src, m).some(e=>e.type==='expense'));
+  if(!conGasto.length) return { titulo:'Mapa de calor', svg:'', dice:'Todavía no hay gastos en este año.' };
+  if(_grCalorMes === null || !conGasto.includes(_grCalorMes)) _grCalorMes = conGasto[conGasto.length-1];
+  const m = _grCalorMes;
+  const sumar = (src, mm) => { const o = {}; _grE(src, mm).forEach(e=>{ if(e.type==='expense') o[e.cat] = (o[e.cat]||0) + (e.amount||0); }); return o; };
+  const A = sumar(C.src, m);
+  let prevSrc = null, prevM = null;
+  if(m > 0){ prevSrc = C.src; prevM = m-1; } else if(f[C.year-1]){ prevSrc = f[C.year-1]; prevM = 11; }
+  const P = prevSrc ? sumar(prevSrc, prevM) : {};
+  const hayPrev = Object.keys(P).length > 0;
+  const tot = Object.values(A).reduce((a,b)=>a+b,0), totP = Object.values(P).reduce((a,b)=>a+b,0);
+  const W = _grW, H = Math.round(Math.max(260, Math.min(460, W*0.62)));
+  const items = Object.entries(A).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).map(([k,v])=>{
+    const p = P[k] || 0, cambio = (hayPrev && p > 0) ? (v-p)/p*100 : null;
+    return { k, v, p, cambio, a: v/tot*W*H, nom: _grCatNombre(k) }; });
+  const cajas = _squarify(items, 0, 0, W, H);
+  const nomPrev = prevM !== null ? (prevSrc === C.src ? MONTHS[prevM].toLowerCase() : `${MONTHS[prevM].toLowerCase()} ${C.year-1}`) : '';
+  let svg = cajas.map(c=>{ const g = 2, x = c.x+g/2, y = c.y+g/2, w = Math.max(0, c.w-g), h = Math.max(0, c.h-g);
+    const chip = c.cambio === null ? (hayPrev ? 'nuevo' : '') : `${c.cambio>=0?'▲':'▼'} ${Math.abs(Math.round(c.cambio))}%`;
+    const maxCh = Math.max(3, Math.floor((w-14)/7.2)), nom = c.nom.length > maxCh ? c.nom.slice(0, maxCh-1)+'…' : c.nom;
+    const grande = w > 74 && h > 46, medio = w > 46 && h > 26;
+    return `<g data-tip="${esc(c.nom)}: <b>${fmt(c.v)}</b> · ${Math.round(c.v/tot*100)}% del mes${hayPrev ? ` · ${nomPrev}: ${fmt(c.p)}${c.cambio!==null ? ` (${c.cambio>=0?'+':'−'}${Math.abs(Math.round(c.cambio))}%)` : ' (nuevo)'}` : ''}">
+      <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="6" fill="${_calorColor(c.cambio)}"/>
+      ${medio ? `<text x="${(x+8).toFixed(1)}" y="${(y+17).toFixed(1)}" font-size="12.5" font-weight="600" fill="#fff">${esc(nom)}</text>` : ''}
+      ${grande ? `<text x="${(x+8).toFixed(1)}" y="${(y+33).toFixed(1)}" font-size="11.5" fill="rgba(255,255,255,.85)">${_grPlata(c.v)}</text>` : ''}
+      ${grande && chip && h > 62 ? `<text x="${(x+8).toFixed(1)}" y="${(y+49).toFixed(1)}" font-size="11.5" font-weight="700" fill="#fff">${chip}</text>` : ''}
+    </g>`; }).join('');
+  const subieron = items.filter(i=>i.cambio!==null && i.cambio>0).sort((a,b)=>(b.v-b.p)-(a.v-a.p));
+  const bajaron = items.filter(i=>i.cambio!==null && i.cambio<0).sort((a,b)=>(a.v-a.p)-(b.v-b.p));
+  const meses = conGasto.slice().reverse();
+  const pre = `<div class="ec-months" style="margin-bottom:10px">${meses.map(mm=>`<button class="ec-m${mm===m?' on':''}" onclick="grSetCalorMes(${mm})">${MONTHS[mm]}${(C.year===CURRENT_YEAR && mm===new Date().getMonth())?' · en curso':''}</button>`).join('')}</div>`;
+  const dTot = tot - totP;
+  return { titulo:`Mapa de calor · ${MONTHS[m]} ${C.year}`, sub: hayPrev ? `Cada cuadro es una categoría · comparado con ${nomPrev}` : 'Cada cuadro es una categoría', alto:H, pre,
+    kpis:[ ['Gastado', _grPlata(tot), hayPrev ? `${dTot>=0?'▲':'▼'} ${_grPlata(Math.abs(dTot))} vs ${nomPrev}` : `${items.length} categorías`, 'var(--red)'],
+           ['Subieron', String(subieron.length), subieron[0] ? subieron[0].nom : '—', subieron.length ? 'var(--red)' : 'var(--text)'],
+           ['Bajaron', String(bajaron.length), bajaron[0] ? bajaron[0].nom : '—', bajaron.length ? 'var(--green)' : 'var(--text)'] ],
+    svg,
+    leyenda:[['rgb(30,150,100)','Bajó mucho'],['rgb(110,140,115)','Bajó poco'],['rgb(58,61,68)','Igual'],['rgb(150,80,70)','Subió poco'],['rgb(205,70,58)','Subió mucho']].concat(hayPrev && items.some(i=>i.cambio===null) ? [['#4a4f5a','Nueva este mes']] : []),
+    que:`Como el mapa de la bolsa: cada cuadro es una categoría de gasto. <b>Mientras más grande</b>, más gastaste ahí ese mes. <b>Verde</b> es que bajó contra el mes anterior y <b>rojo</b> que subió; mientras más intenso el color, más cambió.`,
+    dice: !hayPrev ? `En ${MONTHS[m].toLowerCase()} gastaste <b>${fmt(tot)}</b>. Lo que más pesa es <b>${esc(items[0].nom)}</b> (${Math.round(items[0].v/tot*100)}%). No hay mes anterior para comparar.` :
+      `En ${MONTHS[m].toLowerCase()} gastaste <b>${fmt(tot)}</b>, ${dTot>=0?`<b>${fmt(dTot)} más</b>`:`<b>${fmt(-dTot)} menos</b>`} que en ${nomPrev}.` +
+      (subieron[0] ? ` Lo que más subió: <b>${esc(subieron[0].nom)}</b> (+${fmt(subieron[0].v-subieron[0].p)}).` : '') +
+      (bajaron[0] ? ` Lo que más bajó: <b>${esc(bajaron[0].nom)}</b> (−${fmt(bajaron[0].p-bajaron[0].v)}).` : '') };
+}
+
 function renderGraficas(){
   const panel = document.getElementById('panel-graficas'); if(!panel) return;
   _grW = Math.round(Math.max(340, Math.min(1100, (panel.clientWidth || 676) - 36)));
   const C = _grCtx();
-  const fn = { capital:_grCapital, dona:_grDona, ahorro:_grAhorro, acumulado:_grAcumulado, semana:_grSemana }[_grTipo] || _grCapital;
+  const fn = { capital:_grCapital, dona:_grDona, calor:_grCalor, ahorro:_grAhorro, acumulado:_grAcumulado, semana:_grSemana }[_grTipo] || _grCapital;
   let g; try { g = fn(C); } catch(e){ console.error('Gráfica:', e); g = { titulo:'Gráfica', sub:'', svg:'', dice:'No se pudo dibujar esta gráfica.' }; }
   const alto = g.alto || _grH;
   const anios = C.anios;
@@ -8902,6 +8976,7 @@ function renderGraficas(){
     <div class="gr-chips">${GR_TIPOS.map(([k,l])=>`<button class="gr-chip${k===_grTipo?' on':''}" onclick="grSetTipo('${k}')">${l}</button>`).join('')}</div>
     <div class="gr-card"><h3>${g.titulo}</h3><div class="sub">${g.sub||''}</div>
       ${g.kpis && g.svg ? `<div class="gr-kpis">${g.kpis.map(([l,v,sb,c])=>`<div class="gr-kpi"><div class="l">${l}</div><div class="v" style="color:${c}">${v}</div><div class="s">${sb||'&nbsp;'}</div></div>`).join('')}</div>` : ''}
+      ${g.pre || ''}
       ${g.svg ? `<svg class="gr-svg" viewBox="0 0 ${_grW} ${alto}" role="img" aria-label="${esc(g.titulo)}" onclick="grTip(event)">${g.svg}</svg>` : `<div class="gr-empty">${g.dice}</div>`}
       ${g.svg ? `<div class="gr-tip" id="gr-tip"></div>` : ''}
       ${g.leyenda && g.leyenda.length ? `<div class="gr-legend">${g.leyenda.map(([c,l])=>`<span><i style="background:${c}"></i>${l}</span>`).join('')}</div>` : ''}
