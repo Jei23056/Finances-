@@ -1357,6 +1357,7 @@ body {
 .tr-row { display:grid !important; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px; }
 .tr-row .cc-month-name { width:auto; }
 .tr-row .cc-month-amt { width:auto; white-space:nowrap; }
+.alert-card .alert-btn { align-self:center; background:var(--ac, var(--gold)); color:#fff; border:none; border-radius:999px; padding:7px 14px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; }
 </style>
 </head>
 <body>
@@ -7360,6 +7361,7 @@ auth.onAuthStateChanged(async user => {
     try { _boot = await db.collection('users').doc(currentUser.uid).get(); } catch(e){ _boot = null; }
     const _b = (_boot && _boot.exists) ? (_boot.data() || {}) : null;
     if(_b && typeof _b[META_AHORRO_KEY] === 'number') _metaAhorro = _b[META_AHORRO_KEY];   // tu meta de ahorro (%)
+    try { _ugArranque(_b); } catch(e){}   // aviso de "último cambio" (aparato y hora)
     const _hecho = (k) => !!(_b && _b[k] === true);
     // Desglose de crédito listo desde el arranque (se abre sin "Cargando…")
     if(_b && _dc === null) _dc = (_b[DC_FIELD] && typeof _b[DC_FIELD]==='object') ? _b[DC_FIELD] : {};
@@ -8456,6 +8458,7 @@ function generateAlerts(){
   if(_curDataYear() !== CURRENT_YEAR) return [];
   const hoy = new Date(), mi = hoy.getMonth(), dia = hoy.getDate(), ym = `${CURRENT_YEAR}-${mi}`;
   const out = [];
+  try { const u = _ugAviso(); if(u) out.push(u); } catch(e){}   // último cambio guardado (aparato y hora)
   const gastos = (m) => ((data[m] && Array.isArray(data[m].entries)) ? data[m].entries : []).filter(e=>e.type==='expense');
 
   // 1) Tarjetas: pago o corte cerca
@@ -8523,7 +8526,7 @@ function renderAlerts(){
   const al = generateAlerts();
   el.innerHTML = al.map(a=>`<div class="alert-card" style="--ac:${a.c}">
       <div class="tx"><div class="t">${esc(a.t)}</div><div class="d">${esc(a.d)}</div></div>
-      <button class="x" onclick="dismissAlert('${a.id.replace(/'/g,'')}')" title="Descartar" aria-label="Descartar aviso">✕</button>
+      ${a.recargar ? `<button class="alert-btn" onclick="location.reload()">Actualizar</button>` : `<button class="x" onclick="dismissAlert('${a.id.replace(/'/g,'')}')" title="Descartar" aria-label="Descartar aviso">✕</button>`}
     </div>`).join('');
 }
 
@@ -9663,6 +9666,104 @@ function dismissSplash(){
   setTimeout(()=>{ splash.style.display='none'; }, 650);
 }
 
+
+// ═════════════════════════════════════════════════════════════════════════
+// ÚLTIMO CAMBIO GUARDADO (nov 2026) — un aviso arriba que dice desde qué
+// aparato y a qué hora se guardó lo último. NO cambia cómo se guardan tus
+// datos: cada vez que guardas algo se anota aparte una notita pequeña
+// (`ultimo_guardado_v1`: aparato y hora), y al volver a la app se mira esa
+// notita. Si la escribió otro aparato después de que esta pantalla cargó,
+// el aviso se pone rojo y te pide actualizar antes de anotar.
+// ═════════════════════════════════════════════════════════════════════════
+const UG_KEY = 'ultimo_guardado_v1', LS_UG_DEV = 'jb_aparato_id';
+let _ugRemoto = null;              // la última notita que se vio en Firebase { aparato, dev, t }
+let _ugViejo = false;              // true = otro aparato guardó y esta pantalla no lo tiene
+let _ugListo = false;              // ya se sabe con qué notita arrancó esta pantalla
+const _ugConocidos = new Set();    // notitas que esta pantalla ya tiene (la del arranque y las propias)
+let _ugTimer = null, _ugUltRev = 0, _ugRevisando = false;
+function _ugAparato(){
+  const ua = navigator.userAgent || '';
+  if(/iPhone|iPod/.test(ua)) return 'iPhone';
+  if(/iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return 'iPad';
+  if(/Macintosh/.test(ua)) return 'Mac';
+  if(/Android/.test(ua)) return 'Android';
+  if(/Windows/.test(ua)) return 'PC';
+  return 'otro aparato';
+}
+function _ugDevId(){
+  try { let id = localStorage.getItem(LS_UG_DEV); if(!id){ id = Date.now().toString(36) + Math.random().toString(36).slice(2,8); localStorage.setItem(LS_UG_DEV, id); } return id; } catch(e){ return 'sin-id'; }
+}
+function _ugValida(r){ return (r && typeof r === 'object' && typeof r.t === 'number') ? r : null; }
+function _ugCuando(t){
+  const d = new Date(t), hoy = new Date(), dia0 = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const dif = Math.round((dia0(hoy) - dia0(d)) / 86400000);
+  let h = d.getHours(); const ap = h >= 12 ? 'p. m.' : 'a. m.'; h = h % 12 || 12;
+  const hora = `${h}:${String(d.getMinutes()).padStart(2,'0')} ${ap}`;
+  if(dif === 0) return `hoy a las ${hora}`;
+  if(dif === 1) return `ayer a las ${hora}`;
+  return `el ${d.getDate()} de ${MONTHS[d.getMonth()].toLowerCase()}${d.getFullYear() !== hoy.getFullYear() ? ' de ' + d.getFullYear() : ''} a las ${hora}`;
+}
+// Al arrancar (con la misma lectura con la que se cargan tus datos)
+function _ugArranque(b){
+  _ugConocidos.clear(); _ugViejo = false; _ugRemoto = null; _ugListo = false;
+  if(!b) return;                      // la lectura falló: se fija en la primera revisión
+  _ugRemoto = _ugValida(b[UG_KEY]); _ugListo = true;
+  if(_ugRemoto) _ugConocidos.add(_ugRemoto.t);
+}
+// Después de guardar algo desde este aparato: se anota la notita
+function _ugMarcar(){
+  if(!currentUser) return;
+  if(typeof viewerActive !== 'undefined' && viewerActive) return;
+  const nota = { aparato:_ugAparato(), dev:_ugDevId(), t:Date.now() };
+  _ugConocidos.add(nota.t); _ugRemoto = nota; _ugListo = true;
+  clearTimeout(_ugTimer);
+  _ugTimer = setTimeout(()=>{
+    if(!currentUser) return;
+    try { db.collection('users').doc(currentUser.uid).set({ [UG_KEY]: nota }, { merge: true }).catch(e=>console.warn('No se pudo anotar el último cambio:', e)); } catch(e){}
+    try { renderAlerts(); } catch(e){}
+  }, 300);
+}
+// Al volver a la app: ¿otro aparato guardó algo que esta pantalla no tiene?
+async function _ugRevisar(){
+  if(!currentUser || _ugRevisando || document.hidden) return;
+  if(Date.now() - _ugUltRev < 15000) return;
+  _ugRevisando = true; _ugUltRev = Date.now();
+  try {
+    const uid = currentUser.uid;
+    const doc = await db.collection('users').doc(uid).get();
+    if(!currentUser || currentUser.uid !== uid) return;
+    const r = _ugValida(doc.exists ? (doc.data() || {})[UG_KEY] : null);
+    if(!_ugListo){ _ugListo = true; _ugRemoto = r; if(r) _ugConocidos.add(r.t); }
+    else if(r && !_ugConocidos.has(r.t)){ _ugRemoto = r; _ugViejo = true; }
+    try { renderAlerts(); } catch(e){}
+  } catch(e){ /* sin internet: se intenta la próxima vez */ }
+  finally { _ugRevisando = false; }
+}
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) _ugRevisar(); });
+window.addEventListener('focus', ()=>{ _ugRevisar(); });
+window.addEventListener('pageshow', ()=>{ _ugRevisar(); });
+setInterval(()=>{ _ugRevisar(); }, 120000);   // y cada 2 minutos mientras la tienes abierta
+// El mensaje que sale arriba
+function _ugAviso(){
+  const r = _ugRemoto; if(!r) return null;
+  const ap = String(r.aparato || 'otro aparato'), mio = (r.dev === _ugDevId());
+  const icono = /Mac|PC/.test(ap) ? '💻' : '📱';
+  if(_ugViejo) return { id:`ug-viejo-${r.t}`, c:'var(--red)', recargar:true,
+    t:`⚠️ Guardaste algo en tu ${ap} ${_ugCuando(r.t)}`,
+    d:'Esta pantalla todavía no lo tiene. Toca Actualizar antes de anotar para no perderlo.' };
+  return { id:'ug-info', c:'var(--green)',
+    t:`${icono} Último cambio: ${mio ? 'este ' + ap : ap} · ${_ugCuando(r.t)}`,
+    d:'Esta pantalla ya lo tiene. Puedes anotar normal.' };
+}
+// Las funciones que guardan siguen EXACTAMENTE igual; solo que al terminar
+// se anota la notita de "último cambio".
+(function(){
+  const _save = save, _saveTarjetas = saveTarjetas, _saveDebito = saveDebito, _saveTrabajos = saveTrabajos;
+  save = function(){ const r = _save.apply(this, arguments); _ugMarcar(); return r; };
+  saveTarjetas = function(){ const r = _saveTarjetas.apply(this, arguments); _ugMarcar(); return r; };
+  saveDebito = function(){ const r = _saveDebito.apply(this, arguments); _ugMarcar(); return r; };
+  saveTrabajos = function(){ const r = _saveTrabajos.apply(this, arguments); _ugMarcar(); return r; };
+})();
 </script>
 </body>
 </html>
