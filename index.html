@@ -8444,7 +8444,15 @@ function editCardDates(idx){
 const _alertasQuitadas = new Set();
 try { localStorage.removeItem('jb_alertas_ocultas'); } catch(e){}   // limpia lo que guardaba la versión anterior
 function _alertasOcultas(){ return _alertasQuitadas; }
-function dismissAlert(id){ _alertasQuitadas.add(id); renderAlerts(); }
+// Los avisos de "posible cobro doble" que ya quitaste se recuerdan en este aparato
+// para que no vuelvan a salir. Si aparece OTRO cobro doble, ese sí sale.
+const LS_DOBLES = 'jb_dobles_vistos';
+function _doblesVistos(){ try { const a = JSON.parse(localStorage.getItem(LS_DOBLES) || '[]'); return Array.isArray(a) ? a : []; } catch(e){ return []; } }
+function dismissAlert(id){
+  _alertasQuitadas.add(id);
+  if(/^doble-/.test(id)){ try { const a = _doblesVistos(); if(!a.includes(id)){ a.push(id); localStorage.setItem(LS_DOBLES, JSON.stringify(a.slice(-80))); } } catch(e){} }
+  renderAlerts();
+}
 let _alertasFueraDesde = 0;
 document.addEventListener('visibilitychange', ()=>{
   if(document.hidden){ _alertasFueraDesde = Date.now(); return; }
@@ -8489,6 +8497,7 @@ function generateAlerts(){
   }
 
   // 3) Posibles cobros dobles (este mes y el anterior)
+  const doblesVistos = _doblesVistos();
   [mi, mi-1].filter(m=>m>=0).forEach(m=>{
     const g = {};
     gastos(m).forEach(e=>{
@@ -8496,9 +8505,10 @@ function generateAlerts(){
       const k = `${e.cat}|${e.amount}|${String(e.desc||'').trim().toLowerCase()}|${d}`;
       (g[k] = g[k] || []).push(e);
     });
-    Object.values(g).filter(a=>a.length>=2).slice(0,2).forEach(a=>{
+    Object.values(g).filter(a=>a.length>=2).map(a=>({ a, id:`doble-${CURRENT_YEAR}-${m}-${a.map(x=>x.id).join('_')}` }))
+      .filter(x=>!doblesVistos.includes(x.id)).slice(0,2).forEach(({a, id})=>{
       const e = a[0], d = parseDayFromDateStr(e.date);
-      out.push({ id:`doble-${CURRENT_YEAR}-${m}-${a.map(x=>x.id).join('_')}`, c:'var(--gold)', t:'🔁 Posible cobro doble',
+      out.push({ id, c:'var(--gold)', t:'🔁 Posible cobro doble',
         d:`"${e.desc || e.cat}" de ${fmt(e.amount)} aparece ${a.length} veces el ${d} de ${MONTHS[m].toLowerCase()}. Si fue a propósito, descarta este aviso.` });
     });
   });
@@ -8744,7 +8754,7 @@ function _grDona(C){
     const d = (a1-a0) >= Math.PI*2-1e-6
       ? `M${Pt(a0,R)} A${R},${R} 0 1 1 ${Pt(a0+Math.PI,R)} A${R},${R} 0 1 1 ${Pt(a0,R)} M${Pt(a0,r)} A${r},${r} 0 1 0 ${Pt(a0+Math.PI,r)} A${r},${r} 0 1 0 ${Pt(a0,r)}Z`
       : `M${Pt(s0,R)} A${R},${R} 0 ${big} 1 ${Pt(s1,R)} L${Pt(s1,r)} A${r},${r} 0 ${big} 0 ${Pt(s0,r)}Z`;
-    svg += `<path d="${d}" fill="${it.col}" data-tip="${esc(it.nom)}: <b>${fmt(it.v)}</b> · ${it.pct.toFixed(1)}% de tus gastos${it.pv!==null?` · en ${C.prev.year}: ${fmt(it.pv)}`:''}"/>`;
+    svg += `<path d="${d}" fill="${it.col}" data-tip="${esc(esc(it.nom))}: <b>${fmt(it.v)}</b> · ${it.pct.toFixed(1)}% de tus gastos${it.pv!==null?` · en ${C.prev.year}: ${fmt(it.pv)}`:''}"/>`;
     a0 = a1;
   });
   svg += `<text x="${cx}" y="${cy-8}" text-anchor="middle" font-size="11" letter-spacing="1" fill="var(--muted)">GASTADO</text>
@@ -8755,7 +8765,7 @@ function _grDona(C){
   const mxV = Math.max(...items.map(it=>Math.max(it.v, it.pv||0)));
   items.forEach((it,i)=>{
     const y0 = ly + i*rowH, bwMax = rx - lx - 22 - (B ? 96 : 0);   // si comparas, queda espacio para el % de cambio
-    svg += `<g data-tip="${esc(it.nom)}: <b>${fmt(it.v)}</b> · ${it.pct.toFixed(1)}% de tus gastos${it.pv!==null?` · en ${C.prev.year}: ${fmt(it.pv)}`:''}">
+    svg += `<g data-tip="${esc(esc(it.nom))}: <b>${fmt(it.v)}</b> · ${it.pct.toFixed(1)}% de tus gastos${it.pv!==null?` · en ${C.prev.year}: ${fmt(it.pv)}`:''}">
       <rect x="${lx}" y="${y0}" width="${rx-lx}" height="${rowH-4}" fill="transparent"/>
       <circle cx="${lx+5}" cy="${y0+9}" r="5" fill="${it.col}"/>
       <text x="${lx+16}" y="${y0+13}" font-size="12.5" fill="var(--text)">${esc(it.nom.length>22?it.nom.slice(0,21)+'…':it.nom)}</text>
@@ -8979,7 +8989,7 @@ function _grCalor(C){
     // El nombre se recorta según el tamaño real de la letra, para que nunca se salga del cuadro
     const mc = Math.max(3, Math.floor((w - 14) / ((grande ? fz : 12) * 0.64)));
     const nomC = c.nom.length > mc ? c.nom.slice(0, mc - 1) + '…' : c.nom;
-    return `<g data-tip="${esc(c.nom)}: <b>${fmt(c.v)}</b> · ${Math.round(c.v/tot*100)}% del mes${hayPrev ? ` · ${nomPrev}: ${fmt(c.p)}${c.cambio!==null ? ` (${c.cambio>=0?'+':'−'}${Math.abs(Math.round(c.cambio))}%)` : ' (nuevo)'}` : ''}">
+    return `<g data-tip="${esc(esc(c.nom))}: <b>${fmt(c.v)}</b> · ${Math.round(c.v/tot*100)}% del mes${hayPrev ? ` · ${nomPrev}: ${fmt(c.p)}${c.cambio!==null ? ` (${c.cambio>=0?'+':'−'}${Math.abs(Math.round(c.cambio))}%)` : ' (nuevo)'}` : ''}">
       <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" fill="${_calorColor(c.cambio)}"/>
       ${medio ? `<text x="${cx.toFixed(1)}" y="${(grande ? cy - fz*0.35 : cy + 4).toFixed(1)}" text-anchor="middle" font-size="${grande ? fz.toFixed(1) : 12}" font-weight="700" fill="#fff">${esc(nomC)}</text>` : ''}
       ${grande ? `<text x="${cx.toFixed(1)}" y="${(cy + fz*0.75).toFixed(1)}" text-anchor="middle" font-size="${Math.max(11, fz*0.72).toFixed(1)}" font-weight="600" fill="#fff">${chip || _grPlata(c.v)}</text>` : ''}
