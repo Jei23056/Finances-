@@ -9483,18 +9483,13 @@ function ecPDF(){
 
 // ═════════════════════════════════════════════════════════════════════════
 // BUSCADOR (nov 2026) — encuentra cualquier ingreso o gasto de todos los
-// meses y todos los años (el actual y los guardados en tu historial).
+// meses del año que tienes abierto (no busca en años anteriores).
 // Solo lee tus datos; no guarda ni cambia nada.
 // ═════════════════════════════════════════════════════════════════════════
 let _bqTexto = '', _bqTipo = 'todos', _bqTimer = null;
 const BQ_MAX = 150;
 const _bqNorm = t => String(t == null ? '' : t).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
-function _bqFuentes(){
-  const f = Object.assign({}, _grFuentes());
-  // Mientras "ves un año anterior", los datos del año actual están guardados aparte
-  if(typeof viewerActive !== 'undefined' && viewerActive) f[CURRENT_YEAR] = _datosVivos();
-  return f;
-}
+function _bqFuentes(){ return { [_curDataYear()]: data }; }   // solo el año que tienes abierto
 function _bqBuscar(){
   const palabras = _bqNorm(_bqTexto).split(/\s+/).filter(Boolean);
   if(!palabras.length) return null;
@@ -9519,7 +9514,7 @@ function _bqBuscar(){
 }
 function _bqResultadosHTML(){
   const R = _bqBuscar();
-  if(R === null) return `<div class="gr-card"><div class="gr-empty">Escribe lo que buscas: una descripción (Netflix), una categoría (gasolina), un monto (650), una fuente o una tarjeta. Puedes combinar, por ejemplo <b>netflix 2025</b> o <b>gasolina octubre</b>.</div></div>`;
+  if(R === null) return `<div class="gr-card"><div class="gr-empty">Escribe lo que buscas: una descripción (Netflix), una categoría (gasolina), un monto (650), una fuente o una tarjeta. Puedes combinar, por ejemplo <b>gasolina octubre</b>.</div></div>`;
   if(!R.length) return `<div class="gr-card"><div class="gr-empty">No encontré ningún movimiento con “${esc(_bqTexto.trim())}”.</div></div>`;
   const cur = _curDataYear();
   let inc = 0, exp = 0; R.forEach(r=>{ if(r.e.type === 'income') inc += r.monto; else exp += r.monto; });
@@ -9540,6 +9535,7 @@ function _bqResultadosHTML(){
 function _bqPintar(){
   const out = document.getElementById('bq-out'); if(out) out.innerHTML = _bqResultadosHTML();
   const x = document.getElementById('bq-x'); if(x) x.style.display = _bqTexto ? '' : 'none';
+  const sub = document.getElementById('bq-sub'); if(sub) sub.textContent = `Encuentra cualquier ingreso o gasto de ${_curDataYear()}, en todos los meses.`;
   document.querySelectorAll('#panel-buscar .ec-m').forEach(b=> b.classList.toggle('on', b.dataset.t === _bqTipo));
 }
 function renderBuscar(){
@@ -9547,7 +9543,7 @@ function renderBuscar(){
   // La caja de texto se crea una sola vez (para no perder lo que estás escribiendo)
   if(!document.getElementById('bq-input')){
     panel.innerHTML = `
-      <div class="gr-head"><div class="t">Buscar</div><div class="s">Encuentra cualquier ingreso o gasto, de este año o de los anteriores.</div></div>
+      <div class="gr-head"><div class="t">Buscar</div><div class="s" id="bq-sub"></div></div>
       <div class="bq-box"><span aria-hidden="true">🔎</span><input id="bq-input" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Netflix, gasolina, 650…" aria-label="Buscar movimientos" oninput="bqEscribir(this.value)"><button type="button" class="bq-x" id="bq-x" onclick="bqLimpiar()" aria-label="Borrar búsqueda" style="display:none">✕</button></div>
       <div class="ec-months">${[['todos','Todos'],['gastos','Gastos'],['ingresos','Ingresos']].map(([k,l])=>`<button type="button" class="ec-m" data-t="${k}" onclick="bqTipo('${k}')">${l}</button>`).join('')}</div>
       <div id="bq-out"></div>`;
