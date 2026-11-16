@@ -3289,7 +3289,7 @@ function editEntryStart(mi, id){
   const tjEl = document.getElementById(`tarjeta-${mi}`);
   if(tjEl && e.tarjeta) tjEl.value = e.tarjeta;
   const trEl = document.getElementById(`trabajo-${mi}`);
-  if(trEl && e.trabajo) trEl.value = e.trabajo;
+  if(trEl) trEl.value = e.trabajo || '';   // sin fuente = selector vacío (no arrastra la que estuviera elegida)
   const dbEl = document.getElementById(`debito-${mi}`);
   if(dbEl && e.debito) dbEl.value = e.debito;
 
@@ -3874,7 +3874,7 @@ function trabajoTotal(nombre){
     });
   }
   // 1) Año actual (datos en vivo)
-  sumarFinanzas(data);
+  sumarFinanzas(_datosVivos());
   // 2) Años del historial — sin contar el año actual dos veces
   if(historialFinanzasCache && typeof historialFinanzasCache==='object'){
     Object.keys(historialFinanzasCache).forEach(year=>{
@@ -3901,7 +3901,7 @@ function trabajoTotalAnio(nombre, year){
     });
   }
   if(parseInt(year,10) === CURRENT_YEAR){
-    sumar(data);
+    sumar(_datosVivos());
   } else if(historialFinanzasCache && historialFinanzasCache[year]){
     sumar(historialFinanzasCache[year]);
   }
@@ -4786,7 +4786,10 @@ function switchToTrabajos(){
 // Usa la misma regla que los totales del trabajo: ingresos de "Nómina / Salario"
 // con ese trabajo. El año actual sale de tus datos; los anteriores, del Historial.
 const _trYear = {}, _trOpen = {};
-function _trFinanzas(year){ return (parseInt(year,10) === CURRENT_YEAR) ? data : ((historialFinanzasCache && historialFinanzasCache[year]) || null); }
+// Datos reales del año actual: mientras "ves un año anterior", `data` es ese año
+// viejo y los de verdad están guardados aparte hasta que salgas de ese modo.
+function _datosVivos(){ return (typeof viewerActive !== 'undefined' && viewerActive && _viewerBackup && _viewerBackup.data) ? _viewerBackup.data : data; }
+function _trFinanzas(year){ return (parseInt(year,10) === CURRENT_YEAR) ? _datosVivos() : ((historialFinanzasCache && historialFinanzasCache[year]) || null); }
 function _trPorMes(nombre, year){
   const fin = _trFinanzas(year), out = Array(12).fill(0);
   if(!fin) return out;
@@ -8463,26 +8466,22 @@ function generateAlerts(){
     if(c){ const n = _diasHasta(c); if(n <= 2) out.push({ id:`corte-${tj.id}-${ym}-${c}`, c:'var(--gold)', t:`✂️ ${tj.nombre} corta ${_enDias(n)}`, d:'Si vas a comprar algo grande, espera al día siguiente del corte y tendrás más días para pagar.' }); }
   });
 
-  // Meses anteriores de este año con gastos (para saber qué es "lo normal")
-  const previos = []; for(let m=0; m<mi; m++){ if(gastos(m).length) previos.push(m); }
+  // Lo normal: los últimos 6 meses con gastos (cruza al año anterior)
+  const N = _normalDeCategorias(CURRENT_YEAR, mi, 6);
 
-  // 2) Categorías que se dispararon este mes
-  if(previos.length >= 2){
-    const sumCat = (m)=>{ const o={}; gastos(m).forEach(e=>{ if(e.cat==='Crédito') return; o[e.cat]=(o[e.cat]||0)+(e.amount||0); }); return o; };
-    const prom = {}; previos.forEach(m=>{ const o=sumCat(m); Object.keys(o).forEach(k=>prom[k]=(prom[k]||0)+o[k]); });
-    Object.keys(prom).forEach(k=>prom[k]/=previos.length);
-    const ahora = sumCat(mi);
-    Object.keys(ahora).map(k=>({k, v:ahora[k], n:prom[k]||0}))
+  // 2) Categorías HABITUALES que se dispararon este mes (un gasto de una sola vez no cuenta)
+  if(N.n >= 2){
+    const ahora = {}; gastos(mi).forEach(e=>{ if(e.cat==='Crédito') return; ahora[e.cat] = (ahora[e.cat]||0) + (e.amount||0); });
+    Object.keys(ahora).filter(k=>N.habitual(k)).map(k=>({k, v:ahora[k], n:N.prom[k]||0}))
       .filter(x=> x.n>0 && x.v > x.n*1.5 && (x.v - x.n) >= 1000)
       .sort((a,b)=>(b.v-b.n)-(a.v-a.n)).slice(0,2)
       .forEach(x=> out.push({ id:`alto-${ym}-${x.k}`, c:'var(--red)', t:`📈 ${_catNombre(x.k)} se disparó`, d:`Llevas ${fmt(x.v)} este mes. Lo normal son ${fmt(x.n)} al mes.` }));
 
     // 4) Buenas noticias: gastando menos que de costumbre (a partir del día 20)
     if(dia >= 20){
-      const tot = (m)=> gastos(m).reduce((s,e)=>s+(e.amount||0),0);
-      const promTot = previos.reduce((s,m)=>s+tot(m),0)/previos.length, ahoraTot = tot(mi);
-      if(promTot > 0 && ahoraTot > 0 && ahoraTot < promTot*0.8)
-        out.push({ id:`mejor-${ym}`, c:'var(--green)', t:'🎉 Vas mejor que de costumbre', d:`Llevas ${fmt(ahoraTot)} en gastos este mes. Lo normal son ${fmt(promTot)}.` });
+      const ahoraTot = gastos(mi).reduce((s,e)=>s+(e.amount||0),0);
+      if(N.promTotal > 0 && ahoraTot > 0 && ahoraTot < N.promTotal*0.8)
+        out.push({ id:`mejor-${ym}`, c:'var(--green)', t:'🎉 Vas mejor que de costumbre', d:`Llevas ${fmt(ahoraTot)} en gastos este mes. Lo normal son ${fmt(N.promTotal)}.` });
     }
   }
 
@@ -8562,6 +8561,34 @@ function _grFuentes(){
   return out;
 }
 const _grE = (src, m) => (src && src[m] && Array.isArray(src[m].entries)) ? src[m].entries : [];
+// Los últimos `n` meses hasta (año, mes) inclusive, cruzando al año anterior si hace
+// falta. Así en enero no se "empieza de cero". Cada elemento: { y, m, src, t (totales) }.
+function _ventana(yr, hasta, n){
+  const f = _grFuentes(), tot = {}, out = [];
+  let y = yr, m = hasta;
+  for(let i=0; i<n; i++){
+    const src = f[y]; if(!src) break;
+    tot[y] = tot[y] || _grTotales(src);
+    out.unshift({ y, m, src, t: tot[y][m] });
+    m--; if(m < 0){ m = 11; y--; }
+  }
+  return out;
+}
+// "Lo normal" antes de un mes: los últimos `n` meses anteriores con gastos, el promedio
+// por categoría y si la categoría es HABITUAL (aparece en al menos la mitad de esos
+// meses, mínimo 2). Un gasto de una sola vez no es habitual y no cuenta como desviación.
+function _normalDeCategorias(yr, m, n){
+  let py = yr, pm = m - 1; if(pm < 0){ pm = 11; py--; }
+  const W = _ventana(py, pm, n).filter(x=> _grE(x.src, x.m).some(e=>e.type==='expense'));
+  const prom = {}, veces = {}; let total = 0;
+  W.forEach(x=>{ const visto = {};
+    _grE(x.src, x.m).forEach(e=>{ if(e.type!=='expense') return; const v = e.amount||0;
+      prom[e.cat] = (prom[e.cat]||0) + v; total += v;
+      if(!visto[e.cat]){ visto[e.cat] = 1; veces[e.cat] = (veces[e.cat]||0) + 1; } }); });
+  Object.keys(prom).forEach(k=> prom[k] /= (W.length || 1));
+  const minimo = Math.max(2, Math.ceil(W.length/2));
+  return { n: W.length, prom, habitual: k => (veces[k]||0) >= minimo, promTotal: W.length ? total/W.length : 0 };
+}
 function _grTieneDatos(src){ for(let m=0;m<12;m++) if(_grE(src,m).length) return true; return false; }
 function _grAnios(){ const f = _grFuentes(), cur = _curDataYear(); return Object.keys(f).map(Number).filter(y=> y===cur || _grTieneDatos(f[y])).sort((a,b)=>b-a); }
 // Totales de los 12 meses de un año, con el capital encadenado igual que la app
@@ -9096,24 +9123,27 @@ function _fuenteIngreso(e){ if(e.trabajo) return `💼 ${e.trabajo}`; try { retu
 // Meses completos: en el año actual, el mes en curso todavía no cuenta como "completo"
 function _mesesHasta(hasta){ const out = []; for(let m=0; m<=hasta; m++) out.push(m); return out; }
 
-function _saludCalc(hasta){
-  const T = _grTotales(data), meses = _mesesHasta(hasta), yr = _curDataYear();
-  const conDatos = meses.filter(m=>T[m].inc || T[m].exp);
+function _saludCalc(hasta, anio){
+  const yr = anio || _curDataYear();
+  // Los últimos 12 meses hasta este (cruzando al año anterior), para que la nota
+  // no se reinicie cada enero.
+  const W = _ventana(yr, hasta, 12);
+  const conDatos = W.filter(x=>x.t.inc || x.t.exp);
   const enCurso = (yr === CURRENT_YEAR && hasta === new Date().getMonth());
-  const completos = conDatos.filter(m=> !(enCurso && m === hasta));
-  const sumInc = conDatos.reduce((s,m)=>s+T[m].inc,0), sumNet = conDatos.reduce((s,m)=>s+T[m].net,0);
+  const completos = conDatos.filter(x=> !(enCurso && x.y === yr && x.m === hasta));
+  const sumInc = conDatos.reduce((s,x)=>s+x.t.inc,0), sumNet = conDatos.reduce((s,x)=>s+x.t.net,0);
   // 1) Tasa de ahorro
   const ahorro = sumInc ? sumNet/sumInc*100 : null;
   // 2) Meses cubiertos: capital / gasto promedio de los últimos 3 meses completos
-  const ult3 = completos.slice(-3), gProm = ult3.length ? ult3.reduce((s,m)=>s+T[m].exp,0)/ult3.length : (conDatos.length ? conDatos.reduce((s,m)=>s+T[m].exp,0)/conDatos.length : 0);
-  const capital = T[hasta].end, cubre = gProm > 0 ? capital / gProm : null;
+  const ult3 = completos.slice(-3), gProm = ult3.length ? ult3.reduce((s,x)=>s+x.t.exp,0)/ult3.length : (conDatos.length ? conDatos.reduce((s,x)=>s+x.t.exp,0)/conDatos.length : 0);
+  const capital = W.length ? W[W.length-1].t.end : 0, cubre = gProm > 0 ? capital / gProm : null;
   // 3) Estabilidad: meses en rojo entre los últimos 6 completos
-  const ult6 = completos.slice(-6), rojos = ult6.filter(m=>T[m].net < 0).length;
+  const ult6 = completos.slice(-6), rojos = ult6.filter(x=>x.t.net < 0).length;
   // 4) Gastos con tarjeta de crédito sobre lo que entra
-  let cred = 0; conDatos.forEach(m=> _grE(data,m).forEach(e=>{ if(e.type==='expense' && e.cat==='Crédito') cred += e.amount||0; }));
+  let cred = 0; conDatos.forEach(x=> _grE(x.src, x.m).forEach(e=>{ if(e.type==='expense' && e.cat==='Crédito') cred += e.amount||0; }));
   const credPct = sumInc ? cred/sumInc*100 : null;
   // 5) Concentración de ingresos
-  const fuentes = {}; conDatos.forEach(m=> _grE(data,m).forEach(e=>{ if(e.type==='income'){ const f = _fuenteIngreso(e); fuentes[f] = (fuentes[f]||0) + (e.amount||0); } }));
+  const fuentes = {}; conDatos.forEach(x=> _grE(x.src, x.m).forEach(e=>{ if(e.type==='income'){ const f = _fuenteIngreso(e); fuentes[f] = (fuentes[f]||0) + (e.amount||0); } }));
   const listaF = Object.entries(fuentes).sort((a,b)=>b[1]-a[1]);
   const topF = (listaF[0] && sumInc) ? listaF[0][1]/sumInc*100 : null;
   const hhi = sumInc ? listaF.reduce((s,[,v])=>s+Math.pow(v/sumInc*100,2),0) : null;
@@ -9171,8 +9201,10 @@ function renderSalud(){
   const panel = document.getElementById('panel-salud'); if(!panel) return;
   const yr = _curDataYear(), hasta = (yr === CURRENT_YEAR) ? new Date().getMonth() : 11;
   const S = _saludCalc(hasta);
+  // Con qué mes se compara la nota: el anterior (en enero, diciembre del año pasado)
+  const antes = hasta > 0 ? [yr, hasta-1] : (_grFuentes()[yr-1] ? [yr-1, 11] : null);
   if(!S.conDatos.length){ panel.innerHTML = `<div class="gr-head"><div class="t">Tu salud financiera</div></div><div class="gr-card"><div class="gr-empty">Todavía no hay movimientos este año.</div></div>`; return; }
-  const P = hasta > 0 ? _saludCalc(hasta-1) : null;
+  const P = antes ? _saludCalc(antes[1], antes[0]) : null;
   const [nivel, color] = _saludNivel(S.score);
   const R = 70, C = Math.PI*R, off = C*(1 - S.score/100);
   const gauge = `<svg viewBox="0 0 180 104" width="200" style="max-width:100%"><path d="M20 94 A70 70 0 0 1 160 94" fill="none" stroke="var(--surf)" stroke-width="14" stroke-linecap="round"/>
@@ -9182,11 +9214,11 @@ function renderSalud(){
   const peores = S.ind.slice().sort((a,b)=>(a.pts/a.max)-(b.pts/b.max)).filter(x=>x.pts/x.max < 0.999).slice(0,3);
   const colsF = (typeof DONUT_COLORS_LIVE !== 'undefined') ? DONUT_COLORS_LIVE : ['#5b8fd6','#4ec99a','#e8695d','#c9a15a','#8f7fd6'];
   panel.innerHTML = `
-    <div class="gr-head"><div class="t">Tu salud financiera</div><div class="s">Una nota de 0 a 100 que combina 5 indicadores, como los que usa un banco para evaluar a un cliente. ${S.enCurso ? 'Incluye el mes en curso.' : ''}</div></div>
+    <div class="gr-head"><div class="t">Tu salud financiera</div><div class="s">Una nota de 0 a 100 que combina 5 indicadores, como los que usa un banco para evaluar a un cliente. Mira tus últimos 12 meses${S.enCurso ? ', incluido el mes en curso' : ''}.</div></div>
     <div class="gr-card"><div class="sa-hero">${gauge}
       <div><div class="sa-lvl" style="color:${color}">${nivel}</div>
         <div class="sa-sub">${S.score>=80 ? 'Tus finanzas están en muy buena forma.' : S.score>=65 ? 'Vas bien; hay uno o dos puntos que puedes reforzar.' : S.score>=50 ? 'Tienes una base, pero hay áreas que conviene mejorar.' : 'Hay varios puntos que necesitan atención. Empieza por las recomendaciones de abajo.'}</div>
-        ${dif!==null ? `<span class="sa-chg" style="color:${dif>=0?'var(--green)':'var(--red)'}">${dif>=0?'▲':'▼'} ${Math.abs(dif)} ${Math.abs(dif)===1?'punto':'puntos'} vs ${MONTHS[hasta-1].toLowerCase()}</span>` : ''}
+        ${dif!==null ? `<span class="sa-chg" style="color:${dif>=0?'var(--green)':'var(--red)'}">${dif>=0?'▲':'▼'} ${Math.abs(dif)} ${Math.abs(dif)===1?'punto':'puntos'} vs ${MONTHS[antes[1]].toLowerCase()}</span>` : ''}
       </div></div></div>
     ${_saludHistorialHTML(hasta, (panel.clientWidth || 676) - 36)}
     <div class="gr-card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
@@ -9203,7 +9235,7 @@ function renderSalud(){
         <span class="more">${x.que} ${x.tip}<br><span style="color:var(--muted)">Aporta ${Math.round(x.pts)} de ${x.max} puntos.</span></span>
       </button>`).join('')}
     </div>
-    <div class="gr-card"><h3>De dónde viene tu dinero</h3><div class="sub">Tus ingresos de ${yr} por fuente</div>
+    <div class="gr-card"><h3>De dónde viene tu dinero</h3><div class="sub">Tus ingresos de ${S.conDatos.length === 1 ? 'este mes' : `los últimos ${S.conDatos.length} meses`}, por fuente</div>
       ${S.listaF.length ? `<div class="sa-src">${S.listaF.map(([f,v],i)=>`<i style="width:${(v/S.sumInc*100).toFixed(2)}%;background:${colsF[i%colsF.length]}" title="${esc(f)}"></i>`).join('')}</div>
       ${S.listaF.map(([f,v],i)=>`<div class="sa-row"><span><span style="color:${colsF[i%colsF.length]}">●</span> ${esc(f)}</span><span class="num" style="font-variant-numeric:tabular-nums">${fmt(v)} · <b>${(v/S.sumInc*100).toFixed(1)}%</b></span></div>`).join('')}
       <div class="sa-sub" style="margin-top:10px">Índice de concentración: <b style="color:var(--text)">${Math.round(S.hhi).toLocaleString('en-US')}</b> de 10,000. Más de 2,500 se considera concentrado: si esa fuente falla, tus ingresos caen de golpe.</div>` : '<div class="gr-empty">Todavía no hay ingresos.</div>'}
@@ -9219,13 +9251,15 @@ function _ecDatos(yr, m){
   const src = _grFuentes()[yr] || {};
   const T = _grTotales(src), d = T[m];
   const gastosCat = {}; _grE(src,m).forEach(e=>{ if(e.type==='expense') gastosCat[e.cat] = (gastosCat[e.cat]||0) + (e.amount||0); });
-  // Lo normal: promedio de los meses anteriores de ese mismo año con gastos
-  const previos = []; for(let k=0;k<m;k++) if(_grE(src,k).some(e=>e.type==='expense')) previos.push(k);
-  const prom = {}; previos.forEach(k=> _grE(src,k).forEach(e=>{ if(e.type==='expense') prom[e.cat] = (prom[e.cat]||0) + (e.amount||0)/previos.length; }));
-  const desv = Object.keys(Object.assign({}, gastosCat, prom)).map(c=>({ c, v:gastosCat[c]||0, p:prom[c]||0 }))
-    .filter(x=> x.p>0 && Math.abs(x.v-x.p) >= 1000 && Math.abs(x.v-x.p)/x.p >= 0.15).sort((a,b)=>Math.abs(b.v-b.p)-Math.abs(a.v-a.p)).slice(0,3);
-  const top = Object.entries(gastosCat).sort((a,b)=>b[1]-a[1]).slice(0,3);
   const enCurso = (yr === CURRENT_YEAR && m === new Date().getMonth());
+  // Lo normal: promedio de los últimos 6 meses con gastos (cruza al año anterior).
+  // Solo se comparan las categorías habituales; un gasto de una sola vez no es una
+  // "desviación". Y en un mes que no ha terminado solo se marca lo que YA subió.
+  const N = _normalDeCategorias(yr, m, 6), previos = Array(N.n).fill(0);
+  const desv = Object.keys(Object.assign({}, gastosCat, N.prom)).filter(c=>N.habitual(c)).map(c=>({ c, v:gastosCat[c]||0, p:N.prom[c]||0 }))
+    .filter(x=> x.p>0 && Math.abs(x.v-x.p) >= 1000 && Math.abs(x.v-x.p)/x.p >= 0.15 && !(enCurso && x.v < x.p))
+    .sort((a,b)=>Math.abs(b.v-b.p)-Math.abs(a.v-a.p)).slice(0,3);
+  const top = Object.entries(gastosCat).sort((a,b)=>b[1]-a[1]).slice(0,3);
   return { yr, m, T, d, desv, top, previos, enCurso, pct: d.inc ? d.net/d.inc*100 : null, vivo: yr === _curDataYear() };
 }
 function _ecRecomendaciones(D){
@@ -9237,7 +9271,7 @@ function _ecRecomendaciones(D){
   const col = S ? S.ind.find(x=>x.k==='colchon') : null, fu = S ? S.ind.find(x=>x.k==='fuentes') : null;
   const cubre = col && col.v!=='—' ? parseFloat(col.v) : null;
   if(cubre !== null && cubre >= 6) out.push(`Tienes más de 6 meses de gastos guardados: el dinero por encima de eso podría estar en un <b>certificado</b> ganando intereses.`);
-  if(cubre !== null && cubre < 3) out.push(`Prioriza tu fondo de emergencia: hoy cubre <b>${cubre.toFixed(1)} meses</b>; la meta son 6.`);
+  if(cubre !== null && cubre < 3) out.push(`Prioriza tu fondo de emergencia: ${D.enCurso ? 'hoy cubre' : 'al cierre de ese mes cubría'} <b>${cubre.toFixed(1)} meses</b>; la meta son 6.`);
   if(fu && fu.v !== '—' && parseFloat(fu.v) >= 90) out.push(`Casi todo tu ingreso viene de una sola fuente. Un ingreso extra, aunque sea pequeño, bajaría tu riesgo.`);
   if(!out.length) out.push('Buen mes. Mantén el mismo ritmo y revisa tus gráficas para comparar con los meses anteriores.');
   return out.slice(0,3);
@@ -9572,9 +9606,10 @@ async function bioUnlock(){
 }
 // Salida de emergencia: quita el candado de este aparato y pide entrar con Google otra vez
 function bioForgot(){
-  try { localStorage.removeItem(LS_BIO); } catch(e){}
-  _bioShow(false);
-  try { signOut(); } catch(e){}
+  // Primero se cierra la sesión (la app se oculta y sale el inicio con Google) y
+  // solo después se quita el candado, para que tus números no se vean ni un instante.
+  const quitar = ()=>{ try { localStorage.removeItem(LS_BIO); } catch(e){} _bioShow(false); };
+  try { const r = auth.signOut(); if(r && r.then) r.then(quitar, quitar); else quitar(); } catch(e){ quitar(); }
 }
 auth.onAuthStateChanged(u=>{
   _bioUser = u || null;
