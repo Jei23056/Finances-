@@ -8620,6 +8620,12 @@ function _grTotales(src){
   }
   return out;
 }
+// Préstamos recibidos en un mes: es dinero que debes, no que ganaste.
+function _prestamosMes(src, m){ let t = 0; _grE(src, m).forEach(e=>{ if(e.type==='income' && ING_APARTE.includes(e.cat)) t += e.amount||0; }); return t; }
+// Los mismos totales, pero con los préstamos recibidos fuera de "entró" y de "sobró"
+// (para Salud y Estado de cuenta). El capital (start/end) sigue siendo el real.
+function _sinPrestamos(t, p){ return p ? Object.assign({}, t, { inc: parseFloat((t.inc - p).toFixed(2)), net: parseFloat((t.net - p).toFixed(2)), prest: p }) : Object.assign({ prest: 0 }, t); }
+function _totalesSinPrestamos(src){ return _grTotales(src).map((t, m)=> _sinPrestamos(t, _prestamosMes(src, m))); }
 // Contexto de la gráfica: el año elegido y (si se pidió) el anterior
 function _grCtx(){
   const f = _grFuentes(), anios = _grAnios();
@@ -9140,7 +9146,9 @@ function _saludCalc(hasta, anio){
   const yr = anio || _curDataYear();
   // Los últimos 12 meses hasta este (cruzando al año anterior), para que la nota
   // no se reinicie cada enero.
-  const W = _ventana(yr, hasta, 12);
+  // Los préstamos recibidos no cuentan como ingreso (sí están en tu capital).
+  const W = _ventana(yr, hasta, 12).map(x=> Object.assign({}, x, { t: _sinPrestamos(x.t, _prestamosMes(x.src, x.m)) }));
+  const prest = W.reduce((a,x)=>a + x.t.prest, 0);
   const conDatos = W.filter(x=>x.t.inc || x.t.exp);
   const enCurso = (yr === CURRENT_YEAR && hasta === new Date().getMonth());
   const completos = conDatos.filter(x=> !(enCurso && x.y === yr && x.m === hasta));
@@ -9156,7 +9164,7 @@ function _saludCalc(hasta, anio){
   let cred = 0; conDatos.forEach(x=> _grE(x.src, x.m).forEach(e=>{ if(e.type==='expense' && e.cat==='Crédito') cred += e.amount||0; }));
   const credPct = sumInc ? cred/sumInc*100 : null;
   // 5) Concentración de ingresos
-  const fuentes = {}; conDatos.forEach(x=> _grE(x.src, x.m).forEach(e=>{ if(e.type==='income'){ const f = _fuenteIngreso(e); fuentes[f] = (fuentes[f]||0) + (e.amount||0); } }));
+  const fuentes = {}; conDatos.forEach(x=> _grE(x.src, x.m).forEach(e=>{ if(e.type==='income' && !ING_APARTE.includes(e.cat)){ const f = _fuenteIngreso(e); fuentes[f] = (fuentes[f]||0) + (e.amount||0); } }));
   const listaF = Object.entries(fuentes).sort((a,b)=>b[1]-a[1]);
   const topF = (listaF[0] && sumInc) ? listaF[0][1]/sumInc*100 : null;
   const hhi = sumInc ? listaF.reduce((s,[,v])=>s+Math.pow(v/sumInc*100,2),0) : null;
@@ -9179,7 +9187,7 @@ function _saludCalc(hasta, anio){
       tip: topF!==null && topF>=90 ? 'Depender de una sola fuente es un riesgo: un ingreso extra estable lo bajaría.' : 'Tus ingresos están repartidos de forma saludable.' }
   ];
   const score = Math.round(ind.reduce((s,x)=>s+x.pts,0));
-  return { score, ind, listaF, sumInc, hhi, capital, conDatos, enCurso };
+  return { score, ind, listaF, sumInc, hhi, capital, conDatos, enCurso, prest };
 }
 const _saludNivel = sc => sc>=80 ? ['Excelente','var(--green)'] : sc>=65 ? ['Buena','var(--green)'] : sc>=50 ? ['Regular','#e3b04f'] : ['Necesita atención','var(--red)'];
 // Tu nota mes a mes: la nota como estaba al cierre de cada mes (solo lee)
@@ -9227,7 +9235,7 @@ function renderSalud(){
   const peores = S.ind.slice().sort((a,b)=>(a.pts/a.max)-(b.pts/b.max)).filter(x=>x.pts/x.max < 0.999).slice(0,3);
   const colsF = (typeof DONUT_COLORS_LIVE !== 'undefined') ? DONUT_COLORS_LIVE : ['#5b8fd6','#4ec99a','#e8695d','#c9a15a','#8f7fd6'];
   panel.innerHTML = `
-    <div class="gr-head"><div class="t">Tu salud financiera</div><div class="s">Una nota de 0 a 100 que combina 5 indicadores, como los que usa un banco para evaluar a un cliente. Mira tus últimos 12 meses${S.enCurso ? ', incluido el mes en curso' : ''}.</div></div>
+    <div class="gr-head"><div class="t">Tu salud financiera</div><div class="s">Una nota de 0 a 100 que combina 5 indicadores, como los que usa un banco para evaluar a un cliente. Mira tus últimos 12 meses${S.enCurso ? ', incluido el mes en curso' : ''}.${S.prest ? ` Los ${fmt(S.prest)} de préstamos recibidos no cuentan como ingreso.` : ''}</div></div>
     <div class="gr-card"><div class="sa-hero">${gauge}
       <div><div class="sa-lvl" style="color:${color}">${nivel}</div>
         <div class="sa-sub">${S.score>=80 ? 'Tus finanzas están en muy buena forma.' : S.score>=65 ? 'Vas bien; hay uno o dos puntos que puedes reforzar.' : S.score>=50 ? 'Tienes una base, pero hay áreas que conviene mejorar.' : 'Hay varios puntos que necesitan atención. Empieza por las recomendaciones de abajo.'}</div>
@@ -9258,11 +9266,12 @@ function renderSalud(){
 
 // ── Estado de cuenta ejecutivo ─────────────────────────────────────────────
 let _ecMes = null, _ecYear = null, _ecComp = false;
+let _ecYearAuto = false;   // true = se abrió el año anterior porque el actual aún no tiene movimientos
 // Los estados de cuenta no se guardan aparte: se arman con tus movimientos. Los de
 // años anteriores salen del Historial que la app guarda sola al cambiar de año.
 function _ecDatos(yr, m){
   const src = _grFuentes()[yr] || {};
-  const T = _grTotales(src), d = T[m];
+  const T = _totalesSinPrestamos(src), d = T[m];
   const gastosCat = {}; _grE(src,m).forEach(e=>{ if(e.type==='expense') gastosCat[e.cat] = (gastosCat[e.cat]||0) + (e.amount||0); });
   const enCurso = (yr === CURRENT_YEAR && m === new Date().getMonth());
   // Lo normal: promedio de los últimos 6 meses con gastos (cruza al año anterior).
@@ -9309,6 +9318,7 @@ function _ecHTML(D, print){
       <div class="gr-kpi"><div class="l">Salió</div><div class="v" style="color:var(--red)">${_grPlata(D.d.exp)}</div><div class="s">${K(D.d.exp)}</div></div>
       <div class="gr-kpi"><div class="l">Ahorro</div><div class="v" style="color:${D.pct===null?'var(--muted)':D.pct>=_metaAhorro?'var(--green)':D.pct>=0?'#e3b04f':'var(--red)'}">${D.pct===null?'—':Math.round(D.pct)+'%'}</div><div class="s">${D.d.net>=0?'sobró ':'faltó '}${K(Math.abs(D.d.net))}</div></div>
     </div>
+    ${D.d.prest ? `<p style="font-size:12px;color:var(--muted2);margin:10px 0 0">💵 Aparte recibiste <b>${K(D.d.prest)}</b> de préstamo. No se cuenta como ingreso ni como ahorro porque es dinero que debes; sí está en tu capital.</p>` : ''}
     ${D.cmp ? (()=>{ const P = D.cmp, fila = (l, a, b, bueno, f) => { const dif = a - b, ok = bueno==='alto' ? dif>=0 : dif<=0;
         return `<div class="ec-line"><span>${l}</span><span class="num">${f(a)} <span style="color:var(--muted);font-weight:400">vs ${f(b)}</span> <span style="color:${dif===0?'var(--muted2)':ok?'var(--green)':'var(--red)'}">${dif>=0?'▲':'▼'} ${f(Math.abs(dif))}</span></span></div>`; };
       const pc = v => v===null ? '—' : Math.round(v)+'%';
@@ -9327,7 +9337,7 @@ function _ecHTML(D, print){
 // mes de hoy; al comparar, usa los mismos meses del año anterior. Solo lee.
 const EC_ANUAL = -1;
 function _ecAnualDatos(yr, hastaForzado){
-  const src = _grFuentes()[yr] || {}, T = _grTotales(src);
+  const src = _grFuentes()[yr] || {}, T = _totalesSinPrestamos(src);
   const hasta = hastaForzado !== undefined ? hastaForzado : ((yr === CURRENT_YEAR) ? new Date().getMonth() : 11);
   const meses = []; for(let m=0; m<=hasta; m++) if(_grE(src,m).length) meses.push(m);
   let inc = 0, exp = 0; const cat = {};
@@ -9335,7 +9345,7 @@ function _ecAnualDatos(yr, hastaForzado){
   const net = inc - exp, ini = T[0].start, fin = T[hasta].end;
   const conPct = meses.filter(m=>T[m].inc>0).map(m=>({ m, pct: T[m].net/T[m].inc*100, net:T[m].net }));
   const mejor = meses.slice().sort((a,b)=>T[b].net-T[a].net)[0], peor = meses.slice().sort((a,b)=>T[a].net-T[b].net)[0];
-  return { anual:true, yr, hasta, meses, T, inc, exp, net, ini, fin, cat, pct: inc ? net/inc*100 : null,
+  return { anual:true, yr, hasta, meses, T, inc, exp, net, ini, fin, cat, pct: inc ? net/inc*100 : null, prest: meses.reduce((a,m)=>a + T[m].prest, 0),
     enMeta: conPct.filter(x=>x.pct >= _metaAhorro).length, conPct, mejor, peor,
     top: Object.entries(cat).sort((a,b)=>b[1]-a[1]).slice(0,5),
     enCurso: yr === CURRENT_YEAR && hasta < 11, vivo: yr === _curDataYear(),
@@ -9378,6 +9388,7 @@ function _ecAnualHTML(A, print){
       <div class="gr-kpi"><div class="l">Salió</div><div class="v" style="color:var(--red)">${_grPlata(A.exp)}</div><div class="s">${K(A.exp)}</div></div>
       <div class="gr-kpi"><div class="l">Ahorro</div><div class="v" style="color:${colPct}">${pc(A.pct)}</div><div class="s">${A.net>=0?'sobró ':'faltó '}${K(Math.abs(A.net))}</div></div>
     </div>
+    ${A.prest ? `<p style="font-size:12px;color:var(--muted2);margin:10px 0 0">💵 Aparte recibiste <b>${K(A.prest)}</b> de préstamo. No se cuenta como ingreso ni como ahorro porque es dinero que debes; sí está en tu capital.</p>` : ''}
     ${cmp}
     <div class="ec-sec"><div class="l">Lo más destacado</div><p>${destacado}</p></div>
     <div class="ec-sec"><div class="l">En qué se fue el dinero</div>${A.top.length ? A.top.map(([c,v])=>`<div class="ec-line"><span>${esc(_grCatNombre(c))}</span><span class="num">${K(v)} · ${A.exp?Math.round(v/A.exp*100):0}%</span></div>`).join('') : '<p>Sin gastos.</p>'}</div>
@@ -9397,7 +9408,12 @@ const _ecDocHTML = (D, print) => D.anual ? _ecAnualHTML(D, print) : _ecHTML(D, p
 function renderEstado(){
   const panel = document.getElementById('panel-estado'); if(!panel) return;
   const anios = _grAnios(), f = _grFuentes();
-  if(!_ecYear || !f[_ecYear]) _ecYear = _curDataYear();
+  if(!_ecYear || !f[_ecYear] || _ecYearAuto){
+    const cur = _curDataYear(), eraAuto = _ecYearAuto ? _ecYear : null; _ecYear = cur; _ecYearAuto = false;
+    // Año nuevo sin movimientos todavía: se abre el último año que sí tiene (diciembre)
+    if(!_grTieneDatos(f[cur])){ const ant = anios.find(y=> y < cur && _grTieneDatos(f[y])); if(ant){ _ecYear = ant; _ecYearAuto = true; } }
+    if(eraAuto !== null && eraAuto !== _ecYear) _ecMes = null;
+  }
   const yr = _ecYear, src = f[yr], hoyM = (yr === CURRENT_YEAR) ? new Date().getMonth() : 11;
   const conDatos = []; for(let m=0;m<=hoyM;m++) if(_grE(src,m).length) conDatos.push(m);
   const yearsHTML = anios.length > 1 ? `<div class="gr-top"><div class="gr-years">${anios.map(y=>`<button class="gr-year${y===yr?' on':''}" onclick="ecSetYear(${y})">${y}</button>`).join('')}</div></div>` : '';
@@ -9408,14 +9424,14 @@ function renderEstado(){
   const hayPrev = !!(f[py] && (anual ? _grTieneDatos(f[py]) : _grE(f[py], _ecMes).length));
   const conQue = anual ? `${py}` : `${MONTHS[_ecMes].toLowerCase()} ${py}`;
   panel.innerHTML = `
-    <div class="gr-head"><div class="t">Estado de cuenta</div><div class="s">El resumen de una página de cada mes o del año completo, como el de un banco privado. Elige el año y el mes${yr !== _curDataYear() ? ' · año guardado en tu historial, solo para ver' : ''}.</div></div>
+    <div class="gr-head"><div class="t">Estado de cuenta</div><div class="s">El resumen de una página de cada mes o del año completo, como el de un banco privado. Elige el año y el mes${yr !== _curDataYear() ? ' · año guardado en tu historial, solo para ver' : ''}.${_ecYearAuto ? ` Todavía no hay movimientos en ${_curDataYear()}, así que te muestro ${yr}.` : ''}</div></div>
     ${anios.length > 1 || hayPrev ? `<div class="gr-top">${anios.length > 1 ? `<div class="gr-years">${anios.map(y=>`<button class="gr-year${y===yr?' on':''}" onclick="ecSetYear(${y})">${y}</button>`).join('')}</div>` : '<div></div>'}
       ${hayPrev ? `<button class="gr-cmp${_ecComp?' on':''}" onclick="ecToggleComp()">⇄ ${_ecComp ? `Comparando con ${conQue}` : `Comparar con ${conQue}`}</button>` : ''}</div>` : ''}
     <div class="ec-months"><button class="ec-m${anual?' on':''}" onclick="ecSetMes(${EC_ANUAL})">📅 Año completo${(yr===CURRENT_YEAR && new Date().getMonth()<11)?' · en curso':''}</button>${conDatos.slice().reverse().map(m=>`<button class="ec-m${m===_ecMes?' on':''}" onclick="ecSetMes(${m})">${MONTHS[m]}${(yr===CURRENT_YEAR && m===new Date().getMonth())?' · en curso':''}</button>`).join('')}</div>
     <div class="ec-doc">${_ecDocHTML(D, false)}</div>`;
 }
 function ecSetMes(m){ _ecMes = m; renderEstado(); }
-function ecSetYear(y){ _ecYear = y; _ecMes = null; renderEstado(); }
+function ecSetYear(y){ _ecYear = y; _ecYearAuto = false; _ecMes = null; renderEstado(); }
 function ecToggleComp(){ _ecComp = !_ecComp; renderEstado(); }
 // PDF: una versión clara para imprimir o guardar como PDF (como el reporte anual)
 // Imprimir: abre el estado de cuenta en una página aparte, igual que el reporte
