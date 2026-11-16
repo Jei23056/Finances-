@@ -9555,7 +9555,18 @@ function bqEscribir(v){ _bqTexto = v; clearTimeout(_bqTimer); _bqTimer = setTime
 function bqTipo(t){ _bqTipo = t; _bqPintar(); }
 function bqLimpiar(){ _bqTexto = ''; const inp = document.getElementById('bq-input'); if(inp){ inp.value = ''; inp.focus(); } _bqPintar(); }
 // Tocar un resultado de este año te lleva a ese mes, a la lista completa
-function bqIr(m){ try { switchMonth(m); showInner(m, 'all'); } catch(e){ console.warn(e); } }
+function bqIr(m){
+  try {
+    // Si no es el mes presente, se abren las pestañas de los meses para que arriba
+    // quede marcado el mes al que fuiste (y no parezca que sigues en el mes de hoy).
+    if(m !== new Date().getMonth()) _monthsExpanded = true;
+    switchMonth(m); showInner(m, 'all');
+    const tab = document.querySelectorAll('#month-tabs .mtab')[m];
+    if(tab && tab.scrollIntoView) tab.scrollIntoView({ block:'nearest', inline:'center' });
+    const tabs = document.getElementById('month-tabs');
+    if(tabs){ const y = tabs.getBoundingClientRect().top + window.scrollY - 70; window.scrollTo({ top: Math.max(0, y) }); }
+  } catch(e){ console.warn(e); }
+}
 
 // ── Cambiar a Salud o Estado, igual que las otras secciones ───────────────
 function _secHide(){
