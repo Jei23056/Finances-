@@ -1358,6 +1358,21 @@ body {
 .tr-row .cc-month-name { width:auto; }
 .tr-row .cc-month-amt { width:auto; white-space:nowrap; }
 .alert-card .alert-btn { align-self:center; background:var(--ac, var(--gold)); color:#fff; border:none; border-radius:999px; padding:7px 14px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; }
+/* Buscador de movimientos */
+#mtab-buscar { display:none !important; }
+.bq-box { display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:12px 14px; margin-bottom:12px; }
+.bq-box input { flex:1; min-width:0; background:none; border:none; outline:none; color:var(--text); font:400 16px 'DM Sans',sans-serif; }
+.bq-box input::placeholder { color:var(--muted); }
+.bq-box .bq-x { background:none; border:none; color:var(--muted); font-size:16px; cursor:pointer; padding:2px 6px; border-radius:6px; }
+.bq-res { font-size:12px; color:var(--muted2); margin:0 2px 10px; font-variant-numeric:tabular-nums; }
+.bq-grp { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:16px 2px 6px; }
+.bq-row { display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--border); border-radius:var(--rs); padding:10px 12px; margin-bottom:6px; }
+.bq-row.ir { cursor:pointer; }
+.bq-row.ir:hover { border-color:var(--border2); }
+.bq-row .bq-l { flex:1; min-width:0; }
+.bq-row .bq-d { font-size:14px; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bq-row .bq-s { font-size:12px; color:var(--muted2); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bq-row .bq-a { font-size:14px; font-weight:600; white-space:nowrap; font-variant-numeric:tabular-nums; }
 </style>
 </head>
 <body>
@@ -1555,6 +1570,7 @@ body {
 <div id="panel-graficas" style="display:none"></div>
 <div id="panel-salud" style="display:none"></div>
 <div id="panel-estado" style="display:none"></div>
+<div id="panel-buscar" style="display:none"></div>
 
 <div id="panel-since" style="display:none">
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1.5rem">
@@ -9465,9 +9481,89 @@ function ecPDF(){
   setTimeout(()=>win.print(), 700);
 }
 
+// ═════════════════════════════════════════════════════════════════════════
+// BUSCADOR (nov 2026) — encuentra cualquier ingreso o gasto de todos los
+// meses y todos los años (el actual y los guardados en tu historial).
+// Solo lee tus datos; no guarda ni cambia nada.
+// ═════════════════════════════════════════════════════════════════════════
+let _bqTexto = '', _bqTipo = 'todos', _bqTimer = null;
+const BQ_MAX = 150;
+const _bqNorm = t => String(t == null ? '' : t).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+function _bqFuentes(){
+  const f = Object.assign({}, _grFuentes());
+  // Mientras "ves un año anterior", los datos del año actual están guardados aparte
+  if(typeof viewerActive !== 'undefined' && viewerActive) f[CURRENT_YEAR] = _datosVivos();
+  return f;
+}
+function _bqBuscar(){
+  const palabras = _bqNorm(_bqTexto).split(/\s+/).filter(Boolean);
+  if(!palabras.length) return null;
+  const f = _bqFuentes(), out = [];
+  const nomDebito = id => { const c = (typeof tarjetasDebito !== 'undefined' && tarjetasDebito || []).find(t=>t.id===id); return c ? c.nombre : ''; };
+  Object.keys(f).map(Number).forEach(y=>{ for(let m=0; m<12; m++) _grE(f[y], m).forEach(e=>{
+    if(!e || (e.type !== 'income' && e.type !== 'expense')) return;
+    if(_bqTipo === 'ingresos' && e.type !== 'income') return;
+    if(_bqTipo === 'gastos' && e.type !== 'expense') return;
+    const monto = Number(e.amount) || 0, cat = e.type === 'income' ? (_catLabel(e.cat, 'income') || e.cat) : _grCatNombre(e.cat);
+    const texto = _bqNorm([e.desc, e.cat, cat, e.trabajo, e.tarjeta, nomDebito(e.debito), e.date, MONTHS[m], y, e.type === 'income' ? 'ingreso' : 'gasto'].join(' '));
+    const ok = palabras.every(w=>{
+      if(texto.includes(w)) return true;
+      const n = w.replace(/[$,]/g,'');                       // ¿es un monto? 650 · 14,107 · 3053.20
+      if(!/^\d+(\.\d*)?$/.test(n)) return false;
+      return n.includes('.') ? monto.toFixed(2).startsWith(n) : String(Math.trunc(monto)) === n;
+    });
+    if(ok) out.push({ y, m, e, monto, cat, dia: (()=>{ try { return parseDayFromDateStr(e.date) || 0; } catch(err){ return 0; } })() });
+  }); });
+  out.sort((a,b)=> b.y - a.y || b.m - a.m || b.dia - a.dia || (Number(b.e.id)||0) - (Number(a.e.id)||0));
+  return out;
+}
+function _bqResultadosHTML(){
+  const R = _bqBuscar();
+  if(R === null) return `<div class="gr-card"><div class="gr-empty">Escribe lo que buscas: una descripción (Netflix), una categoría (gasolina), un monto (650), una fuente o una tarjeta. Puedes combinar, por ejemplo <b>netflix 2025</b> o <b>gasolina octubre</b>.</div></div>`;
+  if(!R.length) return `<div class="gr-card"><div class="gr-empty">No encontré ningún movimiento con “${esc(_bqTexto.trim())}”.</div></div>`;
+  const cur = _curDataYear();
+  let inc = 0, exp = 0; R.forEach(r=>{ if(r.e.type === 'income') inc += r.monto; else exp += r.monto; });
+  let html = `<div class="bq-res"><b style="color:var(--text)">${R.length}</b> ${R.length === 1 ? 'movimiento' : 'movimientos'}${exp ? ` · gastos <b style="color:var(--red)">${fmt(exp)}</b>` : ''}${inc ? ` · ingresos <b style="color:var(--green)">${fmt(inc)}</b>` : ''}${R.length > BQ_MAX ? ` · se muestran los ${BQ_MAX} más recientes` : ''}</div>`;
+  let grupo = '';
+  R.slice(0, BQ_MAX).forEach(r=>{
+    const g = `${r.y}-${r.m}`;
+    if(g !== grupo){ grupo = g; html += `<div class="bq-grp">${MONTHS[r.m]} ${r.y}${r.y !== cur ? ' · solo para ver' : ''}</div>`; }
+    const e = r.e, ir = (r.y === cur), ing = e.type === 'income';
+    const extra = [e.date, r.cat, e.trabajo ? `💼 ${e.trabajo}` : '', e.tarjeta ? `💳 ${e.tarjeta}` : ''].filter(Boolean).map(x=>esc(x)).join(' · ');
+    html += `<div class="bq-row${ir ? ' ir' : ''}"${ir ? ` onclick="bqIr(${r.m})" title="Ir a ${MONTHS[r.m]}"` : ''}>
+      <div class="bq-l"><div class="bq-d">${esc(e.desc || r.cat || 'Sin descripción')}</div><div class="bq-s">${extra}</div></div>
+      <div class="bq-a" style="color:${ing ? 'var(--green)' : 'var(--red)'}">${ing ? '+' : '−'}${fmt(r.monto)}</div>
+    </div>`;
+  });
+  return html;
+}
+function _bqPintar(){
+  const out = document.getElementById('bq-out'); if(out) out.innerHTML = _bqResultadosHTML();
+  const x = document.getElementById('bq-x'); if(x) x.style.display = _bqTexto ? '' : 'none';
+  document.querySelectorAll('#panel-buscar .ec-m').forEach(b=> b.classList.toggle('on', b.dataset.t === _bqTipo));
+}
+function renderBuscar(){
+  const panel = document.getElementById('panel-buscar'); if(!panel) return;
+  // La caja de texto se crea una sola vez (para no perder lo que estás escribiendo)
+  if(!document.getElementById('bq-input')){
+    panel.innerHTML = `
+      <div class="gr-head"><div class="t">Buscar</div><div class="s">Encuentra cualquier ingreso o gasto, de este año o de los anteriores.</div></div>
+      <div class="bq-box"><span aria-hidden="true">🔎</span><input id="bq-input" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Netflix, gasolina, 650…" aria-label="Buscar movimientos" oninput="bqEscribir(this.value)"><button type="button" class="bq-x" id="bq-x" onclick="bqLimpiar()" aria-label="Borrar búsqueda" style="display:none">✕</button></div>
+      <div class="ec-months">${[['todos','Todos'],['gastos','Gastos'],['ingresos','Ingresos']].map(([k,l])=>`<button type="button" class="ec-m" data-t="${k}" onclick="bqTipo('${k}')">${l}</button>`).join('')}</div>
+      <div id="bq-out"></div>`;
+    const inp = document.getElementById('bq-input'); if(inp) inp.value = _bqTexto;
+  }
+  _bqPintar();
+}
+function bqEscribir(v){ _bqTexto = v; clearTimeout(_bqTimer); _bqTimer = setTimeout(_bqPintar, 120); }
+function bqTipo(t){ _bqTipo = t; _bqPintar(); }
+function bqLimpiar(){ _bqTexto = ''; const inp = document.getElementById('bq-input'); if(inp){ inp.value = ''; inp.focus(); } _bqPintar(); }
+// Tocar un resultado de este año te lleva a ese mes, a la lista completa
+function bqIr(m){ try { switchMonth(m); showInner(m, 'all'); } catch(e){ console.warn(e); } }
+
 // ── Cambiar a Salud o Estado, igual que las otras secciones ───────────────
 function _secHide(){
-  ['salud','estado'].forEach(k=>{ const p=document.getElementById('panel-'+k); if(p) p.style.display='none'; const t=document.getElementById('mtab-'+k); if(t) t.className='mtab'; });
+  ['salud','estado','buscar'].forEach(k=>{ const p=document.getElementById('panel-'+k); if(p) p.style.display='none'; const t=document.getElementById('mtab-'+k); if(t) t.className='mtab'; });
 }
 function _switchToSeccion(k, render){
   annualActive = false;
@@ -9485,13 +9581,14 @@ function _switchToSeccion(k, render){
 }
 function switchToSalud(){ _switchToSeccion('salud', renderSalud); }
 function switchToEstado(){ _switchToSeccion('estado', renderEstado); }
+function switchToBuscar(){ _switchToSeccion('buscar', renderBuscar); }
 (function(){
   const ob = window.buildSkeleton;
   if(typeof ob === 'function'){
     window.buildSkeleton = function(){
       const r = ob.apply(this, arguments);
       const ref = document.getElementById('mtab-since');
-      [['salud','💚 Salud',switchToSalud],['estado','📄 Estado',switchToEstado]].forEach(([k,l,fn])=>{
+      [['salud','💚 Salud',switchToSalud],['estado','📄 Estado',switchToEstado],['buscar','🔎 Buscar',switchToBuscar]].forEach(([k,l,fn])=>{
         if(ref && !document.getElementById('mtab-'+k)){ const b = document.createElement('button'); b.id = 'mtab-'+k; b.className = 'mtab'; b.textContent = l; b.onclick = ()=>fn(); ref.parentElement.appendChild(b); }
       });
       return r;
@@ -9504,7 +9601,7 @@ function switchToEstado(){ _switchToSeccion('estado', renderEstado); }
   const ra = window.renderAll;
   if(typeof ra === 'function'){
     window.renderAll = function(){ const r = ra.apply(this, arguments);
-      [['salud',renderSalud],['estado',renderEstado]].forEach(([k,fn])=>{ const p=document.getElementById('panel-'+k); if(p && p.style.display==='block'){ try { fn(); } catch(e){ console.warn(e); } } });
+      [['salud',renderSalud],['estado',renderEstado],['buscar',renderBuscar]].forEach(([k,fn])=>{ const p=document.getElementById('panel-'+k); if(p && p.style.display==='block'){ try { fn(); } catch(e){ console.warn(e); } } });
       return r; };
   }
 })();
@@ -9523,7 +9620,8 @@ function switchToEstado(){ _switchToSeccion('estado', renderEstado); }
     ['estado','📄', 'Estado',   ()=> document.getElementById('mtab-estado')],
     ['cards', '💳', 'Tarjetas', ()=> document.getElementById('mtab-cards')],
     ['dc',    '🧾', 'Desglose', ()=> document.getElementById('mtab-desglose')],
-    ['trab',  '💰', 'Ingresos', ()=> document.getElementById('mtab-trabajos')]
+    ['trab',  '💰', 'Ingresos', ()=> document.getElementById('mtab-trabajos')],
+    ['buscar','🔎', 'Buscar',   ()=> document.getElementById('mtab-buscar')]
   ];
   function build(){
     const shell = document.getElementById('app-shell');
@@ -9553,7 +9651,7 @@ function switchToEstado(){ _switchToSeccion('estado', renderEstado); }
       if(act.id === 'mtab-annual') k = 'anual'; else if(act.id === 'mtab-cards') k = 'cards';
       else if(act.id === 'mtab-desglose') k = 'dc'; else if(act.id === 'mtab-trabajos') k = 'trab';
       else if(act.id === 'mtab-graficas') k = 'graf'; else if(act.id === 'mtab-since') k = 'since';
-      else if(act.id === 'mtab-salud') k = 'salud'; else if(act.id === 'mtab-estado') k = 'estado';
+      else if(act.id === 'mtab-salud') k = 'salud'; else if(act.id === 'mtab-estado') k = 'estado'; else if(act.id === 'mtab-buscar') k = 'buscar';
       else if(all.indexOf(act) < 12) k = 'mes';
     }
     nav.querySelectorAll('button').forEach(b=> b.classList.toggle('on', b.dataset.k === k));
