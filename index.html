@@ -4807,11 +4807,11 @@ const _trYear = {}, _trOpen = {};
 // viejo y los de verdad están guardados aparte hasta que salgas de ese modo.
 function _datosVivos(){ return (typeof viewerActive !== 'undefined' && viewerActive && _viewerBackup && _viewerBackup.data) ? _viewerBackup.data : data; }
 function _trFinanzas(year){ return (parseInt(year,10) === CURRENT_YEAR) ? _datosVivos() : ((historialFinanzasCache && historialFinanzasCache[year]) || null); }
-function _trPorMes(nombre, year){
+function _trPorMes(nombre, year, soloNomina){
   const fin = _trFinanzas(year), out = Array(12).fill(0);
   if(!fin) return out;
   for(let m=0; m<12; m++){ const md = fin[m];
-    if(md && Array.isArray(md.entries)) md.entries.forEach(e=>{ if(_trCuenta(e, nombre)) out[m] += e.amount||0; }); }
+    if(md && Array.isArray(md.entries)) md.entries.forEach(e=>{ if(_trCuenta(e, nombre) && !(soloNomina && _trEsExtra(e, nombre))) out[m] += e.amount||0; }); }
   return out.map(v=>parseFloat(v.toFixed(2)));
 }
 function trToggleMeses(id){ _trOpen[id] = !_trOpen[id]; renderTrabajos(); }
@@ -4848,6 +4848,7 @@ function _trMesesHTML(tr, anios){
   if(!conIngresos.length) return boton + `<div class="cc-months"><span style="font-size:12px;color:var(--muted)">Todavía no hay ingresos en este trabajo.</span></div>`;
   let y = _trYear[id]; if(!conIngresos.includes(y)) y = conIngresos[0];
   const meses = _trPorMes(tr.nombre, y), prev = conIngresos.includes(y-1) ? _trPorMes(tr.nombre, y-1) : null;
+  const extras = _trExtrasPorMes(tr.nombre, y);
   const hasta = (y === CURRENT_YEAR) ? new Date().getMonth() : 11;
   const conPago = meses.slice(0, hasta+1).map((v,m)=>({ m, v })).filter(x=>x.v > 0);
   const total = conPago.reduce((a,x)=>a+x.v, 0), prom = conPago.length ? total/conPago.length : 0;
@@ -4858,6 +4859,7 @@ function _trMesesHTML(tr, anios){
     return `<div class="cc-month-row tr-row">
       <div style="min-width:0"><div class="cc-month-name">${MONTHS[m]}${(y===CURRENT_YEAR && m===new Date().getMonth())?' <span style="color:var(--muted);font-size:10.5px">· en curso</span>':''}</div>
         <div style="height:5px;background:var(--surf);border-radius:3px;margin-top:5px;position:relative;overflow:hidden"><i style="position:absolute;left:0;top:0;bottom:0;width:${(v/mx*100).toFixed(1)}%;background:var(--green);border-radius:3px"></i></div>
+        ${extras[m].v > 0 ? `<div style="font-size:10.5px;color:var(--muted);margin-top:3px">${_trExtraNota(extras[m])}</div>` : ''}
         ${p!==null ? `<div style="font-size:10.5px;color:var(--muted);margin-top:3px">${y-1}: ${fmt(p)}${d!==null && v>0 ? ` · <span style="color:${d>=0?'var(--green)':'var(--red)'}">${d>=0?'▲':'▼'} ${fmt(Math.abs(d))}</span>` : ''}</div>` : ''}</div>
       <div class="cc-month-amt" style="color:${v>0?'var(--green)':'var(--muted)'}">${v>0 ? fmt(v) : '—'}</div></div>`; }).join('');
   return boton + `<div class="cc-months">
@@ -4906,7 +4908,7 @@ function _sueldoHTML(tr, idx){
   if(!(tr.bruto > 0)) return `<button class="cc-toggle" style="margin-top:.85rem" onclick="editSueldoBruto(${idx})">💵 Poner mi sueldo bruto (antes de descuentos)</button>`;
   const D = _sueldoDesglose(tr.bruto);
   // Lo que de verdad te llegó: promedio de los últimos 3 meses completos con pago
-  const mesesAct = _trPorMes(tr.nombre, CURRENT_YEAR), hoy = new Date().getMonth();
+  const mesesAct = _trPorMes(tr.nombre, CURRENT_YEAR, true), hoy = new Date().getMonth();   // solo nómina: un bono no altera la comparación
   const ult = mesesAct.slice(0, hoy).map((v,m)=>({ m, v })).filter(x=>x.v>0).slice(-3);
   const real = ult.length ? ult.reduce((a,x)=>a+x.v,0)/ult.length : null;
   const fila = (l, v, c, extra) => `<div class="cc-month-row tr-row"><div class="cc-month-name">${l}${extra?` <span style="color:var(--muted);font-size:10.5px">${extra}</span>`:''}</div><div class="cc-month-amt" style="color:${c}">${v}</div></div>`;
@@ -4941,10 +4943,27 @@ const TR_TIPOS = {
 };
 const _trConRet10 = t => t === 'independiente' || t === 'alquiler';
 const _trTipo = tr => (tr && TR_TIPOS[tr.tipo]) ? tr.tipo : 'empleado';
-function _trCuenta(e, nombre){
-  if(e.type !== 'income' || e.trabajo !== nombre) return false;
-  const tr = (trabajos||[]).find(t=>t.nombre===nombre);
-  return _trTipo(tr) === 'empleado' ? e.cat === 'Nómina / Salario' : true;
+// Cuenta para la fuente TODO ingreso que le asignaste (sueldo, bonos, premios…).
+function _trCuenta(e, nombre){ return e.type === 'income' && e.trabajo === nombre; }
+// En un EMPLEO, lo que no es nómina (un bono, un premio…) se suma a la fuente pero
+// se muestra aparte y no entra en la comparación con tu sueldo esperado.
+function _trEsExtra(e, nombre){
+  if(!_trCuenta(e, nombre) || e.cat === 'Nómina / Salario') return false;
+  return _trTipo((trabajos||[]).find(t=>t.nombre===nombre)) === 'empleado';
+}
+// Los extras de cada mes de un año: [{ v: total, cats: { categoría: monto } } × 12]
+function _trExtrasPorMes(nombre, year){
+  const fin = _trFinanzas(year), out = Array.from({length:12}, ()=>({ v:0, cats:{} }));
+  if(!fin) return out;
+  for(let m=0; m<12; m++){ const md = fin[m];
+    if(md && Array.isArray(md.entries)) md.entries.forEach(e=>{ if(_trEsExtra(e, nombre)){ out[m].v += e.amount||0; out[m].cats[e.cat] = (out[m].cats[e.cat]||0) + (e.amount||0); } }); }
+  return out;
+}
+function _trExtraNota(x){
+  if(!(x && x.v > 0)) return '';
+  const cats = Object.keys(x.cats);
+  let nom = 'bonos y extras'; if(cats.length === 1){ try { nom = _catLabel(cats[0], 'income') || cats[0]; } catch(e){ nom = cats[0]; } }
+  return `incluye ${fmt(x.v)} de ${esc(nom)}`;
 }
 function setTipoTrabajo(idx, tipo){
   if(typeof viewerActive !== 'undefined' && viewerActive) return;
@@ -5054,6 +5073,7 @@ function renderTrabajos(){
 
   grid.innerHTML = trabajos.map((tr,idx)=>{
     const total = trabajoTotal(tr.nombre);
+    const extraTot = anios.reduce((a,y)=> a + _trExtrasPorMes(tr.nombre, y).reduce((b,x)=>b + x.v, 0), 0);
     const desgloseRows = anios.map(y=>{
       const monto = trabajoTotalAnio(tr.nombre, y);
       if(monto <= 0) return '';
@@ -5077,6 +5097,7 @@ function renderTrabajos(){
         <div class="cc-stat" onclick="toggleTrDesglose('${tr.id}')" style="cursor:pointer" title="Ver por año">
           <div class="cc-stat-lbl">Total ▾</div>
           <div class="cc-stat-val" style="color:var(--green)">${fmt(total)}</div>
+          ${extraTot > 0 ? `<div style="font-size:10.5px;color:var(--muted);margin-top:2px">incluye ${fmt(extraTot)} de bonos y extras</div>` : ''}
           <div class="tr-desglose" id="tr-desglose-${tr.id}">
             ${desgloseRows || '<span style="font-size:11px;color:var(--muted)">Sin ingresos registrados</span>'}
           </div>
