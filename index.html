@@ -1373,6 +1373,39 @@ body {
 .bq-row .bq-d { font-size:14px; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .bq-row .bq-s { font-size:12px; color:var(--muted2); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .bq-row .bq-a { font-size:14px; font-weight:600; white-space:nowrap; font-variant-numeric:tabular-nums; }
+/* Sección Gastos */
+#mtab-gastos { display:none !important; }
+.ga-nota { font-size:12px; color:var(--muted2); margin:-4px 2px 14px; line-height:1.5; }
+.ga-row { display:block; width:100%; text-align:left; background:none; border:none; border-top:1px solid var(--border); padding:11px 0; cursor:pointer; color:inherit; font:inherit; }
+.ga-row.pri { border-top:none; }
+.ga-top { display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+.ga-n { font-size:14px; font-weight:600; color:var(--text); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ga-n small { font-weight:400; font-size:11px; color:var(--muted); }
+.ga-v { font-size:14px; font-weight:600; color:var(--text); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.ga-bar { height:6px; background:var(--surf); border-radius:3px; margin-top:6px; overflow:hidden; }
+.ga-bar i { display:block; height:100%; border-radius:3px; background:var(--red); }
+.ga-s { display:flex; justify-content:space-between; gap:10px; font-size:11.5px; color:var(--muted2); margin-top:4px; font-variant-numeric:tabular-nums; }
+.ga-s span { white-space:nowrap; }
+.ga-det { background:var(--surf); border:1px solid var(--border); border-radius:var(--rs); padding:12px 14px; margin:2px 0 12px; }
+.ga-det p { font-size:13px; color:var(--muted2); line-height:1.5; margin:0; }
+.ga-det p b { color:var(--text); }
+.ga-lbl { font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin:14px 0 4px; }
+.ga-cmp { display:grid; grid-template-columns:minmax(72px,auto) 1fr auto; gap:10px; align-items:center; font-size:12px; color:var(--muted2); margin-top:8px; }
+.ga-cmp .ga-bar { margin-top:0; background:var(--card); }
+.ga-cmp b { color:var(--text); font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.ga-hist { display:flex; gap:6px; align-items:flex-end; margin-top:6px; }
+.ga-col { flex:1; min-width:0; text-align:center; }
+.ga-col span { display:block; font-size:10.5px; color:var(--muted2); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.ga-col div { height:60px; display:flex; align-items:flex-end; justify-content:center; margin:3px 0; }
+.ga-col i { display:block; width:70%; max-width:34px; background:var(--muted); opacity:.5; border-radius:4px 4px 0 0; }
+.ga-col.on i { background:var(--red); opacity:1; }
+.ga-col b { display:block; font-size:10.5px; font-weight:500; color:var(--muted); }
+.ga-col.on b { color:var(--text); }
+.ga-mov { display:flex; justify-content:space-between; align-items:baseline; gap:10px; font-size:12.5px; padding:7px 0; border-top:1px solid var(--border); }
+.ga-mov.pri { border-top:none; }
+.ga-mov span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text); }
+.ga-mov span small { color:var(--muted2); font-size:11.5px; }
+.ga-mov b { color:var(--red); font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap; }
 </style>
 </head>
 <body>
@@ -1571,6 +1604,7 @@ body {
 <div id="panel-salud" style="display:none"></div>
 <div id="panel-estado" style="display:none"></div>
 <div id="panel-buscar" style="display:none"></div>
+<div id="panel-gastos" style="display:none"></div>
 
 <div id="panel-since" style="display:none">
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1.5rem">
@@ -9589,9 +9623,122 @@ function bqIr(m){
   } catch(e){ console.warn(e); }
 }
 
+// ═════════════════════════════════════════════════════════════════════════
+// GASTOS (nov 2026) — en qué se te va el dinero: categorías de mayor a menor,
+// cada una comparada con el mes anterior, los gastos más grandes y el total
+// mes a mes. Solo lee tus datos; no guarda ni cambia nada.
+// Un mes EN CURSO se compara con el mes anterior hasta el mismo día (el 17
+// contra el 17), porque contra el mes completo siempre parecería que vas menos.
+// ═════════════════════════════════════════════════════════════════════════
+let _gaMes = null, _gaCat = null, _gaOrden = [];
+const _gaDia = e => { try { return parseDayFromDateStr(e.date) || 0; } catch(err){ return 0; } };
+// Gastos de un mes; con `hastaDia`, solo los de ese día o antes
+function _gaGastos(src, m, hastaDia){ return _grE(src, m).filter(e=> e && e.type === 'expense' && (!hastaDia || _gaDia(e) <= hastaDia)); }
+const _gaSuma = lista => lista.reduce((t,e)=> t + (e.amount||0), 0);
+function _gaPorCat(lista){ const o = {}; lista.forEach(e=>{ o[e.cat] = (o[e.cat]||0) + (e.amount||0); }); return o; }
+function _gaDatos(yr, m){
+  const f = _grFuentes(), src = f[yr] || {}, hoy = new Date();
+  const enCurso = (yr === CURRENT_YEAR && m === hoy.getMonth()), dia = enCurso ? hoy.getDate() : 0;
+  const lista = _gaGastos(src, m);
+  // Mes anterior (en enero: diciembre del año pasado, si está guardado)
+  let py = yr, pm = m - 1; if(pm < 0){ pm = 11; py--; }
+  const pCompleto = f[py] ? _gaGastos(f[py], pm) : [], hayPrev = pCompleto.length > 0;
+  const pLista = (hayPrev && enCurso) ? _gaGastos(f[py], pm, dia) : pCompleto;
+  return { yr, m, enCurso, dia, lista, total: _gaSuma(lista), cats: _gaPorCat(lista), hayPrev, py, pm,
+    pTotal: _gaSuma(pLista), pCats: _gaPorCat(pLista), pTotalCompleto: _gaSuma(pCompleto) };
+}
+const _gaPct = (d, p) => `${d > 0 ? '+' : '−'}${Math.abs(Math.round(d / p * 100))}%`;
+// Flecha de cambio: roja si gastaste más, verde si gastaste menos
+function _gaCambio(v, p, hayPrev){
+  if(!hayPrev) return '';
+  if(!(p > 0)) return v > 0 ? '<span>nuevo</span>' : '';
+  const d = v - p;
+  if(Math.abs(d) < 0.005) return '<span>igual</span>';
+  return `<span style="color:${d > 0 ? 'var(--red)' : 'var(--green)'}">${d > 0 ? '▲' : '▼'} ${fmt(Math.abs(d))} (${_gaPct(d, p)})</span>`;
+}
+function _gaNomPrev(D){ return MONTHS[D.pm].toLowerCase() + (D.py !== D.yr ? ' ' + D.py : ''); }
+function _gaMovHTML(e, i, conCat){
+  const sub = [conCat ? _grCatNombre(e.cat) : '', e.date].filter(Boolean).map(x=>esc(x)).join(' · ');
+  return `<div class="ga-mov${i === 0 ? ' pri' : ''}"><span>${esc(e.desc || _grCatNombre(e.cat) || 'Sin descripción')}${sub ? ` <small>· ${sub}</small>` : ''}</span><b>−${fmt(e.amount||0)}</b></div>`;
+}
+// Lo que se abre al tocar una categoría
+function _gaDetalleHTML(D, cat){
+  const v = D.cats[cat] || 0, p = D.pCats[cat] || 0, d = v - p;
+  const contra = _gaNomPrev(D) + (D.enCurso ? ` hasta el día ${D.dia}` : '');
+  let frase;
+  if(!D.hayPrev) frase = 'Todavía no hay un mes anterior para comparar.';
+  else if(!(p > 0)) frase = `En ${contra} no gastaste nada en esta categoría.`;
+  else if(Math.abs(d) < 0.005) frase = `Gastaste lo mismo que en ${contra}.`;
+  else frase = `Gastaste <b style="color:${d > 0 ? 'var(--red)' : 'var(--green)'}">${fmt(Math.abs(d))} ${d > 0 ? 'más' : 'menos'}</b> que en ${contra} (${_gaPct(d, p)}).`;
+  const mx = Math.max(v, p, 1);
+  const barra = (l, val, c) => `<div class="ga-cmp"><span>${l}</span><div class="ga-bar"><i style="width:${(val/mx*100).toFixed(1)}%;background:${c}"></i></div><b>${fmt(val)}</b></div>`;
+  const W = _ventana(D.yr, D.m, 6).map(x=>({ m: x.m, v: _gaSuma(_gaGastos(x.src, x.m).filter(e=>e.cat === cat)) }));
+  const mxH = Math.max(1, ...W.map(x=>x.v)), ant = W.slice(0, -1).filter(x=>x.v > 0);
+  const prom = ant.length ? ant.reduce((t,x)=>t + x.v, 0) / ant.length : null;
+  const movs = D.lista.filter(e=>e.cat === cat).sort((a,b)=>(b.amount||0) - (a.amount||0));
+  return `<div class="ga-det">
+    <p>${frase}</p>
+    ${D.hayPrev ? barra(MONTHS[D.m], v, 'var(--red)') + barra(MONTHS[D.pm], p, 'var(--muted)') : ''}
+    ${W.length > 1 ? `<div class="ga-lbl">Últimos ${W.length} meses</div>
+      <div class="ga-hist">${W.map((x,i)=>`<div class="ga-col${i === W.length-1 ? ' on' : ''}"><span>${x.v > 0 ? _grK(x.v) : '—'}</span><div><i style="height:${(x.v > 0 ? Math.max(4, x.v/mxH*100) : 0).toFixed(1)}%"></i></div><b>${GR_MES[x.m]}</b></div>`).join('')}</div>
+      ${prom !== null ? `<p style="font-size:12px;margin-top:6px">Tu promedio en los meses anteriores: <b>${fmt(prom)}</b>.${D.enCurso ? ` ${MONTHS[D.m]} todavía no termina.` : ''}</p>` : ''}` : ''}
+    <div class="ga-lbl">${movs.length === 1 ? 'El movimiento' : `Los ${movs.length} movimientos`} de ${MONTHS[D.m].toLowerCase()}</div>
+    ${movs.slice(0, 12).map((e,i)=>_gaMovHTML(e, i, false)).join('')}
+    ${movs.length > 12 ? `<p style="font-size:11.5px;margin-top:6px">y ${movs.length - 12} más. Usa 🔎 Buscar para verlos todos.</p>` : ''}
+  </div>`;
+}
+function renderGastos(){
+  const panel = document.getElementById('panel-gastos'); if(!panel) return;
+  const yr = _curDataYear(), src = _grFuentes()[yr] || {};
+  const hasta = (yr === CURRENT_YEAR) ? new Date().getMonth() : 11;
+  const conGastos = []; for(let m = 0; m <= hasta; m++) if(_gaGastos(src, m).length) conGastos.push(m);
+  if(!conGastos.length){ panel.innerHTML = `<div class="gr-head"><div class="t">Gastos</div></div><div class="gr-card"><div class="gr-empty">Todavía no hay gastos en ${yr}.</div></div>`; return; }
+  if(_gaMes === null || !conGastos.includes(_gaMes)){ _gaMes = conGastos[conGastos.length - 1]; _gaCat = null; }
+  const D = _gaDatos(yr, _gaMes), nomMes = MONTHS[D.m], nomPrev = _gaNomPrev(D);
+  // Arriba: cuánto gastaste y contra el mes anterior
+  const dif = D.total - D.pTotal;
+  const colDif = !D.hayPrev || Math.abs(dif) < 0.005 ? 'var(--muted2)' : dif > 0 ? 'var(--red)' : 'var(--green)';
+  const kpis = `<div class="gr-kpis">
+    <div class="gr-kpi"><div class="l">Gastaste</div><div class="v" style="color:var(--red)">${_grPlata(D.total)}</div><div class="s">${fmt(D.total)}</div></div>
+    <div class="gr-kpi"><div class="l">${esc(MONTHS[D.pm])}${D.enCurso && D.hayPrev ? ` al día ${D.dia}` : ''}</div><div class="v" style="color:var(--text)">${D.hayPrev ? _grPlata(D.pTotal) : '—'}</div><div class="s">${D.hayPrev ? fmt(D.pTotal) : 'sin datos'}</div></div>
+    <div class="gr-kpi"><div class="l">Diferencia</div><div class="v" style="color:${colDif}">${!D.hayPrev ? '—' : Math.abs(dif) < 0.005 ? 'Igual' : (dif > 0 ? '▲ ' : '▼ ') + _grPlata(Math.abs(dif))}</div><div class="s">${!D.hayPrev ? 'sin mes anterior' : Math.abs(dif) < 0.005 ? 'lo mismo' : (D.pTotal > 0 ? Math.abs(Math.round(dif / D.pTotal * 100)) + '% ' : '') + (dif > 0 ? 'más' : 'menos')}</div></div>
+  </div>`;
+  const nota = (D.enCurso && D.hayPrev) ? `<div class="ga-nota">${nomMes} va por el día ${D.dia}, así que se compara con ${nomPrev} hasta el día ${D.dia}. En ${nomPrev} completo gastaste <b style="color:var(--text)">${fmt(D.pTotalCompleto)}</b>.</div>` : '';
+  // En qué gastas más
+  const orden = Object.keys(D.cats).sort((a,b)=> D.cats[b] - D.cats[a]); _gaOrden = orden;
+  if(_gaCat !== null && !orden.includes(_gaCat)) _gaCat = null;
+  const mxCat = Math.max(1, ...orden.map(c=>D.cats[c]));
+  const filasCat = orden.map((c,i)=>{ const v = D.cats[c], abierto = (c === _gaCat);
+    return `<button type="button" class="ga-row${i === 0 ? ' pri' : ''}" onclick="gaCat(${i})" aria-expanded="${abierto}">
+      <div class="ga-top"><span class="ga-n">${esc(_grCatNombre(c))} <small>${abierto ? '▴' : '▾'}</small></span><span class="ga-v">${fmt(v)}</span></div>
+      <div class="ga-bar"><i style="width:${(v/mxCat*100).toFixed(1)}%"></i></div>
+      <div class="ga-s"><span>${D.total ? Math.round(v/D.total*100) : 0}% de tus gastos</span>${_gaCambio(v, D.pCats[c] || 0, D.hayPrev)}</div>
+    </button>${abierto ? _gaDetalleHTML(D, c) : ''}`; }).join('');
+  // Los gastos más grandes del mes
+  const grandes = D.lista.slice().sort((a,b)=>(b.amount||0) - (a.amount||0)).slice(0, 5);
+  // Mes a mes
+  const porMes = []; for(let m = 0; m <= hasta; m++) porMes.push(_gaDatos(yr, m));
+  const mxMes = Math.max(1, ...porMes.map(x=>x.total));
+  const filasMes = porMes.map((x,i)=>`<button type="button" class="ga-row${i === 0 ? ' pri' : ''}" onclick="gaSetMes(${x.m})"${x.total ? '' : ' disabled style="cursor:default"'}>
+      <div class="ga-top"><span class="ga-n">${MONTHS[x.m]}${x.enCurso ? ' <small>· en curso</small>' : ''}</span><span class="ga-v" style="${x.total ? '' : 'color:var(--muted)'}">${x.total ? fmt(x.total) : '—'}</span></div>
+      <div class="ga-bar"><i style="width:${(x.total/mxMes*100).toFixed(1)}%${x.m === D.m ? '' : ';opacity:.55'}"></i></div>
+      ${x.total && x.hayPrev ? `<div class="ga-s"><span>vs ${_gaNomPrev(x)}${x.enCurso ? ` al día ${x.dia}` : ''}</span>${_gaCambio(x.total, x.pTotal, true)}</div>` : ''}
+    </button>`).join('');
+  panel.innerHTML = `
+    <div class="gr-head"><div class="t">Gastos</div><div class="s">En qué se te va el dinero en ${yr}: tus categorías de mayor a menor y cómo cambian contra el mes anterior. Rojo es que gastaste más; verde, que gastaste menos.</div></div>
+    <div class="ec-months">${conGastos.slice().reverse().map(m=>`<button type="button" class="ec-m${m === D.m ? ' on' : ''}" onclick="gaSetMes(${m})">${MONTHS[m]}${(yr === CURRENT_YEAR && m === new Date().getMonth()) ? ' · en curso' : ''}</button>`).join('')}</div>
+    ${kpis}${nota}
+    <div class="gr-card"><h3>En qué gastas más</h3><div class="sub">${nomMes} ${yr} · toca una categoría para compararla con ${nomPrev}</div>${filasCat}</div>
+    <div class="gr-card"><h3>Los gastos más grandes</h3><div class="sub">Los ${grandes.length === 1 ? 'movimiento más alto' : grandes.length + ' movimientos más altos'} de ${nomMes.toLowerCase()}</div>${grandes.map((e,i)=>_gaMovHTML(e, i, true)).join('')}</div>
+    <div class="gr-card"><h3>Mes a mes</h3><div class="sub">Lo que gastaste cada mes de ${yr} · toca un mes para verlo</div>${filasMes}</div>`;
+}
+function gaSetMes(m){ _gaMes = m; _gaCat = null; renderGastos();
+  const p = document.getElementById('panel-gastos'); if(p){ const y = p.getBoundingClientRect().top + window.scrollY - 70; if(window.scrollY > y) window.scrollTo({ top: Math.max(0, y) }); } }
+function gaCat(i){ const c = _gaOrden[i]; if(c === undefined) return; _gaCat = (_gaCat === c) ? null : c; renderGastos(); }
+
 // ── Cambiar a Salud o Estado, igual que las otras secciones ───────────────
 function _secHide(){
-  ['salud','estado','buscar'].forEach(k=>{ const p=document.getElementById('panel-'+k); if(p) p.style.display='none'; const t=document.getElementById('mtab-'+k); if(t) t.className='mtab'; });
+  ['salud','estado','buscar','gastos'].forEach(k=>{ const p=document.getElementById('panel-'+k); if(p) p.style.display='none'; const t=document.getElementById('mtab-'+k); if(t) t.className='mtab'; });
 }
 function _switchToSeccion(k, render){
   annualActive = false;
@@ -9610,13 +9757,14 @@ function _switchToSeccion(k, render){
 function switchToSalud(){ _switchToSeccion('salud', renderSalud); }
 function switchToEstado(){ _switchToSeccion('estado', renderEstado); }
 function switchToBuscar(){ _switchToSeccion('buscar', renderBuscar); }
+function switchToGastos(){ _switchToSeccion('gastos', renderGastos); }
 (function(){
   const ob = window.buildSkeleton;
   if(typeof ob === 'function'){
     window.buildSkeleton = function(){
       const r = ob.apply(this, arguments);
       const ref = document.getElementById('mtab-since');
-      [['salud','💚 Salud',switchToSalud],['estado','📄 Estado',switchToEstado],['buscar','🔎 Buscar',switchToBuscar]].forEach(([k,l,fn])=>{
+      [['salud','💚 Salud',switchToSalud],['estado','📄 Estado',switchToEstado],['buscar','🔎 Buscar',switchToBuscar],['gastos','💸 Gastos',switchToGastos]].forEach(([k,l,fn])=>{
         if(ref && !document.getElementById('mtab-'+k)){ const b = document.createElement('button'); b.id = 'mtab-'+k; b.className = 'mtab'; b.textContent = l; b.onclick = ()=>fn(); ref.parentElement.appendChild(b); }
       });
       return r;
@@ -9629,7 +9777,7 @@ function switchToBuscar(){ _switchToSeccion('buscar', renderBuscar); }
   const ra = window.renderAll;
   if(typeof ra === 'function'){
     window.renderAll = function(){ const r = ra.apply(this, arguments);
-      [['salud',renderSalud],['estado',renderEstado],['buscar',renderBuscar]].forEach(([k,fn])=>{ const p=document.getElementById('panel-'+k); if(p && p.style.display==='block'){ try { fn(); } catch(e){ console.warn(e); } } });
+      [['salud',renderSalud],['estado',renderEstado],['buscar',renderBuscar],['gastos',renderGastos]].forEach(([k,fn])=>{ const p=document.getElementById('panel-'+k); if(p && p.style.display==='block'){ try { fn(); } catch(e){ console.warn(e); } } });
       return r; };
   }
 })();
@@ -9649,6 +9797,7 @@ function switchToBuscar(){ _switchToSeccion('buscar', renderBuscar); }
     ['cards', '💳', 'Tarjetas', ()=> document.getElementById('mtab-cards')],
     ['dc',    '🧾', 'Desglose', ()=> document.getElementById('mtab-desglose')],
     ['trab',  '💰', 'Ingresos', ()=> document.getElementById('mtab-trabajos')],
+    ['gastos','💸', 'Gastos',   ()=> document.getElementById('mtab-gastos')],
     ['buscar','🔎', 'Buscar',   ()=> document.getElementById('mtab-buscar')]
   ];
   function build(){
@@ -9679,7 +9828,7 @@ function switchToBuscar(){ _switchToSeccion('buscar', renderBuscar); }
       if(act.id === 'mtab-annual') k = 'anual'; else if(act.id === 'mtab-cards') k = 'cards';
       else if(act.id === 'mtab-desglose') k = 'dc'; else if(act.id === 'mtab-trabajos') k = 'trab';
       else if(act.id === 'mtab-graficas') k = 'graf'; else if(act.id === 'mtab-since') k = 'since';
-      else if(act.id === 'mtab-salud') k = 'salud'; else if(act.id === 'mtab-estado') k = 'estado'; else if(act.id === 'mtab-buscar') k = 'buscar';
+      else if(act.id === 'mtab-salud') k = 'salud'; else if(act.id === 'mtab-estado') k = 'estado'; else if(act.id === 'mtab-buscar') k = 'buscar'; else if(act.id === 'mtab-gastos') k = 'gastos';
       else if(all.indexOf(act) < 12) k = 'mes';
     }
     nav.querySelectorAll('button').forEach(b=> b.classList.toggle('on', b.dataset.k === k));
