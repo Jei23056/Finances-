@@ -9627,8 +9627,8 @@ function bqIr(m){
 // GASTOS (nov 2026) — en qué se te va el dinero: categorías de mayor a menor,
 // cada una comparada con el mes anterior, los gastos más grandes y el total
 // mes a mes. Solo lee tus datos; no guarda ni cambia nada.
-// Un mes EN CURSO se compara con el mes anterior hasta el mismo día (el 17
-// contra el 17), porque contra el mes completo siempre parecería que vas menos.
+// Siempre se compara con el mes anterior COMPLETO. Si el mes está en curso,
+// se dice "llevas" y se avisa que todavía no termina.
 // ═════════════════════════════════════════════════════════════════════════
 let _gaMes = null, _gaCat = null, _gaOrden = [];
 const _gaDia = e => { try { return parseDayFromDateStr(e.date) || 0; } catch(err){ return 0; } };
@@ -9643,9 +9643,8 @@ function _gaDatos(yr, m){
   // Mes anterior (en enero: diciembre del año pasado, si está guardado)
   let py = yr, pm = m - 1; if(pm < 0){ pm = 11; py--; }
   const pCompleto = f[py] ? _gaGastos(f[py], pm) : [], hayPrev = pCompleto.length > 0;
-  const pLista = (hayPrev && enCurso) ? _gaGastos(f[py], pm, dia) : pCompleto;
   return { yr, m, enCurso, dia, lista, total: _gaSuma(lista), cats: _gaPorCat(lista), hayPrev, py, pm,
-    pTotal: _gaSuma(pLista), pCats: _gaPorCat(pLista), pTotalCompleto: _gaSuma(pCompleto) };
+    pTotal: _gaSuma(pCompleto), pCats: _gaPorCat(pCompleto) };
 }
 const _gaPct = (d, p) => `${d > 0 ? '+' : '−'}${Math.abs(Math.round(d / p * 100))}%`;
 // Flecha de cambio: roja si gastaste más, verde si gastaste menos
@@ -9664,12 +9663,14 @@ function _gaMovHTML(e, i, conCat){
 // Lo que se abre al tocar una categoría
 function _gaDetalleHTML(D, cat){
   const v = D.cats[cat] || 0, p = D.pCats[cat] || 0, d = v - p;
-  const contra = _gaNomPrev(D) + (D.enCurso ? ` hasta el día ${D.dia}` : '');
+  const contra = _gaNomPrev(D), col = d > 0 ? 'var(--red)' : 'var(--green)';
   let frase;
   if(!D.hayPrev) frase = 'Todavía no hay un mes anterior para comparar.';
   else if(!(p > 0)) frase = `En ${contra} no gastaste nada en esta categoría.`;
-  else if(Math.abs(d) < 0.005) frase = `Gastaste lo mismo que en ${contra}.`;
-  else frase = `Gastaste <b style="color:${d > 0 ? 'var(--red)' : 'var(--green)'}">${fmt(Math.abs(d))} ${d > 0 ? 'más' : 'menos'}</b> que en ${contra} (${_gaPct(d, p)}).`;
+  else if(Math.abs(d) < 0.005) frase = `${D.enCurso ? 'Llevas' : 'Gastaste'} lo mismo que en ${contra}.`;
+  else if(D.enCurso) frase = d > 0 ? `Ya llevas <b style="color:${col}">${fmt(d)} más</b> que en todo ${contra} (${_gaPct(d, p)}).`
+    : `Llevas <b style="color:${col}">${fmt(-d)} menos</b> que en todo ${contra} (${_gaPct(d, p)}), pero ${MONTHS[D.m].toLowerCase()} todavía no termina.`;
+  else frase = `Gastaste <b style="color:${col}">${fmt(Math.abs(d))} ${d > 0 ? 'más' : 'menos'}</b> que en ${contra} (${_gaPct(d, p)}).`;
   const mx = Math.max(v, p, 1);
   const barra = (l, val, c) => `<div class="ga-cmp"><span>${l}</span><div class="ga-bar"><i style="width:${(val/mx*100).toFixed(1)}%;background:${c}"></i></div><b>${fmt(val)}</b></div>`;
   const W = _ventana(D.yr, D.m, 6).map(x=>({ m: x.m, v: _gaSuma(_gaGastos(x.src, x.m).filter(e=>e.cat === cat)) }));
@@ -9699,11 +9700,11 @@ function renderGastos(){
   const dif = D.total - D.pTotal;
   const colDif = !D.hayPrev || Math.abs(dif) < 0.005 ? 'var(--muted2)' : dif > 0 ? 'var(--red)' : 'var(--green)';
   const kpis = `<div class="gr-kpis">
-    <div class="gr-kpi"><div class="l">Gastaste</div><div class="v" style="color:var(--red)">${_grPlata(D.total)}</div><div class="s">${fmt(D.total)}</div></div>
-    <div class="gr-kpi"><div class="l">${esc(MONTHS[D.pm])}${D.enCurso && D.hayPrev ? ` al día ${D.dia}` : ''}</div><div class="v" style="color:var(--text)">${D.hayPrev ? _grPlata(D.pTotal) : '—'}</div><div class="s">${D.hayPrev ? fmt(D.pTotal) : 'sin datos'}</div></div>
+    <div class="gr-kpi"><div class="l">${D.enCurso ? 'Llevas' : 'Gastaste'}</div><div class="v" style="color:var(--red)">${_grPlata(D.total)}</div><div class="s">${fmt(D.total)}</div></div>
+    <div class="gr-kpi"><div class="l">${esc(MONTHS[D.pm])}</div><div class="v" style="color:var(--text)">${D.hayPrev ? _grPlata(D.pTotal) : '—'}</div><div class="s">${D.hayPrev ? fmt(D.pTotal) : 'sin datos'}</div></div>
     <div class="gr-kpi"><div class="l">Diferencia</div><div class="v" style="color:${colDif}">${!D.hayPrev ? '—' : Math.abs(dif) < 0.005 ? 'Igual' : (dif > 0 ? '▲ ' : '▼ ') + _grPlata(Math.abs(dif))}</div><div class="s">${!D.hayPrev ? 'sin mes anterior' : Math.abs(dif) < 0.005 ? 'lo mismo' : (D.pTotal > 0 ? Math.abs(Math.round(dif / D.pTotal * 100)) + '% ' : '') + (dif > 0 ? 'más' : 'menos')}</div></div>
   </div>`;
-  const nota = (D.enCurso && D.hayPrev) ? `<div class="ga-nota">${nomMes} va por el día ${D.dia}, así que se compara con ${nomPrev} hasta el día ${D.dia}. En ${nomPrev} completo gastaste <b style="color:var(--text)">${fmt(D.pTotalCompleto)}</b>.</div>` : '';
+  const nota = (D.enCurso && D.hayPrev) ? `<div class="ga-nota">${nomMes} va por el día ${D.dia} y todavía no termina. Se compara con ${nomPrev} completo.</div>` : '';
   // En qué gastas más
   const orden = Object.keys(D.cats).sort((a,b)=> D.cats[b] - D.cats[a]); _gaOrden = orden;
   if(_gaCat !== null && !orden.includes(_gaCat)) _gaCat = null;
@@ -9722,7 +9723,7 @@ function renderGastos(){
   const filasMes = porMes.map((x,i)=>`<button type="button" class="ga-row${i === 0 ? ' pri' : ''}" onclick="gaSetMes(${x.m})"${x.total ? '' : ' disabled style="cursor:default"'}>
       <div class="ga-top"><span class="ga-n">${MONTHS[x.m]}${x.enCurso ? ' <small>· en curso</small>' : ''}</span><span class="ga-v" style="${x.total ? '' : 'color:var(--muted)'}">${x.total ? fmt(x.total) : '—'}</span></div>
       <div class="ga-bar"><i style="width:${(x.total/mxMes*100).toFixed(1)}%${x.m === D.m ? '' : ';opacity:.55'}"></i></div>
-      ${x.total && x.hayPrev ? `<div class="ga-s"><span>vs ${_gaNomPrev(x)}${x.enCurso ? ` al día ${x.dia}` : ''}</span>${_gaCambio(x.total, x.pTotal, true)}</div>` : ''}
+      ${x.total && x.hayPrev ? `<div class="ga-s"><span>vs ${_gaNomPrev(x)}</span>${_gaCambio(x.total, x.pTotal, true)}</div>` : ''}
     </button>`).join('');
   panel.innerHTML = `
     <div class="gr-head"><div class="t">Gastos</div><div class="s">En qué se te va el dinero en ${yr}: tus categorías de mayor a menor y cómo cambian contra el mes anterior. Rojo es que gastaste más; verde, que gastaste menos.</div></div>
