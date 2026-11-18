@@ -9231,9 +9231,18 @@ function _saludCalc(hasta, anio){
   const capital = W.length ? W[W.length-1].t.end : 0, cubre = gProm > 0 ? capital / gProm : null;
   // 3) Estabilidad: meses en rojo entre los últimos 6 completos
   const ult6 = completos.slice(-6), rojos = ult6.filter(x=>x.t.net < 0).length;
-  // 4) Gastos con tarjeta de crédito sobre lo que entra
-  let cred = 0; conDatos.forEach(x=> _grE(x.src, x.m).forEach(e=>{ if(e.type==='expense' && e.cat==='Crédito') cred += e.amount||0; }));
-  const credPct = sumInc ? cred/sumInc*100 : null;
+  // 4) Uso de crédito: cuánto de tu LÍMITE usas. Se toma el último mes con pagos
+  //    de tarjeta (lo que pagaste ese mes es lo que consumiste del ciclo) y se
+  //    compara con el límite de tus tarjetas abiertas, igual que en Tarjetas.
+  const credLim = (tarjetas||[]).filter(tj=> tj && tj.cerrada !== true && tj.inicio > 0).reduce((a,tj)=> a + tj.inicio, 0);
+  let credMes = null, credPago = 0;
+  for(let i = conDatos.length - 1; i >= 0; i--){ const x = conDatos[i];
+    const pago = _grE(x.src, x.m).reduce((a,e)=> a + ((e.type==='expense' && e.cat==='Crédito') ? (e.amount||0) : 0), 0);
+    if(pago > 0){ credMes = x; credPago = pago; break; } }
+  const credPct = credLim > 0 ? (credMes ? credPago/credLim*100 : 0) : null;
+  const credTxt = credLim <= 0 ? 'No tienes tarjetas de crédito abiertas con límite anotado.'
+    : !credMes ? `No has usado tus tarjetas en los últimos meses. Tu límite es de <b>${fmt(credLim)}</b>.`
+    : `En ${MONTHS[credMes.m].toLowerCase()}${credMes.y !== yr ? ' ' + credMes.y : ''} usaste <b>${fmt(credPago)}</b> de tu límite de <b>${fmt(credLim)}</b>. Es lo que pagaste de tus tarjetas ese mes, comparado con el límite de tus tarjetas abiertas.`;
   // 5) Concentración de ingresos
   const fuentes = {}; conDatos.forEach(x=> _grE(x.src, x.m).forEach(e=>{ if(e.type==='income' && !ING_APARTE.includes(e.cat)){ const f = _fuenteIngreso(e); fuentes[f] = (fuentes[f]||0) + (e.amount||0); } }));
   const listaF = Object.entries(fuentes).sort((a,b)=>b[1]-a[1]);
@@ -9250,9 +9259,9 @@ function _saludCalc(hasta, anio){
     { k:'estab', n:'Estabilidad', max:20, pts: ult6.length ? 20*_clamp01(1 - rojos/3) : 0, v: ult6.length ? `${ult6.length - rojos}/${ult6.length}` : '—', c: !ult6.length ? 'var(--muted)' : rojos===0?'var(--green)':rojos<=2?'#e3b04f':'var(--red)',
       t:'Meses sin gastar más de lo que entra', que:`En los últimos <b>${ult6.length}</b> meses completos, <b>${rojos}</b> ${rojos===1?'cerró':'cerraron'} con más gastos que ingresos.`,
       tip: rojos ? 'Revisa qué pasó en esos meses: suelen ser gastos grandes que se pueden planificar con tiempo.' : 'Ningún mes en rojo. Excelente control.' },
-    { k:'credito', n:'Uso de crédito', max:15, pts: credPct===null?0:15*_clamp01((50-credPct)/40), v: credPct===null?'—':`${Math.round(credPct)}%`, c: col(credPct,20,35,true),
-      t:'Sano: menos del 20% de lo que entra', que:`Pagas con tarjeta de crédito el equivalente al <b>${credPct===null?0:Math.round(credPct)}%</b> de tus ingresos.`,
-      tip: credPct!==null && credPct>=20 ? 'Usar menos la tarjeta reduce el riesgo de pagar intereses.' : 'Usas el crédito con moderación.' },
+    { k:'credito', n:'Uso de crédito', max:15, pts: credPct===null ? 15 : 15*_clamp01((70-credPct)/60), v: credPct===null?'—':`${Math.round(credPct)}%`, c: col(credPct,30,50,true),
+      t:'Sano: menos del 30% de tu límite', que: credTxt,
+      tip: credPct!==null && credPct>=30 ? `Lo sano es usar menos del 30% de tu límite: unos <b>${fmt(credLim*0.3)}</b> al mes. Usar menos te ayuda en tu historial de crédito y reduce el riesgo de pagar intereses.` : credPct===null ? 'Sin tarjetas de crédito, no hay riesgo de intereses.' : 'Usas poco de tu límite. Muy bien.' },
     { k:'fuentes', n:'Concentración de ingresos', max:15, pts: topF===null?0:15*_clamp01((100-topF)/40), v: topF===null?'—':`${Math.round(topF)}%`, c: col(topF,70,90,true),
       t:'Lo que viene de tu fuente principal', que: listaF.length ? `El <b>${Math.round(topF)}%</b> de lo que ganas viene de <b>${esc(listaF[0][0])}</b>.` : 'Todavía no hay ingresos.',
       tip: topF!==null && topF>=90 ? 'Depender de una sola fuente es un riesgo: un ingreso extra estable lo bajaría.' : 'Tus ingresos están repartidos de forma saludable.' }
