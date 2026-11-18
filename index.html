@@ -1406,6 +1406,20 @@ body {
 .ga-mov span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text); }
 .ga-mov span small { color:var(--muted2); font-size:11.5px; }
 .ga-mov b { color:var(--red); font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap; }
+/* % Ahorrado: meta del mes y en qué se fue */
+.ah-meta-bar { position:relative; height:8px; background:var(--card); border-radius:4px; overflow:hidden; margin:8px 0 6px; }
+.ah-meta-bar i { position:absolute; left:0; top:0; bottom:0; border-radius:4px; }
+.ah-meta-lbl { display:flex; justify-content:space-between; font-size:11.5px; color:var(--muted2); font-variant-numeric:tabular-nums; }
+.ah-cat { display:flex; justify-content:space-between; gap:10px; font-size:13px; padding:4px 0; color:var(--text); }
+.ah-cat span:first-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ah-cat span:last-child { white-space:nowrap; font-variant-numeric:tabular-nums; color:var(--red); }
+.ah-cat small { color:var(--muted2); font-size:11.5px; }
+.ah-link { display:block; width:100%; margin-top:8px; background:none; border:1px solid var(--border2); border-radius:999px; padding:7px 12px; color:var(--text); font:500 12.5px 'DM Sans',sans-serif; cursor:pointer; }
+.ah-cmp { display:grid; grid-template-columns:minmax(0,1fr) auto auto auto; column-gap:10px; row-gap:6px; align-items:baseline; font-size:12.5px; color:var(--text); font-variant-numeric:tabular-nums; }
+.ah-cmp .h { font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); text-align:right; }
+.ah-cmp .h:first-child { text-align:left; }
+.ah-cmp .n { text-align:right; white-space:nowrap; }
+.ah-cmp .tot { border-top:1px solid var(--border); padding-top:6px; font-weight:600; }
 </style>
 </head>
 <body>
@@ -2100,14 +2114,53 @@ function openAhorroPanel(){
     }
     h += `<div class="ah-box"><div class="ah-txt">${txt}</div></div>`;
 
+    // Tu meta del mes: cuánto llevas hacia tu meta de ahorro y cuánto te falta
+    { const meta = (typeof _metaAhorro === 'number') ? _metaAhorro : 20, objetivo = tCur.inc * meta / 100;
+      const avance = objetivo > 0 ? Math.max(0, Math.min(1, queda / objetivo)) : 0, llego = queda >= objetivo;
+      const enCurso = (mi === new Date().getMonth());
+      let tm;
+      if(llego) tm = `¡Llegaste a tu meta! Ahorraste <b style="color:var(--green)">${fmt(queda - objetivo)}</b> más de lo que pedía.`;
+      else if(queda > 0) tm = `Te faltan <b>${fmt(objetivo - queda)}</b> para llegar a tu meta.`;
+      else tm = `Tu meta pedía ahorrar <b>${fmt(objetivo)}</b>, pero ${enCurso ? 'vas' : 'quedaste'} en negativo. Te faltan <b>${fmt(objetivo - queda)}</b> para llegar.`;
+      h += `<div class="ah-box"><div class="ah-tit">Tu meta: ahorrar el ${meta}%</div>
+        <div class="ah-txt">${tm}</div>
+        <div class="ah-meta-bar"><i style="width:${(avance*100).toFixed(1)}%;background:${llego ? 'var(--green)' : queda > 0 ? '#e3b04f' : 'var(--red)'}"></i></div>
+        <div class="ah-meta-lbl"><span>${enCurso ? 'Llevas' : 'Ahorraste'} ${fmtSigned(queda)}</span><span>Meta ${fmt(objetivo)}</span></div>
+        <div class="ah-txt" style="color:var(--muted2);font-size:11.5px;margin-top:6px">El ${meta}% de lo que ${enCurso ? 'has ganado hasta ahora' : 'ganaste'} (${fmt(tCur.inc)}). Puedes cambiar tu meta en Salud.</div></div>`; }
+
+    // En qué se fue lo que no ahorraste: tus 3 categorías de gasto más grandes
+    { const porCat = {}; ((data[mi] && Array.isArray(data[mi].entries)) ? data[mi].entries : []).forEach(e=>{ if(e.type==='expense') porCat[e.cat] = (porCat[e.cat]||0) + (e.amount||0); });
+      const top = Object.entries(porCat).sort((a,b)=>b[1]-a[1]).slice(0,3);
+      const nom = c => { try { return _grCatNombre(c); } catch(e){ return c; } };
+      if(top.length) h += `<div class="ah-box"><div class="ah-tit">En qué se fue tu dinero</div>
+        ${top.map(([c,v])=>`<div class="ah-cat"><span>${esc(nom(c))} <small>· ${tCur.exp ? Math.round(v/tCur.exp*100) : 0}% de tus gastos</small></span><span>${fmt(v)}</span></div>`).join('')}
+        ${typeof switchToGastos === 'function' ? `<button type="button" class="ah-link" onclick="ahIrAGastos(${mi})">Ver todos tus gastos de ${MONTHS[mi].toLowerCase()} →</button>` : ''}</div>`; }
+
     if(tPrev && tPrev.inc > 0){
       const prevPct = Math.round((tPrev.inc - tPrev.exp) / tPrev.inc * 100);
       const diff = pct - prevPct;
       const qPrev = tPrev.inc - tPrev.exp;
-      h += `<div class="ah-box"><div class="ah-tit">Comparado con ${_ant.nombre}</div>
-        ${row('Ingresos', fmt(tPrev.inc), 'var(--green)')}
-        ${row('Gastos', fmt(tPrev.exp), 'var(--red)')}
-        <div class="ah-row tot"><span>Ahorro</span><span style="color:${qPrev>=0?'var(--green)':'var(--red)'}">${fmtSigned(qPrev)} (${prevPct}%)</span></div>
+      // Tabla: el mes anterior al lado de este, con lo que cambió
+      const cambio = (a, b, bueno) => { const d = a - b; if(Math.abs(d) < 0.005) return `<span class="n" style="color:var(--muted2)">igual</span>`;
+        const ok = bueno === 'alto' ? d > 0 : d < 0; return `<span class="n" style="color:${ok ? 'var(--green)' : 'var(--red)'}">${d > 0 ? '▲' : '▼'} ${_grPlata(Math.abs(d))}</span>`; };
+      const nAnt = _ant.nombre, nAct = MONTHS[mi], cort = n => String(n).slice(0,3);
+      const fila = (l, a, b, bueno, f, tot) => `<span class="${tot ? 'tot' : ''}">${l}</span><span class="n ${tot ? 'tot' : ''}">${f(b)}</span><span class="n ${tot ? 'tot' : ''}">${f(a)}</span>${cambio(a, b, bueno).replace('class="n"', `class="n ${tot ? 'tot' : ''}"`)}`;
+      const ptsTxt = (a, b) => { const d = a - b; return d === 0 ? `<span class="n" style="color:var(--muted2)">igual</span>` : `<span class="n" style="color:${d > 0 ? 'var(--green)' : 'var(--red)'}">${d > 0 ? '▲' : '▼'} ${Math.abs(d)}</span>`; };
+      // Por qué cambió tu ahorro
+      const dInc = tCur.inc - tPrev.inc, dExp = tCur.exp - tPrev.exp, dAh = queda - qPrev;
+      const parteInc = Math.abs(dInc) < 0.005 ? 'ganaste lo mismo' : `ganaste <b>${fmt(Math.abs(dInc))} ${dInc > 0 ? 'más' : 'menos'}</b>`;
+      const parteExp = Math.abs(dExp) < 0.005 ? 'gastaste lo mismo' : `gastaste <b>${fmt(Math.abs(dExp))} ${dExp > 0 ? 'más' : 'menos'}</b>`;
+      const une = ((dInc >= 0) === (dExp <= 0)) ? 'y' : 'pero';
+      const porque = Math.abs(dAh) < 0.005 ? 'Por eso ahorraste lo mismo.' : `Por eso tu ahorro ${mi === new Date().getMonth() ? 'va' : 'fue'} <b style="color:${dAh > 0 ? 'var(--green)' : 'var(--red)'}">${fmt(Math.abs(dAh))} ${dAh > 0 ? 'mejor' : 'peor'}</b> que en ${nAnt.toLowerCase()}.`;
+      h += `<div class="ah-box"><div class="ah-tit">Comparado con ${nAnt}</div>
+        <div class="ah-cmp">
+          <span class="h"></span><span class="h">${cort(nAnt)}</span><span class="h">${cort(nAct)}</span><span class="h">Cambio</span>
+          ${fila('Ingresos', tCur.inc, tPrev.inc, 'alto', fmt)}
+          ${fila('Gastos', tCur.exp, tPrev.exp, 'bajo', fmt)}
+          ${fila('Ahorro', queda, qPrev, 'alto', fmtSigned, true)}
+          <span>% ahorrado</span><span class="n">${prevPct}%</span><span class="n">${pct}%</span>${ptsTxt(pct, prevPct)}
+        </div>
+        <div class="ah-txt" style="margin-top:10px">Comparado con ${nAnt.toLowerCase()}, ${parteInc} ${une} ${parteExp}. ${porque}</div>
         <div class="ah-txt" style="margin-top:8px">`;
       if(diff > 0)      h += `En ${_ant.nombre} tu ahorro fue <b>${prevPct}%</b> y ahora va en <b>${pct}%</b>. Por eso dice <b style="color:var(--green)">▲ +${diff}%</b>: vas mejor que el mes pasado.`;
       else if(diff < 0) h += `En ${_ant.nombre} tu ahorro fue <b>${prevPct}%</b> y ahora va en <b>${pct}%</b>. Por eso dice <b style="color:var(--red)">▼ ${diff}%</b>: vas peor que el mes pasado.`;
@@ -2126,6 +2179,14 @@ function openAhorroPanel(){
 }
 function closeAhorroPanel(){
   document.getElementById('ahorro-panel').classList.remove('show');
+}
+// Del % Ahorrado a la sección Gastos, en ese mismo mes
+function ahIrAGastos(mi){
+  closeAhorroPanel();
+  try { _gaMes = mi; _gaCat = null; switchToGastos();
+    const tabs = document.getElementById('month-tabs');
+    if(tabs){ const y = tabs.getBoundingClientRect().top + window.scrollY - 70; window.scrollTo({ top: Math.max(0, y) }); }
+  } catch(e){ console.warn(e); }
 }
 
 // ══════════════════════════════════════════════════════════════════════════
