@@ -8668,6 +8668,15 @@ function generateAlerts(){
       .sort((a,b)=>(b.v-b.n)-(a.v-a.n)).slice(0,2)
       .forEach(x=> out.push({ id:`alto-${ym}-${x.k}`, c:'var(--red)', t:`📈 ${_catNombre(x.k)} se disparó`, d:`Llevas ${fmt(x.v)} este mes. Lo normal son ${fmt(x.n)} al mes.` }));
 
+    // 4b) Buenas noticias: categorías HABITUALES en las que vas gastando mucho menos que
+    //     lo normal (a partir del día 20, para no confundir con lo que todavía no pagas)
+    if(dia >= 20){
+      Object.keys(ahora).filter(k=>N.habitual(k)).map(k=>({k, v:ahora[k], n:N.prom[k]||0}))
+        .filter(x=> x.v > 0 && x.n > 0 && x.v <= x.n*0.6 && (x.n - x.v) >= 1000)
+        .sort((a,b)=>(b.n-b.v)-(a.n-a.v)).slice(0,2)
+        .forEach(x=> out.push({ id:`bajo-${ym}-${x.k}`, c:'var(--green)', t:`👏 Vas gastando ${Math.round((1 - x.v/x.n)*100)}% menos en ${_catNombre(x.k)}`, d:`Llevas ${fmt(x.v)} este mes. Lo normal son ${fmt(x.n)} al mes.` }));
+    }
+
     // 4) Buenas noticias: gastando menos que de costumbre (a partir del día 20)
     if(dia >= 20){
       const ahoraTot = gastos(mi).reduce((s,e)=>s+(e.amount||0),0);
