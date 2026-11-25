@@ -8693,6 +8693,41 @@ function generateAlerts(){
     });
   });
 
+  const meta = (typeof _metaAhorro === 'number') ? _metaAhorro : 20;
+  const pctMes = t => (t && t.inc > 0) ? (t.inc - t.exp) / t.inc * 100 : null;
+  // Mejor % de ahorro del año en los meses anteriores a `hasta` (solo meses con ingresos)
+  const mejorAntes = hasta => { let mejor = null; for(let m = 0; m < hasta; m++){ const v = pctMes(monthTotals(m)); if(v !== null && (mejor === null || v > mejor.v)) mejor = { m, v }; } return mejor; };
+  const conIngresosAntes = hasta => { let n = 0; for(let m = 0; m < hasta; m++) if(monthTotals(m).inc > 0) n++; return n; };
+
+  // 7) Cómo cerró el mes anterior (días 1 al 5)
+  if(dia <= 5){ try { const A = _mesAnterior(mi), v = A ? pctMes(A.t) : null;
+    if(v !== null){
+      const q = A.t.inc - A.t.exp, nom = A.nombre;
+      // ¿fue el mejor mes de ahorro de su año? (solo dentro del año actual)
+      const record = (mi > 0) && conIngresosAntes(mi - 1) >= 2 && (()=>{ const m = mejorAntes(mi - 1); return !m || v > m.v; })();
+      let t, d, c;
+      if(q < 0){ t = `📊 ${nom} cerró en negativo`; d = `Gastaste ${fmt(-q)} más de lo que ganaste (${Math.round(v)}%). Tu meta es ahorrar el ${meta}%.`; c = 'var(--red)'; }
+      else if(v >= meta){ t = `📊 ${nom} cerró: ahorraste ${Math.round(v)}%`; d = `Te quedaron ${fmt(q)} y llegaste a tu meta del ${meta}%. 🎉${record ? ' Además fue tu mejor mes de ahorro del año. 🏆' : ''}`; c = 'var(--green)'; }
+      else { t = `📊 ${nom} cerró: ahorraste ${Math.round(v)}%`; d = `Te quedaron ${fmt(q)}. Tu meta es ${meta}%: te faltaron ${fmt(A.t.inc * meta / 100 - q)}.${record ? ' Aun así, fue tu mejor mes de ahorro del año. 🏆' : ''}`; c = 'var(--gold)'; }
+      out.push({ id:`cierre-${CURRENT_YEAR}-${mi}`, c, t, d });
+    } } catch(e){} }
+
+  // 8) Cambio en tu nota de Salud (contra el mes anterior, si se movió 3 puntos o más)
+  try { if(typeof _saludCalc === 'function'){
+    const antes = mi > 0 ? [CURRENT_YEAR, mi - 1] : (_grFuentes()[CURRENT_YEAR - 1] ? [CURRENT_YEAR - 1, 11] : null);
+    const S = _saludCalc(mi, CURRENT_YEAR), P = antes ? _saludCalc(antes[1], antes[0]) : null;
+    if(S && P && S.conDatos.length && P.conDatos.length){ const dif = S.score - P.score;
+      if(Math.abs(dif) >= 3) out.push({ id:`salud-${ym}-${S.score}`, c: dif > 0 ? 'var(--green)' : 'var(--red)',
+        t: `${dif > 0 ? '💚' : '❤️'} Tu salud financiera ${dif > 0 ? 'subió' : 'bajó'} a ${S.score} (${dif > 0 ? '+' : '−'}${Math.abs(dif)} vs ${MONTHS[antes[1]].toLowerCase()})`,
+        d: `Mira en 💚 Salud qué la ${dif > 0 ? 'subió' : 'bajó'} y qué hacer para ${dif > 0 ? 'seguir así' : 'subirla'}.` }); } } } catch(e){}
+
+  // 9) Récord: este mes va siendo tu mejor mes de ahorro del año (a partir del día 20)
+  if(dia >= 20 && mi >= 2){ try { const v = pctMes(monthTotals(mi)), m = mejorAntes(mi);
+    if(v !== null && v > 0 && conIngresosAntes(mi) >= 2 && m && v > m.v)
+      out.push({ id:`record-${ym}`, c:'var(--green)', t:`🏆 ${MONTHS[mi]} va siendo tu mejor mes de ahorro del año`,
+        d:`Llevas ${Math.round(v)}% ahorrado. Tu mejor mes hasta ahora era ${MONTHS[m.m].toLowerCase()}, con ${Math.round(m.v)}%.` });
+  } catch(e){} }
+
   // 6) Estado de cuenta del mes anterior listo (días 1 al 5)
   if(dia <= 5 && mi > 0 && ((data[mi-1] && Array.isArray(data[mi-1].entries)) ? data[mi-1].entries.length : 0))
     out.push({ id:`estado-${CURRENT_YEAR}-${mi-1}`, c:'var(--gold2)', t:`📄 Tu estado de cuenta de ${MONTHS[mi-1].toLowerCase()} está listo`, d:'Míralo en la barra de abajo, en 📄 Estado.' });
