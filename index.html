@@ -1563,6 +1563,7 @@ body.fuera-inicio #insights-bar, body.fuera-inicio #month-tabs { display:none !i
 <div id="month-panels"></div>
 
 <div id="panel-annual" style="display:none">
+  <div class="gr-head"><div class="t">Tu año</div><div class="s">Todo tu año en un lugar: lo que ganaste y gastaste, tus categorías, tus mejores y peores meses y cómo se movió tu capital.</div></div>
   <button class="wr-launch" onclick="openWrapped()">
     <span class="wl-ic">✨</span>
     <span><div class="wl-t" id="wr-launch-t">Tu año en resumen</div><div class="wl-s">Mira tu año en historias: lo que ganaste, gastaste y tus récords</div></span>
@@ -4974,9 +4975,9 @@ function _trPorMes(nombre, year, soloNomina){
 function trToggleMeses(id){ _trOpen[id] = !_trOpen[id]; renderTrabajos(); }
 function trSetYear(id, y){ _trYear[id] = y; _trOpen[id] = true; renderTrabajos(); }
 // Gráfica del trabajo: lo que ganaste cada mes (y el año anterior al lado)
-function _trGraficaHTML(id, y, meses, prev, hasta){
-  const grid = document.getElementById('trabajos-grid');
-  const W = Math.round(Math.max(300, Math.min(900, ((grid && grid.clientWidth) || 360) - 40))), H = 190, L = 44, R = W - 12, T = 16, B = H - 26;
+function _trGraficaHTML(id, y, meses, prev, hasta, opts){
+  const grid = document.getElementById('trabajos-grid'), col = (opts && opts.color) || 'var(--green)';
+  const W = Math.round(Math.max(300, Math.min(900, ((opts && opts.ancho) || (grid && grid.clientWidth) || 360) - 40))), H = 190, L = 44, R = W - 12, T = 16, B = H - 26;
   const vals = meses.slice(0, hasta+1).concat(prev ? prev.slice(0, hasta+1) : []);
   const eje = _grEje(Math.max(1, ...vals) * 1.1, 0);
   const y0 = v => T + (eje.top - v)/(eje.top || 1)*(B - T), x = m => L + 10 + m/Math.max(1, hasta)*(R - L - 20);
@@ -4984,16 +4985,16 @@ function _trGraficaHTML(id, y, meses, prev, hasta){
   const pts = arr => arr.slice(0, hasta+1).map((v,m)=>[x(m), y0(v)]);
   if(prev) svg += `<path d="${_grCurva(pts(prev))}" fill="none" stroke="var(--muted2)" stroke-width="2" stroke-dasharray="4 4" opacity="0.6"/>`;
   const P = pts(meses);
-  if(P.length >= 2) svg += `<defs><linearGradient id="trG${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--green)" stop-opacity="0.28"/><stop offset="1" stop-color="var(--green)" stop-opacity="0"/></linearGradient></defs>
+  if(P.length >= 2) svg += `<defs><linearGradient id="trG${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity="0.28"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>
     <path d="${_grCurva(P)} L${P[P.length-1][0].toFixed(1)},${y0(0).toFixed(1)} L${P[0][0].toFixed(1)},${y0(0).toFixed(1)}Z" fill="url(#trG${id})"/>`;
-  svg += `<path d="${_grCurva(P)}" fill="none" stroke="var(--green)" stroke-width="2.6" stroke-linecap="round"/>`;
-  svg += meses.slice(0, hasta+1).map((v,m)=>`<g data-tip="${MONTHS[m]} ${y}: <b>${fmt(v)}</b>${prev?` · ${y-1}: ${fmt(prev[m])}`:''}"><rect x="${(x(m)-14).toFixed(1)}" y="${T}" width="28" height="${B-T}" fill="transparent"/><circle cx="${x(m).toFixed(1)}" cy="${y0(v).toFixed(1)}" r="${m===hasta?5.5:3.5}" fill="var(--green)" stroke="var(--card)" stroke-width="2"/></g>`).join('');
+  svg += `<path d="${_grCurva(P)}" fill="none" stroke="${col}" stroke-width="2.6" stroke-linecap="round"/>`;
+  svg += meses.slice(0, hasta+1).map((v,m)=>`<g data-tip="${MONTHS[m]} ${y}: <b>${fmt(v)}</b>${prev?` · ${y-1}: ${fmt(prev[m])}`:''}"><rect x="${(x(m)-14).toFixed(1)}" y="${T}" width="28" height="${B-T}" fill="transparent"/><circle cx="${x(m).toFixed(1)}" cy="${y0(v).toFixed(1)}" r="${m===hasta?5.5:3.5}" fill="${col}" stroke="var(--card)" stroke-width="2"/></g>`).join('');
   const corto = (R - L)/Math.max(1, hasta) < 30;
   svg += Array.from({length: hasta+1}, (_,m)=>`<text x="${x(m).toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="11" fill="var(--muted2)">${corto ? GR_MES[m][0] : GR_MES[m]}</text>`).join('');
   return `<div style="margin:4px 0 12px">
     <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block" role="img" aria-label="Lo que ganaste cada mes" onclick="trTip(event,'${id}')">${svg}</svg>
     <div id="tr-tip-${id}" style="min-height:18px;font-size:12.5px;color:var(--text);margin-top:4px">${'<span style="color:var(--muted);font-size:11.5px">Toca un punto para ver el mes</span>'}</div>
-    <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted2);margin-top:4px"><span><i style="display:inline-block;width:10px;height:3px;background:var(--green);vertical-align:middle;margin-right:5px"></i>${y}</span>${prev ? `<span><i style="display:inline-block;width:10px;height:0;border-top:2px dashed var(--muted2);vertical-align:middle;margin-right:5px"></i>${y-1}</span>` : ''}</div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted2);margin-top:4px"><span><i style="display:inline-block;width:10px;height:3px;background:${col};vertical-align:middle;margin-right:5px"></i>${y}</span>${prev ? `<span><i style="display:inline-block;width:10px;height:0;border-top:2px dashed var(--muted2);vertical-align:middle;margin-right:5px"></i>${y-1}</span>` : ''}</div>
   </div>`;
 }
 function trTip(ev, id){ const el = ev.target.closest('[data-tip]'), box = document.getElementById('tr-tip-'+id); if(box && el) box.innerHTML = el.getAttribute('data-tip'); }
@@ -9912,11 +9913,34 @@ function renderGastos(){
     </button>`).join('');
   panel.innerHTML = `
     <div class="gr-head"><div class="t">Gastos</div><div class="s">En qué se te va el dinero en ${yr}: tus categorías de mayor a menor y cómo cambian contra el mes anterior. Rojo es que gastaste más; verde, que gastaste menos.</div></div>
+    ${_gaAnioHTML(yr, hasta, panel)}
     <div class="ec-months">${conGastos.slice().reverse().map(m=>`<button type="button" class="ec-m${m === D.m ? ' on' : ''}" onclick="gaSetMes(${m})">${MONTHS[m]}${(yr === CURRENT_YEAR && m === new Date().getMonth()) ? ' · en curso' : ''}</button>`).join('')}</div>
     ${kpis}${nota}
     <div class="gr-card"><h3>En qué gastas más</h3><div class="sub">${nomMes} ${yr} · toca una categoría para compararla con ${nomPrev}</div>${filasCat}</div>
     <div class="gr-card"><h3>Los gastos más grandes</h3><div class="sub">Los ${grandes.length === 1 ? 'movimiento más alto' : grandes.length + ' movimientos más altos'} de ${nomMes.toLowerCase()}</div>${grandes.map((e,i)=>_gaMovHTML(e, i, true)).join('')}</div>
     <div class="gr-card"><h3>Mes a mes</h3><div class="sub">Lo que gastaste cada mes de ${yr} · toca un mes para verlo</div>${filasMes}</div>`;
+}
+// Tus gastos del año: total, promedio, mes más caro y la gráfica mes a mes (con el año anterior punteado)
+function _gaAnioHTML(yr, hasta, panel){
+  const f = _grFuentes(), src = f[yr] || {}, prevSrc = f[yr - 1];
+  const meses = Array.from({length:12}, (_,m)=> parseFloat(_gaSuma(_gaGastos(src, m)).toFixed(2)));
+  const prev = (prevSrc && _grTieneDatos(prevSrc)) ? Array.from({length:12}, (_,m)=> parseFloat(_gaSuma(_gaGastos(prevSrc, m)).toFixed(2))) : null;
+  const conGasto = meses.slice(0, hasta + 1).map((v,m)=>({ m, v })).filter(x=>x.v > 0);
+  const total = conGasto.reduce((a,x)=>a + x.v, 0), prom = conGasto.length ? total / conGasto.length : 0;
+  const caro = conGasto.slice().sort((a,b)=>b.v - a.v)[0];
+  const pTot = prev ? prev.slice(0, hasta + 1).reduce((a,v)=>a + v, 0) : null;
+  const kpi = (l, v, sub, c) => `<div class="gr-kpi"><div class="l">${l}</div><div class="v" style="color:${c||'var(--text)'}">${v}</div><div class="s">${sub||''}</div></div>`;
+  const ancho = panel && panel.clientWidth ? panel.clientWidth - 4 : 0;
+  return `<div class="gr-card" style="margin-bottom:1.2rem">
+    <h3>Tus gastos de ${yr}</h3>
+    <div class="sub">${(yr === CURRENT_YEAR && hasta < 11) ? (hasta === 0 ? 'Enero' : `De enero a ${MONTHS[hasta].toLowerCase()}`) : 'Enero a diciembre'}${prev ? ` · comparado con ${yr - 1}` : ''}</div>
+    <div class="gr-kpis">
+      ${kpi('Total', _grPlata(total), pTot !== null ? `${yr - 1}: ${_grPlata(pTot)}` : fmt(total), 'var(--red)')}
+      ${kpi('Al mes', _grPlata(prom), 'en promedio')}
+      ${caro ? kpi('Más caro', _grPlata(caro.v), MONTHS[caro.m]) : ''}
+    </div>
+    ${_trGraficaHTML('gas', yr, meses, prev, hasta, { color:'var(--red)', ancho })}
+  </div>`;
 }
 function gaSetMes(m){ _gaMes = m; _gaCat = null; renderGastos();
   const p = document.getElementById('panel-gastos'); if(p){ const y = p.getBoundingClientRect().top + window.scrollY - 70; if(window.scrollY > y) window.scrollTo({ top: Math.max(0, y) }); } }
