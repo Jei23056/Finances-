@@ -1423,6 +1423,25 @@ body {
 .ah-cmp .h:first-child { text-align:left; }
 .ah-cmp .n { text-align:right; white-space:nowrap; }
 .ah-cmp .tot { border-top:1px solid var(--border); padding-top:6px; font-weight:600; }
+/* ═══ Fondo azul marino (nov 2026) ═══ */
+:root { --bg:#0a1730; }
+body {
+  background:
+    radial-gradient(1000px 560px at 50% -14%, rgba(120,160,230,0.14), transparent 66%),
+    var(--bg);
+  background-attachment: fixed;
+}
+#topbar { background:rgba(10,23,48,0.86); }
+
+/* ═══ Mensajes detrás de un botón ═══ */
+.alerts-toggle { display:inline-flex; align-items:center; gap:8px; align-self:flex-start; background:var(--card); border:1px solid var(--border2); border-radius:999px; padding:8px 14px; color:var(--text); font:500 13px 'DM Sans',sans-serif; cursor:pointer; }
+.alerts-toggle .n { min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:var(--gold); color:var(--bg); font-size:11.5px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; }
+.alerts-toggle .n.urg { background:var(--red); color:#fff; }
+.alerts-toggle .fl { color:var(--muted2); font-size:11px; }
+
+/* ═══ Fuera del inicio (Año, Salud, Tarjetas…) solo se ve la sección elegida ═══ */
+body.fuera-inicio #alerts-bar, body.fuera-inicio .year-bar, body.fuera-inicio #mini-chart,
+body.fuera-inicio #insights-bar, body.fuera-inicio #month-tabs { display:none !important; }
 </style>
 </head>
 <body>
@@ -1624,10 +1643,7 @@ body {
 <div id="panel-gastos" style="display:none"></div>
 
 <div id="panel-since" style="display:none">
-  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1.5rem">
-    <div style="font-size:13px;color:var(--text);font-weight:500">Acumulado histórico</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:2px">Suma de todos tus años: el año actual más los años guardados en el historial. Esto no se borra al cambiar de año.</div>
-  </div>
+  <div class="gr-head"><div class="t">Desde 2026</div><div class="s">Tu acumulado histórico: la suma de todos tus años, el actual más los guardados en el historial. Esto no se borra al cambiar de año.</div></div>
 
   <div id="since-totals" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.5rem"></div>
 
@@ -1644,6 +1660,7 @@ body {
 </div>
 
 <div id="panel-cards" style="display:none">
+  <div class="gr-head"><div class="t">Tarjetas</div><div class="s">Tus tarjetas de crédito y tus cuentas de débito: límites, fechas de corte y de pago, y lo que usas cada mes.</div></div>
 
   <div class="cards-subtabs" style="display:flex;gap:8px;margin-bottom:1.2rem">
     <button class="mtab active" id="cst-credito" onclick="switchCardsSubTab('credito')">💳 Crédito</button>
@@ -1734,10 +1751,7 @@ body {
 </div>
 
 <div id="panel-trabajos" style="display:none">
-  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1.5rem">
-    <div style="font-size:13px;color:var(--text);font-weight:500">💰 Ingresos</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:2px">Todo lo que te entra: un resumen del año y tus fuentes de ingreso (empleo, trabajos por tu cuenta, negocio, alquiler…). Cuando registres un ingreso podrás elegir de qué fuente es.</div>
-  </div>
+  <div class="gr-head"><div class="t">Ingresos</div><div class="s">Todo lo que te entra: un resumen del año y tus fuentes de ingreso (empleo, trabajos por tu cuenta, negocio, alquiler…). Cuando registres un ingreso podrás elegir de qué fuente es.</div></div>
   <div id="ing-resumen"></div>
 
   <div class="cc-add-form">
@@ -2232,8 +2246,8 @@ function closeAhorroPanel(){
 function ahIrAGastos(mi){
   closeAhorroPanel();
   try { _gaMes = mi; _gaCat = null; switchToGastos();
-    const tabs = document.getElementById('month-tabs');
-    if(tabs){ const y = tabs.getBoundingClientRect().top + window.scrollY - 70; window.scrollTo({ top: Math.max(0, y) }); }
+    try { _syncInicio(); } catch(e){}
+    window.scrollTo({ top: 0 });
   } catch(e){ console.warn(e); }
 }
 
@@ -8289,7 +8303,7 @@ function renderDesglose(){
     <div class="b"><div class="l">Sin detallar</div><div class="v" style="color:var(--gold2)">${fmt(r.sinDet)}</div></div>
   </div>`;
 
-  let html = `<div class="dc-intro"><div class="t">🧾 Desglose de crédito</div>
+  let html = `<div class="gr-head"><div class="t">Desglose de crédito</div>
     <div class="s">Aquí aparecen solos tus gastos de crédito, separados por tarjeta. Toca uno para anotar en qué se fue ese dinero. Es solo un detalle aparte: no se suma a tus totales, categorías ni capital, y no se borra al cambiar de año.</div></div>`;
   if(anios.length > 1){
     html += `<div class="dc-years">${anios.map(y=>`<button class="mtab${y===year?' active':''}" onclick="dcSetYear(${y})">${y}</button>`).join('')}</div>`;
@@ -8755,13 +8769,21 @@ function generateAlerts(){
   const ocultas = _alertasOcultas();
   return out.filter(a=>!ocultas.has(a.id));
 }
+// Los mensajes quedan escondidos detrás de un botón ("🔔 Mensajes"): lo tocas y se
+// ven, lo tocas otra vez y se esconden. El aviso rojo de "otro aparato guardó algo"
+// se ve siempre, porque si anotas sin actualizar se puede perder un movimiento.
+let _alertasAbiertas = false;
+function toggleAlertas(){ _alertasAbiertas = !_alertasAbiertas; renderAlerts(); }
 function renderAlerts(){
   const el = document.getElementById('alerts-bar'); if(!el) return;
   const al = generateAlerts();
-  el.innerHTML = al.map(a=>`<div class="alert-card" style="--ac:${a.c}">
+  const card = a => `<div class="alert-card" style="--ac:${a.c}">
       <div class="tx"><div class="t">${esc(a.t)}</div><div class="d">${esc(a.d)}</div></div>
       ${a.recargar ? `<button class="alert-btn" onclick="location.reload()">Actualizar</button>` : `<button class="x" onclick="dismissAlert('${a.id.replace(/'/g,'')}')" title="Descartar" aria-label="Descartar aviso">✕</button>`}
-    </div>`).join('');
+    </div>`;
+  const siempre = al.filter(a=>a.recargar), resto = al.filter(a=>!a.recargar);
+  const urgente = resto.some(a=>a.c === 'var(--red)');
+  el.innerHTML = siempre.map(card).join('') + (resto.length ? `<button type="button" class="alerts-toggle" onclick="toggleAlertas()" aria-expanded="${_alertasAbiertas}">🔔 Mensajes <span class="n${urgente ? ' urg' : ''}">${resto.length}</span><span class="fl">${_alertasAbiertas ? 'Ocultar ▴' : 'Ver ▾'}</span></button>` + (_alertasAbiertas ? resto.map(card).join('') : '') : '');
 }
 
 
@@ -9778,6 +9800,7 @@ function bqIr(m){
     // quede marcado el mes al que fuiste (y no parezca que sigues en el mes de hoy).
     if(m !== new Date().getMonth()) _monthsExpanded = true;
     switchMonth(m); showInner(m, 'all');
+    try { _syncInicio(); } catch(e){}
     const tab = document.querySelectorAll('#month-tabs .mtab')[m];
     if(tab && tab.scrollIntoView) tab.scrollIntoView({ block:'nearest', inline:'center' });
     const tabs = document.getElementById('month-tabs');
@@ -9974,8 +9997,10 @@ function switchToGastos(){ _switchToSeccion('gastos', renderGastos); }
       const it = items.find(x=>x[0]===b.dataset.k); const tab = it && it[3]();
       if(!tab) return;
       tab.click();
+      try { _syncInicio(); } catch(e){}
       const tabs = document.getElementById('month-tabs');
-      if(tabs){ const y = tabs.getBoundingClientRect().top + window.scrollY - 70; if(window.scrollY > y) window.scrollTo({ top: Math.max(0,y), behavior:'smooth' }); }
+      if(document.body.classList.contains('fuera-inicio')) window.scrollTo({ top: 0 });   // sección: arriba, donde está su título
+      else if(tabs){ const y = tabs.getBoundingClientRect().top + window.scrollY - 70; if(window.scrollY > y) window.scrollTo({ top: Math.max(0,y), behavior:'smooth' }); }
       mark();
     });
     const tabs = document.getElementById('month-tabs');
@@ -10227,6 +10252,23 @@ function _ugAviso(){
   saveTarjetas = function(){ const r = _saveTarjetas.apply(this, arguments); _ugMarcar(); return r; };
   saveDebito = function(){ const r = _saveDebito.apply(this, arguments); _ugMarcar(); return r; };
   saveTrabajos = function(){ const r = _saveTrabajos.apply(this, arguments); _ugMarcar(); return r; };
+})();
+
+// ═════════════════════════════════════════════════════════════════════════
+// INICIO vs SECCIONES (nov 2026) — los mensajes, los 4 cuadros de arriba, la
+// gráfica del año y las pestañas de meses solo se ven en el inicio (un mes).
+// En Año, Salud, Tarjetas, etc. solo se ve la sección que tocaste.
+// ═════════════════════════════════════════════════════════════════════════
+function _enInicio(){
+  const tabs = [...document.querySelectorAll('#month-tabs .mtab')];
+  const act = tabs.find(t=>t.classList.contains('active'));
+  return !act || tabs.indexOf(act) < 12;
+}
+function _syncInicio(){ document.body.classList.toggle('fuera-inicio', !_enInicio()); }
+(function(){
+  const tabs = document.getElementById('month-tabs');
+  if(tabs && window.MutationObserver) new MutationObserver(_syncInicio).observe(tabs, { subtree:true, attributes:true, attributeFilter:['class'], childList:true });
+  _syncInicio();
 })();
 </script>
 </body>
