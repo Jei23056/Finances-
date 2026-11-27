@@ -1442,6 +1442,21 @@ body {
 /* ═══ Fuera del inicio (Año, Salud, Tarjetas…) solo se ve la sección elegida ═══ */
 body.fuera-inicio #alerts-bar, body.fuera-inicio .year-bar, body.fuera-inicio #mini-chart,
 body.fuera-inicio #insights-bar, body.fuera-inicio #month-tabs { display:none !important; }
+/* ═══ Cuadros azul marino con un toque de cristal (nov 2026) ═══ */
+:root {
+  --surf:rgba(16,30,57,0.74); --card:rgba(20,36,67,0.74); --card2:rgba(28,47,84,0.84);
+  --border:rgba(150,180,240,0.11); --border2:rgba(150,180,240,0.19);
+}
+.ycard, .mcard, .form-wrap, .cat-block, .bycat-picker, .bycat-summary, .credit-card, .cc-card,
+.mini-chart, .cal-wrap, .cal-stat, .dc-card, .alert-card, .gr-card, .alerts-toggle, .wr-arch, .cc-add-form {
+  -webkit-backdrop-filter:blur(10px) saturate(130%); backdrop-filter:blur(10px) saturate(130%);
+  box-shadow: 0 12px 30px -14px rgba(0,0,0,0.7), 0 2px 6px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+#float-nav { background:rgba(20,36,67,0.74) !important; }
+/* Lo que flota encima de otras cosas va sólido, para que se lea bien */
+.ach-modal, #save-menu, #capital-tooltip { background:#14243f !important; }
+/* La pestaña del mes: el resplandor claro se cortaba en un rectángulo sobre el azul */
+#month-tabs .mtab.active { box-shadow:0 4px 12px -3px rgba(0,0,0,0.5) !important; }
 </style>
 </head>
 <body>
